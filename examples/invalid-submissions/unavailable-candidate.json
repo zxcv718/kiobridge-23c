@@ -1,0 +1,121 @@
+{
+  "inputContractVersion": "1.0.0",
+  "submissionVersion": "1.0.0",
+  "teamId": "TEAM-EXAMPLE",
+  "environmentId": "sandbox",
+  "profile": {
+    "profileId": "TEAM-PROFILE-001",
+    "dataClassification": "SYNTHETIC_PROFILE",
+    "source": {
+      "collectionChannel": "WEB_FORM",
+      "providerId": "TEAM-EXAMPLE",
+      "collectedAt": "2026-08-01T05:30:00.000Z"
+    },
+    "accessibility": {
+      "largeText": false,
+      "simpleSteps": false,
+      "visualGuidance": false,
+      "hearingSupport": false,
+      "mobilitySupport": false,
+      "highContrast": false,
+      "staffAssistancePreferred": false
+    },
+    "interaction": {
+      "preferredInput": "TOUCH",
+      "language": "ko-KR",
+      "confirmationRequired": true
+    },
+    "consent": {
+      "personalization": true,
+      "retentionPolicy": "SESSION_ONLY"
+    }
+  },
+  "sessionContext": {
+    "facts": {},
+    "preferences": {
+      "size": "NO_PREFERENCE"
+    },
+    "hardConstraints": {},
+    "capabilities": {},
+    "fieldMetadata": {},
+    "intent": {
+      "task": "PRACTICE"
+    }
+  },
+  "recommendation": {
+    "recommendedCandidateId": "SANDBOX-003",
+    "alternativeCandidateIds": [],
+    "excludedCandidates": [],
+    "scoreBreakdown": {},
+    "recommendationReasons": [
+      "사용자 조건에 맞는 항목입니다."
+    ],
+    "unmetConditions": [],
+    "confidence": 0.8,
+    "requiresReconfirmation": false
+  },
+  "userDecision": {
+    "approved": true,
+    "decision": "APPROVE",
+    "confirmedAt": "2026-08-01T06:00:00.000Z"
+  },
+  "executionPlan": {
+    "planId": "PLAN-sandbox",
+    "validationMode": "SIMULATION_ONLY",
+    "executionEnvironment": "DIGITAL_TWIN",
+    "actualDeviceCommandSent": false,
+    "actions": [
+      {
+        "actionIndex": 0,
+        "action": "start",
+        "target": {
+          "kind": "review",
+          "id": "ITEM_SELECTION"
+        },
+        "expectedBeforeState": "WELCOME",
+        "expectedAfterState": "ITEM_SELECTION"
+      },
+      {
+        "actionIndex": 1,
+        "action": "select_item",
+        "target": {
+          "kind": "candidate",
+          "id": "SANDBOX-003"
+        },
+        "expectedBeforeState": "ITEM_SELECTION",
+        "expectedAfterState": "OPTION_SELECTION"
+      },
+      {
+        "actionIndex": 2,
+        "action": "select_option",
+        "target": {
+          "kind": "option",
+          "groupId": "SIZE",
+          "id": "SMALL"
+        },
+        "expectedBeforeState": "OPTION_SELECTION",
+        "expectedAfterState": "OPTION_SELECTION"
+      },
+      {
+        "actionIndex": 3,
+        "action": "open_review",
+        "target": {
+          "kind": "review",
+          "id": "REVIEW"
+        },
+        "expectedBeforeState": "OPTION_SELECTION",
+        "expectedAfterState": "REVIEW"
+      },
+      {
+        "actionIndex": 4,
+        "action": "verify_result",
+        "target": {
+          "kind": "review",
+          "id": "REVIEW"
+        },
+        "expectedBeforeState": "REVIEW",
+        "expectedAfterState": "REVIEW"
+      }
+    ]
+  }
+}

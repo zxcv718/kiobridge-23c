@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": ".",
+    "jsx": "react-jsx",
+    "paths": {
+      "@kiobridge/contracts": ["packages/contracts/src/index.ts"],
+      "@kiobridge/state-engine": ["packages/state-engine/src/index.ts"],
+      "@kiobridge/safety-engine": ["packages/safety-engine/src/index.ts"],
+      "@kiobridge/evaluator": ["packages/evaluator/src/index.ts"],
+      "@kiobridge/participant-sdk": ["packages/participant-sdk/src/index.ts"],
+      "@kiobridge/profile-contract": ["packages/profile-contract/src/index.ts"],
+      "@kiobridge/kiosk-driver-contract": ["packages/kiosk-driver-contract/src/index.ts"],
+      "@kiobridge/simulation-driver": ["packages/simulation-driver/src/index.ts"],
+      "@kiobridge/uprlite-driver-contract": ["packages/uprlite-driver-contract/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.tsx",
+    "apps/simulation-api/src/**/*.ts",
+    "apps/simulator-web/src/**/*.ts",
+    "apps/simulator-web/src/**/*.tsx",
+    "examples/minimal-participant-client/src/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": ["node_modules", "**/dist/**"]
+}

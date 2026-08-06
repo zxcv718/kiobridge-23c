@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/core/iso-8601-utc.schema.json",
+  "title": "Canonical Input UTC timestamp",
+  "description": "ISO 8601 / RFC 3339 instant in UTC, ending in a capital Z. Local times and numeric offsets (+09:00) are not accepted, and the date must actually exist. Example: 2026-08-03T00:11:00.123Z",
+  "type": "string",
+  "format": "iso-8601-utc",
+  "examples": ["2026-08-03T00:11:00Z", "2026-08-03T00:11:00.123Z"]
+}

@@ -1,0 +1,23 @@
+{
+  "driver": "UPRLITE",
+  "status": "PENDING_REAL_DEVICE",
+  "controls": {},
+  "_referenceCapture": {
+    "_note": "실기기 연동 전 참고 자료입니다. 런타임에서 사용되지 않으며(status=PENDING_REAL_DEVICE, controls={}), 실제 수집 후 screens/controls 로 옮겨 채웁니다. 좌표는 절대 클릭에 사용하지 않습니다.",
+    "dataClassification": "ACTUAL_EXTRACTED",
+    "processName": "UPRLite",
+    "windowTitle": "UP KIOSK",
+    "baseResolution": { "width": 1080, "height": 1920 },
+    "rootAutomationId": "KIOSKMainForm",
+    "knownAutomationIds": {
+      "DINE_IN": { "automationId": "btnBarrierFreeEatIn", "coordinate": { "x": 388, "y": 1533 } },
+      "TAKE_OUT": { "automationId": "btnBarrierFreeTakeOut", "coordinate": { "x": 694, "y": 1533 } },
+      "CART": { "automationId": "btnCart", "coordinate": { "x": 674, "y": 1719 } },
+      "CANCEL": { "automationId": "btnCancel", "coordinate": { "x": 138, "y": 1719 } },
+      "CALL_STAFF": { "automationId": "btnCallStaff", "coordinate": { "x": 407, "y": 1857 } },
+      "CART_ITEM_NAME": { "automationId": "lbMenuName" },
+      "CART_AMOUNT": { "automationId": "lbAmount" }
+    },
+    "ocrRegion": { "x": 270, "y": 1603, "width": 799, "height": 182 }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "types": ["node", "vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@kiobridge/contracts": ["../../packages/contracts/src/index.ts"],
+      "@kiobridge/state-engine": ["../../packages/state-engine/src/index.ts"],
+      "@kiobridge/safety-engine": ["../../packages/safety-engine/src/index.ts"],
+      "@kiobridge/evaluator": ["../../packages/evaluator/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

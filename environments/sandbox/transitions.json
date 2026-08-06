@@ -1,0 +1,7 @@
+[
+  { "from": "WELCOME", "action": "start", "to": "ITEM_SELECTION" },
+  { "from": "ITEM_SELECTION", "action": "select_item", "to": "OPTION_SELECTION" },
+  { "from": "OPTION_SELECTION", "action": "select_option", "to": "OPTION_SELECTION" },
+  { "from": "OPTION_SELECTION", "action": "open_review", "to": "REVIEW" },
+  { "from": "REVIEW", "action": "verify_result", "to": "REVIEW", "guards": ["readOnly"] }
+]

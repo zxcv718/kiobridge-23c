@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/core/user-decision.schema.json",
+  "title": "UserDecision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "approved",
+    "decision"
+  ],
+  "properties": {
+    "approved": {
+      "type": "boolean"
+    },
+    "decision": {
+      "enum": [
+        "APPROVE",
+        "REJECT",
+        "MODIFY"
+      ]
+    },
+    "confirmedAt": {
+      "$ref": "https://kiobridge.local/schemas/core/iso-8601-utc.schema.json"
+    },
+    "note": {
+      "type": "string"
+    }
+  }
+}

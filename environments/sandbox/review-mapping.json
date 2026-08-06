@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "environmentId": "sandbox",
+  "title": "연습 검토 내용",
+  "notice": "연습용 환경입니다. 평가 대상이 아닙니다.",
+  "fields": [
+    { "fieldId": "itemName", "label": "선택 항목", "required": true, "sources": [{ "type": "selectedCandidateField", "key": "name" }] },
+    {
+      "fieldId": "size", "label": "크기",
+      "sources": [{ "type": "selectedOption", "key": "SIZE" }, { "type": "selectedCandidateSupportedOption", "key": "SIZE", "strategy": "FIRST" }],
+      "fallbackLabel": "미선택"
+    },
+    { "fieldId": "userConfirmed", "label": "사용자 확인 상태", "required": true, "sources": [{ "type": "uiState", "path": "userDecisionLabel" }] },
+    { "fieldId": "notice", "label": "안내", "required": true, "sources": [{ "type": "constant", "value": "연습 환경 — 실제 처리 없음" }] }
+  ]
+}

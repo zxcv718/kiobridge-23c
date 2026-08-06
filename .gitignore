@@ -1,0 +1,20 @@
+# 의존성 · 빌드 산출물
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Vercel — .env.local 에 OIDC 토큰이 들어간다. 절대 커밋 금지.
+.vercel/
+.env
+.env.*
+!.env.example
+
+# 도구 상태 (개인 환경)
+.omc/
+**/.omc/
+.DS_Store
+test-results/
+playwright-report/
+
+# 로컬 실행 산출물 (제출 패키지는 submission-output/ 아래에 별도로 보관한다)
+workspace/*/output/

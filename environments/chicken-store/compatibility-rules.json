@@ -1,0 +1,164 @@
+{
+  "version": "1.0.0",
+  "environmentId": "chicken-store",
+  "rules": [
+    {
+      "ruleId": "CHICKEN_ALLERGEN_HARD_CONSTRAINT",
+      "description": "알레르기 하드 제약 (후보 알레르겐과 겹치면 안 됨)",
+      "source": {
+        "section": "hardConstraints",
+        "path": "allergenIds"
+      },
+      "candidate": {
+        "source": "attributes",
+        "key": "allergenIds"
+      },
+      "operator": "DISJOINT",
+      "severity": "BLOCK",
+      "unknownPolicy": "RECONFIRM",
+      "errorCode": "ALLERGEN_CONFLICT",
+      "absentMeans": "NONE"
+    },
+    {
+      "ruleId": "CHICKEN_PRICE_LIMIT",
+      "description": "가격 상한",
+      "source": {
+        "section": "hardConstraints",
+        "path": "maxPriceKrw"
+      },
+      "candidate": {
+        "source": "field",
+        "key": "price"
+      },
+      "operator": "MAX",
+      "severity": "BLOCK",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "PRICE_LIMIT_EXCEEDED",
+      "absentMeans": "NONE"
+    },
+    {
+      "ruleId": "CHICKEN_SERVICE_TYPE_PREFERENCE",
+      "description": "포장/매장 선호",
+      "source": {
+        "section": "preferences",
+        "path": "serviceType"
+      },
+      "candidate": {
+        "source": "supportedOptions",
+        "key": "SERVICE_TYPE"
+      },
+      "operator": "IN",
+      "severity": "WARN",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "SERVICE_TYPE_MISMATCH",
+      "absentMeans": "NONE"
+    },
+    {
+      "ruleId": "CHICKEN_SPICY_LEVEL_PREFERENCE",
+      "description": "맵기 선호",
+      "source": {
+        "section": "preferences",
+        "path": "spicyLevel"
+      },
+      "candidate": {
+        "source": "supportedOptions",
+        "key": "SPICY_LEVEL"
+      },
+      "operator": "IN",
+      "severity": "WARN",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "SPICY_LEVEL_MISMATCH",
+      "absentMeans": "NONE"
+    },
+    {
+      "ruleId": "CHICKEN_SELECTED_SERVICE_TYPE",
+      "description": "실행계획이 선택한 이용방식",
+      "evaluationScope": "EXECUTION_CHOICE",
+      "source": {
+        "section": "preferences",
+        "path": "serviceType"
+      },
+      "target": {
+        "source": "executionSelectedOption",
+        "key": "SERVICE_TYPE"
+      },
+      "operator": "EQUALS_SELECTED",
+      "severity": "WARN",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "SELECTED_SERVICE_TYPE_MISMATCH",
+      "absentMeans": "NONE"
+    },
+    {
+      "ruleId": "CHICKEN_SELECTED_SPICY_LEVEL",
+      "description": "실행계획이 선택한 맵기",
+      "evaluationScope": "EXECUTION_CHOICE",
+      "source": {
+        "section": "preferences",
+        "path": "spicyLevel"
+      },
+      "target": {
+        "source": "executionSelectedOption",
+        "key": "SPICY_LEVEL"
+      },
+      "operator": "EQUALS_SELECTED",
+      "severity": "WARN",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "SELECTED_SPICY_LEVEL_MISMATCH",
+      "absentMeans": "NONE"
+    },
+    {
+      "ruleId": "CHICKEN_SELECTED_BONE_TYPE",
+      "description": "실행계획이 선택한 뼈 유형",
+      "evaluationScope": "EXECUTION_CHOICE",
+      "source": {
+        "section": "preferences",
+        "path": "boneType"
+      },
+      "target": {
+        "source": "executionSelectedOption",
+        "key": "BONE_TYPE"
+      },
+      "operator": "EQUALS_SELECTED",
+      "severity": "WARN",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "SELECTED_BONE_TYPE_MISMATCH",
+      "absentMeans": "NONE"
+    },
+    {
+      "ruleId": "CHICKEN_SELECTED_CUP_OPTION",
+      "description": "실행계획이 선택한 컵 옵션",
+      "evaluationScope": "EXECUTION_CHOICE",
+      "source": {
+        "section": "preferences",
+        "path": "cupOption"
+      },
+      "target": {
+        "source": "executionSelectedOption",
+        "key": "CUP"
+      },
+      "operator": "EQUALS_SELECTED",
+      "severity": "WARN",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "SELECTED_CUP_OPTION_MISMATCH",
+      "absentMeans": "NONE"
+    },
+    {
+      "ruleId": "CHICKEN_SELECTED_QUANTITY",
+      "description": "실행계획이 선택한 수량",
+      "evaluationScope": "EXECUTION_CHOICE",
+      "source": {
+        "section": "preferences",
+        "path": "quantity"
+      },
+      "target": {
+        "source": "executionSelectedValue",
+        "key": "quantity"
+      },
+      "operator": "EQUALS_SELECTED",
+      "severity": "BLOCK",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "SELECTED_QUANTITY_MISMATCH",
+      "absentMeans": "NONE"
+    }
+  ]
+}

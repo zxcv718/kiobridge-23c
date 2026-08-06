@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/domains/chicken-store.context.schema.json",
+  "title": "chicken-store SessionContext",
+  "allOf": [
+    {
+      "$ref": "https://kiobridge.local/schemas/core/session-context-base.schema.json"
+    }
+  ],
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intent",
+    "facts",
+    "preferences",
+    "hardConstraints",
+    "capabilities"
+  ],
+  "properties": {
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task"
+      ],
+      "properties": {
+        "task": {
+          "const": "ORDER_FOOD"
+        }
+      }
+    },
+    "facts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "serviceType": {
+          "enum": [
+            "DINE_IN",
+            "TAKE_OUT",
+            "NO_PREFERENCE",
+            "UNKNOWN"
+          ]
+        },
+        "spicyLevel": {
+          "enum": [
+            "MILD",
+            "MEDIUM",
+            "HOT",
+            "NO_PREFERENCE",
+            "UNKNOWN"
+          ]
+        },
+        "boneType": {
+          "enum": [
+            "BONE",
+            "BONELESS",
+            "NO_PREFERENCE",
+            "UNKNOWN"
+          ]
+        },
+        "cupOption": {
+          "enum": [
+            "PAPER",
+            "REGULAR",
+            "NONE",
+            "NO_PREFERENCE",
+            "UNKNOWN"
+          ]
+        },
+        "quantity": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "hardConstraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allergenIds": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "PEANUT",
+              "SOY",
+              "MILK",
+              "EGG",
+              "WHEAT",
+              "SHRIMP",
+              "UNKNOWN"
+            ]
+          }
+        },
+        "maxPriceKrw": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {}
+    },
+    "fieldMetadata": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "https://kiobridge.local/schemas/core/field-metadata.schema.json"
+      },
+      "propertyNames": {
+        "pattern": "^/"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "팀 namespace 확장 (예: TEAM_001.contextSignals). Core 필드 이름은 쓸 수 없습니다.",
+      "propertyNames": {
+        "pattern": "^[A-Z][A-Z0-9_]*\\.[A-Za-z][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": true
+    }
+  }
+}

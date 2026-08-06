@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/domains/sandbox.context.schema.json",
+  "title": "sandbox SessionContext",
+  "allOf": [
+    {
+      "$ref": "https://kiobridge.local/schemas/core/session-context-base.schema.json"
+    }
+  ],
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intent",
+    "facts",
+    "preferences",
+    "hardConstraints",
+    "capabilities"
+  ],
+  "properties": {
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task"
+      ],
+      "properties": {
+        "task": {
+          "const": "PRACTICE"
+        }
+      }
+    },
+    "facts": {
+      "type": "object"
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "size": {
+          "enum": [
+            "SMALL",
+            "LARGE",
+            "NO_PREFERENCE",
+            "UNKNOWN"
+          ]
+        }
+      }
+    },
+    "hardConstraints": {
+      "type": "object"
+    },
+    "capabilities": {
+      "type": "object"
+    },
+    "fieldMetadata": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "https://kiobridge.local/schemas/core/field-metadata.schema.json"
+      },
+      "propertyNames": {
+        "pattern": "^/"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "팀 namespace 확장 (예: TEAM_001.contextSignals). Core 필드 이름은 쓸 수 없습니다.",
+      "propertyNames": {
+        "pattern": "^[A-Z][A-Z0-9_]*\\.[A-Za-z][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": true
+    }
+  }
+}

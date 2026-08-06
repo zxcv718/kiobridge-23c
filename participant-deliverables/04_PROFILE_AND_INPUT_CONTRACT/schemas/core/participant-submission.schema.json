@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/core/participant-submission.schema.json",
+  "title": "ParticipantSubmission",
+  "description": "참가팀이 서버에 제출하는 전체 결과. 수집 방식은 자유지만 이 계약을 따라야 합니다. 핵심 객체는 additionalProperties:false 이며 자유 확장은 extensions 아래에서만 허용됩니다. 프로필/컨텍스트 정의는 $ref 로 재사용합니다(중복 정의 금지).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["inputContractVersion", "submissionVersion", "teamId", "environmentId", "profile", "sessionContext", "recommendation", "userDecision", "executionPlan"],
+  "properties": {
+    "inputContractVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$", "description": "Canonical Input Contract 버전 (SemVer)." },
+    "submissionVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "teamId": { "type": "string", "minLength": 1 },
+    "environmentId": { "type": "string", "minLength": 1 },
+    "profile": { "$ref": "https://kiobridge.local/schemas/core/canonical-profile.schema.json" },
+    "sessionContext": { "$ref": "https://kiobridge.local/schemas/core/session-context-base.schema.json" },
+    "recommendation": { "$ref": "https://kiobridge.local/schemas/core/recommendation.schema.json" },
+    "userDecision": { "$ref": "https://kiobridge.local/schemas/core/user-decision.schema.json" },
+    "executionPlan": { "$ref": "https://kiobridge.local/schemas/core/execution-plan.schema.json" },
+    "extensions": {
+      "type": "object",
+      "description": "팀 namespace(teamId) 기반 자유 확장. 공식 안전규칙을 우회할 수 없습니다.",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["schemaVersion"],
+        "properties": {
+          "schemaVersion": { "type": "string" },
+          "features": { "type": "array", "items": { "type": "string" } },
+          "profileData": { "type": "object" },
+          "recommendationData": { "type": "object" },
+          "metadata": { "type": "object" }
+        }
+      }
+    },
+    "accessibilityEvidence": { "type": "object" },
+    "teamMetadata": { "type": "object" }
+  }
+}

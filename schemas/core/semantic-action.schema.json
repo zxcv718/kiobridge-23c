@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/core/semantic-action.schema.json",
+  "title": "SemanticAction",
+  "description": "의미 기반 Action. 좌표·UIA·컨트롤 ID 금지.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "actionIndex",
+    "action",
+    "target",
+    "expectedBeforeState",
+    "expectedAfterState"
+  ],
+  "properties": {
+    "actionIndex": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "action": {
+      "type": "string"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "groupId": {
+          "type": "string"
+        }
+      }
+    },
+    "value": {
+      "type": [
+        "string",
+        "number",
+        "boolean",
+        "null"
+      ]
+    },
+    "expectedBeforeState": {
+      "type": "string"
+    },
+    "expectedAfterState": {
+      "type": "string"
+    }
+  }
+}

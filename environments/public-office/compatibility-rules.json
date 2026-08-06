@@ -1,0 +1,99 @@
+{
+  "version": "1.0.0",
+  "environmentId": "public-office",
+  "rules": [
+    {
+      "ruleId": "PUBLIC_OFFICE_AUTH_METHOD_INTERSECTION",
+      "description": "이용 가능한 인증수단과 후보 요구수단의 교집합",
+      "source": {
+        "section": "capabilities",
+        "path": "availableAuthMethods"
+      },
+      "candidate": {
+        "source": "requirements",
+        "key": "authenticationMethods"
+      },
+      "operator": "INTERSECTS",
+      "severity": "BLOCK",
+      "unknownPolicy": "RECONFIRM",
+      "errorCode": "AUTH_METHOD_UNAVAILABLE",
+      "wildcardCandidateValues": [
+        "STAFF_ASSIST"
+      ],
+      "absentMeans": "UNKNOWN"
+    },
+    {
+      "ruleId": "PUBLIC_OFFICE_SERVICE_CATEGORY_COMPATIBILITY",
+      "description": "민원 카테고리 호환성",
+      "source": {
+        "section": "facts",
+        "path": "serviceCategory"
+      },
+      "candidate": {
+        "source": "supportedOptions",
+        "key": "CATEGORY"
+      },
+      "operator": "IN",
+      "severity": "BLOCK",
+      "unknownPolicy": "RECONFIRM",
+      "errorCode": "REQUESTED_SERVICE_MISMATCH",
+      "wildcardCandidateValues": [
+        "STAFF"
+      ]
+    },
+    {
+      "ruleId": "PUBLIC_OFFICE_REQUESTED_SERVICE_MATCH",
+      "description": "사용자가 지정한 서비스와 추천 후보의 일치",
+      "source": {
+        "section": "intent",
+        "path": "requestedServiceId"
+      },
+      "candidate": {
+        "source": "field",
+        "key": "candidateId"
+      },
+      "operator": "EQUALS",
+      "severity": "BLOCK",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "REQUESTED_SERVICE_MISMATCH"
+    },
+    {
+      "ruleId": "PUBLIC_SELECTED_AUTH_METHOD",
+      "description": "실행계획이 선택한 인증수단",
+      "evaluationScope": "EXECUTION_CHOICE",
+      "source": {
+        "section": "capabilities",
+        "path": "availableAuthMethods"
+      },
+      "target": {
+        "source": "executionSelectedOption",
+        "key": "AUTH_METHOD"
+      },
+      "operator": "CONTAINS_SELECTED",
+      "severity": "BLOCK",
+      "unknownPolicy": "RECONFIRM",
+      "errorCode": "SELECTED_AUTH_METHOD_UNAVAILABLE",
+      "absentMeans": "UNKNOWN",
+      "wildcardCandidateValues": [
+        "STAFF_ASSIST"
+      ]
+    },
+    {
+      "ruleId": "PUBLIC_SELECTED_SERVICE",
+      "description": "최종 선택한 서비스와 요청 서비스 일치",
+      "evaluationScope": "EXECUTION_CHOICE",
+      "source": {
+        "section": "intent",
+        "path": "requestedServiceId"
+      },
+      "target": {
+        "source": "executionSelectedValue",
+        "key": "candidateId"
+      },
+      "operator": "EQUALS_SELECTED",
+      "severity": "BLOCK",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "SELECTED_SERVICE_MISMATCH"
+    }
+  ]
+}

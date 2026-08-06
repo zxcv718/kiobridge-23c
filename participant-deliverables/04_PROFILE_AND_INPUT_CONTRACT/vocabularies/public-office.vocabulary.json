@@ -1,0 +1,37 @@
+{
+  "vocabularyVersion": "1.0.0",
+  "environmentId": "public-office",
+  "facts": {
+    "serviceCategory": [
+      "RESIDENT",
+      "FAMILY",
+      "INSURANCE",
+      "TAX",
+      "STAFF",
+      "UNKNOWN"
+    ]
+  },
+  "preferences": {
+    "stepByStep": {
+      "type": "boolean"
+    },
+    "simpleLanguage": {
+      "type": "boolean"
+    }
+  },
+  "hardConstraints": {
+    "legalEligibilityInferenceAllowed": [
+      false
+    ]
+  },
+  "capabilities": {
+    "availableAuthMethods": [
+      "MOBILE_AUTH",
+      "ID_CARD",
+      "BIOMETRIC",
+      "STAFF_ASSIST",
+      "NONE",
+      "UNKNOWN"
+    ]
+  }
+}

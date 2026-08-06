@@ -1,0 +1,80 @@
+// ══════════════════════════════════════════════════════════════════════
+// 이 파일은 설명용입니다.
+// JSONC 주석이 있으므로 API 에 직접 제출하지 마세요 (JSON 파싱 실패).
+// 실행 예제는 ../submission-format-example/sandbox.json 을 사용하세요.
+// ══════════════════════════════════════════════════════════════════════
+
+// Evidence — 서버가 만든 실행 증거
+//
+// 누가 만드나: 플랫폼 (참가팀이 만들지 않습니다)
+// 언제:       execute 직후
+// 참가팀은 이것을 읽기만 합니다.
+{
+  // 이 실행의 식별자
+  "runId": "RUN-…",
+
+  // [핵심] PASS / FAIL — 다만 아래 resultScope 와 함께 읽어야 합니다.
+  "result": "PASS",
+
+  // [핵심] 항상 SIMULATION_VALIDATION_ONLY.
+  //        "계약·안전·상태 전환을 통과했다" 는 뜻이지 "좋은 추천" 이라는 뜻이 아닙니다.
+  "resultScope": "SIMULATION_VALIDATION_ONLY",
+
+  // 무엇을 검사했는지 항목별로
+  "simulationValidation": {
+    "result": "PASS",
+    "contractValid": true,
+    "safetyValid": true,
+    "stateTransitionValid": true,
+    "boundaryReached": true,
+    "requiredVerifierExecuted": true
+  },
+
+  // 추천 품질은 공개 시뮬레이터가 채점하지 않습니다.
+  "recommendationEvaluation": { "status": "NOT_EVALUATED_PUBLICLY" },
+  // 최종 점수는 비공개 채점 + 심사위원
+  "hackathonEvaluation": { "status": "PRIVATE_AND_JUDGE_EVALUATION_REQUIRED" },
+
+  // 두 단계 호환성 결과
+  "domainCompatibility": {
+    // Stage A — 이 후보가 사용자를 지원할 수 있나
+    "candidate": { "evaluated": true, "blockingErrorCount": 0, "warningCount": 0, "rules": [] },
+    // Stage B — 실행계획이 실제로 고른 값이 맞나
+    "executionChoice": { "evaluated": true, "blockingErrorCount": 0, "warningCount": 0, "rules": [] }
+  },
+
+  // 계획이 실제로 무엇을 선택했는지, 플랫폼이 읽은 대로
+  "executionChoices": { "candidateId": "…", "selectedOptions": {}, "quantity": 1 },
+
+  // 의미 대상이 화면 어디로 해석됐는지.
+  // SYNTHETIC_MOCK = 시뮬레이션 안의 가상 위치이며 실제 좌표가 아닙니다.
+  "resolvedSimulationTrace": [
+    {
+      "actionIndex": 1,
+      "semanticTarget": { "kind": "candidate", "id": "…" },
+      "resolvedTarget": {
+        "pageIndex": 1, "slotIndex": 0,
+        "template": "FOUR_CARD_GRID",
+        "navigationClassification": "SYNTHETIC_MOCK"
+      }
+    }
+  ],
+
+  // 검토화면의 각 값이 어느 공식 소스에서 나왔는지
+  "reviewResolution": { "fields": [], "unresolvedRequiredFields": [] },
+
+  // 안전 관련 — 셋 다 이 값이어야 합니다
+  "actualDeviceCommandSent": false,
+  "validationMode": "SIMULATION_ONLY",
+  "executionEnvironment": "DIGITAL_TWIN",
+
+  // 결제는 계획에만 있어도 FAIL 입니다
+  "plannedPaymentActionCount": 0,
+  "executedPaymentActionCount": 0,
+  "blockedPaymentActionCount": 0,
+
+  // NORMAL_BOUNDARY_STOP = 경계에 도달하고 verifier 도 실행함
+  // SAFETY_STOP          = 오류·금지 Action·불완전 계획으로 중단 (항상 FAIL)
+  "stopType": "NORMAL_BOUNDARY_STOP",
+  "stopReason": "…"
+}

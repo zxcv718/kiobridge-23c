@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/core/recommendation.schema.json",
+  "title": "Recommendation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "recommendedCandidateId",
+    "alternativeCandidateIds",
+    "excludedCandidates",
+    "recommendationReasons",
+    "confidence",
+    "requiresReconfirmation"
+  ],
+  "properties": {
+    "recommendedCandidateId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "alternativeCandidateIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "excludedCandidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidateId",
+          "reasonCode"
+        ],
+        "properties": {
+          "candidateId": {
+            "type": "string"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "reasonText": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "scoreBreakdown": {
+      "type": "object"
+    },
+    "recommendationReasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "unmetConditions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "requiresReconfirmation": {
+      "type": "boolean"
+    }
+  }
+}

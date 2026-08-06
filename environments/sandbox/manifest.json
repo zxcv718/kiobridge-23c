@@ -1,0 +1,45 @@
+{
+  "environmentId": "sandbox",
+  "name": "연습용 Sandbox",
+  "displayName": "연습용 Sandbox",
+  "description": "제출·검증·재생 연결 흐름을 연습하는 환경입니다. 평가에 사용되지 않습니다.",
+  "summary": "연결 흐름 연습 (평가 제외)",
+  "testFocus": "세션 생성 → 제출 → 검증 → 가상 키오스크 재생 → Evidence 왕복 연습",
+  "fixtureVersion": "sandbox@0.2.0",
+  "dataClassification": "SYNTHETIC_MOCK",
+  "sandbox": true,
+  "states": [
+    "WELCOME",
+    "ITEM_SELECTION",
+    "OPTION_SELECTION",
+    "REVIEW",
+    "STOP"
+  ],
+  "initialState": "WELCOME",
+  "reviewBoundaryState": "REVIEW",
+  "requiredVerifierAction": "verify_result",
+  "terminalState": "STOP",
+  "allowedActions": [
+    "start",
+    "select_item",
+    "select_option",
+    "open_review",
+    "verify_result",
+    "request_staff_help"
+  ],
+  "forbiddenActions": [
+    "select_payment",
+    "confirm_payment",
+    "submit_payment",
+    "submit_application",
+    "issue_document"
+  ],
+  "inputContract": {
+    "version": "1.0.0",
+    "schemaRef": "domains/sandbox.context.schema.json",
+    "vocabularyRef": "vocabularies/sandbox.vocabulary.json"
+  },
+  "supportedProfileContractVersions": [
+    "1.0.0"
+  ]
+}

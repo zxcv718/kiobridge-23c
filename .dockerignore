@@ -1,0 +1,47 @@
+# dependencies (OS-specific — never ship these)
+node_modules
+**/node_modules
+
+# build output
+dist
+**/dist
+build
+**/build
+.vite
+
+# test / coverage artefacts
+coverage
+playwright-report
+test-results
+
+# OS / editor junk
+__MACOSX
+.DS_Store
+*.swp
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.json
+
+# logs & scratch
+*.log
+release
+.tmp
+.cache
+
+# private evaluation data — MUST NOT be in the public repo/ZIP
+hidden-profiles
+hidden-scenarios
+expected-results
+private-tests
+kiobridge-private-evaluation
+
+# docker build context extras
+.git
+.github
+.devcontainer
+participant-deliverables

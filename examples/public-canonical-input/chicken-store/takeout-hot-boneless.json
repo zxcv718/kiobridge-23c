@@ -1,0 +1,58 @@
+{
+  "_note": "공식 평가 환경입니다. Canonical Profile 과 SessionContext 형식만 제공합니다. recommendation 과 executionPlan 은 참가팀이 직접 개발해야 하므로 포함하지 않습니다.",
+  "_expectedValidation": "VALID",
+  "inputContractVersion": "1.0.0",
+  "environmentId": "chicken-store",
+  "teamId": "TEAM-EXAMPLE",
+  "profile": {
+    "profileId": "EXAMPLE-PROFILE-CHK-A",
+    "dataClassification": "SYNTHETIC_PROFILE",
+    "source": {
+      "collectionChannel": "WEB_FORM",
+      "providerId": "TEAM-EXAMPLE",
+      "collectedAt": "2026-08-01T05:30:00.000Z"
+    },
+    "accessibility": {
+      "largeText": false,
+      "simpleSteps": false,
+      "visualGuidance": false,
+      "hearingSupport": false,
+      "mobilitySupport": false,
+      "highContrast": false,
+      "staffAssistancePreferred": false
+    },
+    "interaction": {
+      "preferredInput": "TOUCH",
+      "language": "ko-KR",
+      "confirmationRequired": true
+    },
+    "consent": {
+      "personalization": true,
+      "retentionPolicy": "SESSION_ONLY"
+    }
+  },
+  "sessionContext": {
+    "intent": {
+      "task": "ORDER_FOOD"
+    },
+    "facts": {},
+    "preferences": {
+      "serviceType": "TAKE_OUT",
+      "spicyLevel": "HOT",
+      "boneType": "BONELESS",
+      "cupOption": "PAPER",
+      "quantity": 1
+    },
+    "hardConstraints": {
+      "allergenIds": []
+    },
+    "capabilities": {},
+    "fieldMetadata": {
+      "/preferences/serviceType": {
+        "source": "WEB_FORM",
+        "confidence": 1,
+        "confirmedByUser": true
+      }
+    }
+  }
+}

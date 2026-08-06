@@ -1,0 +1,23 @@
+{
+  "_note": "예시 상황 정보입니다. 실제 서비스라면 날씨·혼잡도 API 를 부르되, 실패해도 기본 흐름이 동작해야 합니다.",
+  "contextSignals": [
+    {
+      "type": "WEATHER",
+      "key": "condition",
+      "value": "RAIN",
+      "source": "MOCK_WEATHER",
+      "observedAt": "2026-08-03T00:00:00Z",
+      "expiresAt": "2026-08-03T01:00:00Z",
+      "confidence": 1
+    },
+    {
+      "type": "CROWDING",
+      "key": "level",
+      "value": "BUSY",
+      "source": "MOCK_STORE_STATUS",
+      "observedAt": "2026-08-03T00:00:00Z",
+      "expiresAt": "2026-08-03T00:30:00Z",
+      "confidence": 0.8
+    }
+  ]
+}

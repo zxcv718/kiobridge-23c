@@ -1,0 +1,146 @@
+{
+  "version": "1.0.0",
+  "environmentId": "hospital",
+  "title": "접수 내용",
+  "notice": "실제 병원 접수가 완료되지 않았습니다. 시뮬레이션 검토 화면입니다.",
+  "fields": [
+    {
+      "fieldId": "visitType",
+      "label": "초진 · 재진",
+      "required": true,
+      "sources": [
+        {
+          "type": "selectedOption",
+          "key": "VISIT_TYPE"
+        },
+        {
+          "type": "selectedCandidateSupportedOption",
+          "key": "VISIT_TYPE",
+          "strategy": "FIRST"
+        },
+        {
+          "type": "sessionContext",
+          "path": "facts.visitType"
+        }
+      ],
+      "valueLabels": {
+        "FIRST_VISIT": "초진",
+        "REVISIT": "재진",
+        "HEALTH_SCREENING": "건강검진",
+        "EXAM": "검사",
+        "UNKNOWN": "방문유형 확인 필요"
+      }
+    },
+    {
+      "fieldId": "appointmentStatus",
+      "label": "예약 여부",
+      "required": true,
+      "sources": [
+        {
+          "type": "selectedOption",
+          "key": "APPOINTMENT"
+        },
+        {
+          "type": "selectedCandidateSupportedOption",
+          "key": "APPOINTMENT",
+          "strategy": "FIRST"
+        },
+        {
+          "type": "sessionContext",
+          "path": "facts.appointmentStatus"
+        }
+      ],
+      "valueLabels": {
+        "HAS_APPOINTMENT": "예약 있음",
+        "NO_APPOINTMENT": "예약 없음",
+        "UNKNOWN": "예약 여부 확인 필요"
+      }
+    },
+    {
+      "fieldId": "checkInRoute",
+      "label": "접수 경로",
+      "required": true,
+      "sources": [
+        {
+          "type": "selectedCandidateField",
+          "key": "name"
+        }
+      ]
+    },
+    {
+      "fieldId": "departmentId",
+      "label": "진료과",
+      "required": true,
+      "sources": [
+        {
+          "type": "selectedOption",
+          "key": "DEPARTMENT"
+        },
+        {
+          "type": "selectedCandidateSupportedOption",
+          "key": "DEPARTMENT",
+          "strategy": "FIRST"
+        },
+        {
+          "type": "sessionContext",
+          "path": "facts.departmentId"
+        }
+      ],
+      "valueLabels": {
+        "INTERNAL_MEDICINE": "내과",
+        "ORTHOPEDICS": "정형외과",
+        "RADIOLOGY": "영상의학과",
+        "HEALTH_SCREENING": "건강검진센터",
+        "UNSPECIFIED": "진료과 미지정",
+        "UNKNOWN": "진료과 확인 필요"
+      }
+    },
+    {
+      "fieldId": "guardianPresent",
+      "label": "보호자 동행",
+      "sources": [
+        {
+          "type": "sessionContext",
+          "path": "facts.guardianPresent"
+        }
+      ],
+      "valueLabels": {
+        "true": "동행",
+        "false": "미동행"
+      },
+      "fallbackLabel": "확인되지 않음"
+    },
+    {
+      "fieldId": "supportModes",
+      "label": "접근성 지원",
+      "sources": [
+        {
+          "type": "sessionContext",
+          "path": "preferences.supportModes",
+          "strategy": "JOIN",
+          "separator": ", ",
+          "itemValueLabels": {
+            "LARGE_TEXT": "큰 글씨",
+            "HEARING_SUPPORT": "청각 지원",
+            "VISUAL_GUIDANCE": "시각 안내",
+            "SIMPLE_STEPS": "쉬운 단계",
+            "STAFF_HELP": "직원 도움",
+            "GUARDIAN_MODE": "보호자 모드"
+          }
+        }
+      ],
+      "fallbackLabel": "지원 요청 없음"
+    },
+    {
+      "fieldId": "userConfirmed",
+      "label": "사용자 확인 상태",
+      "required": true,
+      "sources": [
+        {
+          "type": "uiState",
+          "path": "userDecisionLabel"
+        }
+      ]
+    }
+  ]
+}

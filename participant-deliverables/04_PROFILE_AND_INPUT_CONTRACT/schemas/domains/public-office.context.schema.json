@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/domains/public-office.context.schema.json",
+  "title": "public-office SessionContext",
+  "allOf": [
+    {
+      "$ref": "https://kiobridge.local/schemas/core/session-context-base.schema.json"
+    }
+  ],
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intent",
+    "facts",
+    "preferences",
+    "hardConstraints",
+    "capabilities"
+  ],
+  "properties": {
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task"
+      ],
+      "properties": {
+        "task": {
+          "const": "PUBLIC_SERVICE_GUIDANCE"
+        },
+        "requestedServiceId": {
+          "type": "string"
+        }
+      }
+    },
+    "facts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "serviceCategory": {
+          "enum": [
+            "RESIDENT",
+            "FAMILY",
+            "INSURANCE",
+            "TAX",
+            "STAFF",
+            "UNKNOWN"
+          ]
+        }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stepByStep": {
+          "type": "boolean"
+        },
+        "simpleLanguage": {
+          "type": "boolean"
+        }
+      }
+    },
+    "hardConstraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "legalEligibilityInferenceAllowed": {
+          "const": false
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "availableAuthMethods": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "MOBILE_AUTH",
+              "ID_CARD",
+              "BIOMETRIC",
+              "STAFF_ASSIST",
+              "NONE",
+              "UNKNOWN"
+            ]
+          }
+        }
+      }
+    },
+    "fieldMetadata": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "https://kiobridge.local/schemas/core/field-metadata.schema.json"
+      },
+      "propertyNames": {
+        "pattern": "^/"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "팀 namespace 확장 (예: TEAM_001.contextSignals). Core 필드 이름은 쓸 수 없습니다.",
+      "propertyNames": {
+        "pattern": "^[A-Z][A-Z0-9_]*\\.[A-Za-z][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": true
+    }
+  }
+}

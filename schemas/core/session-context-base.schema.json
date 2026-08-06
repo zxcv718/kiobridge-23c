@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/core/session-context-base.schema.json",
+  "title": "SessionContextBase",
+  "description": "이번 키오스크 이용에만 적용되는 정보. 환경별 스키마가 각 섹션을 좁힙니다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intent",
+    "facts",
+    "preferences",
+    "hardConstraints",
+    "capabilities"
+  ],
+  "properties": {
+    "intent": {
+      "type": "object",
+      "required": [
+        "task"
+      ],
+      "properties": {
+        "task": {
+          "enum": [
+            "ORDER_FOOD",
+            "CHECK_IN",
+            "PUBLIC_SERVICE_GUIDANCE",
+            "PRACTICE"
+          ]
+        }
+      }
+    },
+    "facts": {
+      "type": "object",
+      "description": "확인된 객관적 사실"
+    },
+    "preferences": {
+      "type": "object",
+      "description": "선호(위반해도 BLOCK 아님)"
+    },
+    "hardConstraints": {
+      "type": "object",
+      "description": "위반 시 후보를 반드시 제외"
+    },
+    "capabilities": {
+      "type": "object",
+      "description": "현재 사용 가능한 수단"
+    },
+    "fieldMetadata": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "https://kiobridge.local/schemas/core/field-metadata.schema.json"
+      },
+      "propertyNames": {
+        "pattern": "^/"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "팀 namespace 확장 (예: TEAM_001.contextSignals). Core 필드 이름은 쓸 수 없습니다.",
+      "propertyNames": {
+        "pattern": "^[A-Z][A-Z0-9_]*\\.[A-Za-z][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": true
+    }
+  }
+}

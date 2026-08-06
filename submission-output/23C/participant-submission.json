@@ -1,0 +1,356 @@
+{
+  "inputContractVersion": "1.0.0",
+  "submissionVersion": "1.0.0",
+  "teamId": "23C",
+  "environmentId": "chicken-store",
+  "profile": {
+    "profileId": "23C-PROFILE-001",
+    "dataClassification": "SYNTHETIC_PROFILE",
+    "source": {
+      "collectionChannel": "WEB_FORM",
+      "providerId": "23C",
+      "collectedAt": "2026-08-06T06:37:43.442Z"
+    },
+    "accessibility": {
+      "largeText": true,
+      "simpleSteps": true,
+      "visualGuidance": true,
+      "hearingSupport": false,
+      "mobilitySupport": false,
+      "highContrast": false,
+      "staffAssistancePreferred": true
+    },
+    "interaction": {
+      "preferredInput": "TOUCH",
+      "language": "ko-KR",
+      "confirmationRequired": true
+    },
+    "consent": {
+      "personalization": true,
+      "retentionPolicy": "SESSION_ONLY"
+    }
+  },
+  "sessionContext": {
+    "intent": {
+      "task": "ORDER_FOOD"
+    },
+    "facts": {},
+    "preferences": {
+      "serviceType": "TAKE_OUT",
+      "spicyLevel": "HOT",
+      "boneType": "BONELESS",
+      "cupOption": "PAPER",
+      "quantity": 1
+    },
+    "hardConstraints": {
+      "allergenIds": [
+        "PEANUT"
+      ],
+      "maxPriceKrw": 10000
+    },
+    "capabilities": {},
+    "fieldMetadata": {
+      "/preferences/serviceType": {
+        "source": "WEB_FORM",
+        "confidence": 1,
+        "confirmedByUser": true
+      },
+      "/preferences/spicyLevel": {
+        "source": "WEB_FORM",
+        "confidence": 1,
+        "confirmedByUser": true
+      },
+      "/preferences/boneType": {
+        "source": "WEB_FORM",
+        "confidence": 1,
+        "confirmedByUser": true
+      },
+      "/preferences/cupOption": {
+        "source": "WEB_FORM",
+        "confidence": 1,
+        "confirmedByUser": true
+      },
+      "/preferences/quantity": {
+        "source": "WEB_FORM",
+        "confidence": 1,
+        "confirmedByUser": true
+      },
+      "/hardConstraints/allergenIds": {
+        "source": "WEB_FORM",
+        "confidence": 1,
+        "confirmedByUser": true
+      },
+      "/hardConstraints/maxPriceKrw": {
+        "source": "WEB_FORM",
+        "confidence": 1,
+        "confirmedByUser": true
+      }
+    },
+    "extensions": {
+      "TEAM_23C.contextSignals": [
+        {
+          "type": "TIME_OF_DAY",
+          "key": "slot",
+          "value": "OFF_PEAK",
+          "source": "DEVICE_CLOCK",
+          "observedAt": "2026-08-06T06:37:43.443Z",
+          "expiresAt": "2026-08-06T07:37:43.443Z",
+          "confidence": 1
+        },
+        {
+          "type": "STOCK",
+          "key": "soldOutCount",
+          "value": "1",
+          "source": "FIXTURE",
+          "observedAt": "2026-08-06T06:37:43.443Z",
+          "expiresAt": "2026-08-06T07:37:43.443Z",
+          "confidence": 1
+        }
+      ]
+    }
+  },
+  "recommendation": {
+    "recommendedCandidateId": "CHICKEN-001",
+    "alternativeCandidateIds": [
+      "CHICKEN-003",
+      "CHICKEN-002"
+    ],
+    "excludedCandidates": [
+      {
+        "candidateId": "CHICKEN-005",
+        "reasonCode": "ALLERGEN_CONFLICT",
+        "explanation": "등록하신 땅콩 알레르기와 겹치는 재료가 있어 제외했습니다."
+      },
+      {
+        "candidateId": "CHICKEN-007",
+        "reasonCode": "SERVICE_TYPE_UNSUPPORTED",
+        "explanation": "포장을 원하셨는데 이 메뉴는 포장이 불가능해 제외했습니다."
+      },
+      {
+        "candidateId": "CHICKEN-008",
+        "reasonCode": "CANDIDATE_UNAVAILABLE",
+        "explanation": "품절 닭강정은(는) 품절이라 제외했습니다."
+      }
+    ],
+    "scoreBreakdown": {
+      "CHICKEN-001": 90,
+      "CHICKEN-003": 80,
+      "CHICKEN-002": 65,
+      "CHICKEN-006": 65,
+      "CHICKEN-004": 55
+    },
+    "recommendationReasons": [
+      "포장을 원하셔서 포장이 가능한 메뉴 중에서 골랐습니다.",
+      "매운맛을 선호하셔서 매운맛 메뉴를 먼저 보여드립니다.",
+      "순살을 선호하셔서 순살 메뉴를 골랐습니다.",
+      "예산 10,000원 이내의 메뉴만 추천 대상에 두었습니다.",
+      "등록하신 알레르기와 겹치는 메뉴 1개를 제외했습니다.",
+      "품절된 메뉴 1개를 제외했습니다.",
+      "원하시는 이용 방식이 불가능한 메뉴 1개를 제외했습니다.",
+      "이용 방식을 직접 골라 주셔서, 시간대(한산한 시간)는 순서에 반영하지 않았습니다."
+    ],
+    "unmetConditions": [],
+    "confidence": 0.64,
+    "requiresReconfirmation": false
+  },
+  "userDecision": {
+    "approved": true,
+    "decision": "APPROVE",
+    "confirmedAt": "2026-08-06T06:37:43.455Z"
+  },
+  "executionPlan": {
+    "planId": "PLAN-23C-chicken-store",
+    "validationMode": "SIMULATION_ONLY",
+    "executionEnvironment": "DIGITAL_TWIN",
+    "actualDeviceCommandSent": false,
+    "actions": [
+      {
+        "actionIndex": 0,
+        "action": "select_service",
+        "target": {
+          "kind": "service_type",
+          "id": "TAKE_OUT"
+        },
+        "expectedBeforeState": "SERVICE_TYPE",
+        "expectedAfterState": "MENU_SELECTION"
+      },
+      {
+        "actionIndex": 1,
+        "action": "select_menu",
+        "target": {
+          "kind": "candidate",
+          "id": "CHICKEN-001"
+        },
+        "expectedBeforeState": "MENU_SELECTION",
+        "expectedAfterState": "OPTION_SELECTION"
+      },
+      {
+        "actionIndex": 2,
+        "action": "select_option",
+        "target": {
+          "kind": "option",
+          "groupId": "SPICY_LEVEL",
+          "id": "HOT"
+        },
+        "expectedBeforeState": "OPTION_SELECTION",
+        "expectedAfterState": "OPTION_SELECTION"
+      },
+      {
+        "actionIndex": 3,
+        "action": "select_option",
+        "target": {
+          "kind": "option",
+          "groupId": "BONE_TYPE",
+          "id": "BONELESS"
+        },
+        "expectedBeforeState": "OPTION_SELECTION",
+        "expectedAfterState": "OPTION_SELECTION"
+      },
+      {
+        "actionIndex": 4,
+        "action": "select_option",
+        "target": {
+          "kind": "option",
+          "groupId": "CUP",
+          "id": "PAPER"
+        },
+        "expectedBeforeState": "OPTION_SELECTION",
+        "expectedAfterState": "OPTION_SELECTION"
+      },
+      {
+        "actionIndex": 5,
+        "action": "select_option",
+        "target": {
+          "kind": "option",
+          "groupId": "QUANTITY",
+          "id": "Q1"
+        },
+        "value": 1,
+        "expectedBeforeState": "OPTION_SELECTION",
+        "expectedAfterState": "OPTION_SELECTION"
+      },
+      {
+        "actionIndex": 6,
+        "action": "confirm_option",
+        "target": {
+          "kind": "review",
+          "id": "OPTION_CONFIRM"
+        },
+        "expectedBeforeState": "OPTION_SELECTION",
+        "expectedAfterState": "OPTION_CONFIRM"
+      },
+      {
+        "actionIndex": 7,
+        "action": "confirm_option",
+        "target": {
+          "kind": "review",
+          "id": "MENU_SELECTION_WITH_CART"
+        },
+        "expectedBeforeState": "OPTION_CONFIRM",
+        "expectedAfterState": "MENU_SELECTION_WITH_CART"
+      },
+      {
+        "actionIndex": 8,
+        "action": "open_cart_review",
+        "target": {
+          "kind": "review",
+          "id": "CART_REVIEW"
+        },
+        "expectedBeforeState": "MENU_SELECTION_WITH_CART",
+        "expectedAfterState": "CART_REVIEW"
+      },
+      {
+        "actionIndex": 9,
+        "action": "verify_cart",
+        "target": {
+          "kind": "review",
+          "id": "CART_REVIEW"
+        },
+        "expectedBeforeState": "CART_REVIEW",
+        "expectedAfterState": "CART_REVIEW"
+      }
+    ]
+  },
+  "extensions": {
+    "23C": {
+      "schemaVersion": "1.0.0",
+      "features": [
+        "loginless-session-only",
+        "device-profile-optional-with-delete",
+        "profile-session-storage-boundary",
+        "accessibility-7-flags",
+        "explainable-recommendation",
+        "context-signals-time-of-day",
+        "staff-help-every-step",
+        "safety-injection-demo"
+      ],
+      "recommendationData": {
+        "engine": "deterministic-weighted-score",
+        "weights": {
+          "spicy": 25,
+          "bone": 20,
+          "service": 25,
+          "cup": 10,
+          "price": 20
+        },
+        "contextSignalCount": 2,
+        "note": "외부 맥락은 정렬 순서만 조정하며 후보를 제거하지 않습니다. 하드 제약 > 선호 > 맥락 순서를 지킵니다."
+      },
+      "metadata": {
+        "collectionChannel": "WEB_FORM",
+        "llmUsed": false,
+        "externalApiUsed": false
+      }
+    }
+  },
+  "accessibilityEvidence": {
+    "supportModesOfferedByService": [
+      "LARGE_TEXT",
+      "HEARING_SUPPORT",
+      "VISUAL_GUIDANCE",
+      "SIMPLE_STEPS",
+      "STAFF_HELP",
+      "GUARDIAN_MODE"
+    ],
+    "supportModesSelectedInThisSession": [
+      "LARGE_TEXT",
+      "VISUAL_GUIDANCE",
+      "SIMPLE_STEPS",
+      "STAFF_HELP"
+    ],
+    "additionalControls": [
+      "HIGH_CONTRAST",
+      "LARGER_TOUCH_TARGETS"
+    ],
+    "profileFlagsOn": [
+      "largeText",
+      "simpleSteps",
+      "visualGuidance",
+      "staffAssistancePreferred"
+    ],
+    "preferredInput": "TOUCH",
+    "uiGuarantees": {
+      "minTouchTargetPx": 48,
+      "keyboardOnlyFlowSupported": true,
+      "focusVisibleOutlinePx": 3,
+      "respectsPrefersReducedMotion": true,
+      "staffHelpReachableFromEveryStep": true,
+      "iconsAlwaysPairedWithText": true
+    },
+    "notImplemented": [
+      "VOICE_INPUT"
+    ],
+    "verification": {
+      "static": "workspace/23C/tests/a11y.test.ts — 스타일·마크업에서 uiGuarantees 검사 (11건)",
+      "measured": "workspace/23C/tests/e2e/keyboard.spec.ts — 실제 브라우저에서 키보드 완주·포커스 가시성·타깃 크기·200% 확대·색상 비의존 측정 (6건)",
+      "lastMeasuredResult": "PASS"
+    }
+  },
+  "teamMetadata": {
+    "teamId": "23C",
+    "serviceName": "주문 도우미",
+    "environmentId": "chicken-store",
+    "fixtureId": "chicken-store",
+    "fixtureVersion": "0.2.0"
+  }
+}

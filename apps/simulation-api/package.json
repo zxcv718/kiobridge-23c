@@ -1,0 +1,26 @@
+{
+  "name": "@kiobridge/simulation-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@kiobridge/contracts": "*",
+    "@kiobridge/state-engine": "*",
+    "@kiobridge/safety-engine": "*",
+    "@kiobridge/evaluator": "*",
+    "ajv": "^8.17.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "@kiobridge/profile-contract": "*",
+    "@kiobridge/simulation-driver": "*",
+    "@kiobridge/kiosk-driver-contract": "*"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21"
+  }
+}

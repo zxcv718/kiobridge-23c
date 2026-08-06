@@ -1,0 +1,15 @@
+{
+  "name": "@kiobridge/minimal-participant-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "demo": "RUN_EXAMPLE=1 tsx src/index.ts"
+  },
+  "dependencies": {
+    "@kiobridge/participant-sdk": "*",
+    "@kiobridge/contracts": "*"
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/core/environment-pack.schema.json",
+  "title": "EnvironmentManifest",
+  "description": "Manifest for a pluggable environment pack. The platform reads /environments/* and lists any pack whose manifest validates. Participant packs are validated separately and cannot overwrite official packs.",
+  "type": "object",
+  "required": [
+    "environmentId",
+    "fixtureVersion",
+    "initialState",
+    "reviewBoundaryState",
+    "requiredVerifierAction",
+    "terminalState",
+    "states",
+    "allowedActions",
+    "forbiddenActions",
+    "dataClassification",
+    "inputContract",
+    "supportedProfileContractVersions"
+  ],
+  "properties": {
+    "environmentId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "name": {
+      "type": "string"
+    },
+    "displayName": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "string"
+    },
+    "testFocus": {
+      "type": "string"
+    },
+    "fixtureVersion": {
+      "type": "string"
+    },
+    "dataClassification": {
+      "enum": [
+        "SYNTHETIC_MOCK",
+        "ACTUAL_EXTRACTED",
+        "PENDING_REAL_DEVICE"
+      ]
+    },
+    "states": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 2
+    },
+    "initialState": {
+      "type": "string"
+    },
+    "reviewBoundaryState": {
+      "type": "string"
+    },
+    "requiredVerifierAction": {
+      "type": "string",
+      "pattern": "^verify_"
+    },
+    "terminalState": {
+      "const": "STOP"
+    },
+    "allowedActions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "forbiddenActions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inputContract": {
+      "type": "object",
+      "required": [
+        "version",
+        "schemaRef",
+        "vocabularyRef"
+      ],
+      "properties": {
+        "version": {
+          "type": "string"
+        },
+        "schemaRef": {
+          "type": "string"
+        },
+        "vocabularyRef": {
+          "type": "string"
+        }
+      }
+    },
+    "supportedProfileContractVersions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sandbox": {
+      "type": "boolean"
+    }
+  }
+}

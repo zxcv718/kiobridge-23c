@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" width="900" height="560" font-family="-apple-system, 'Segoe UI', 'Noto Sans KR', sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">KioBridge 역할 분리 개요</title>
+  <desc id="d">참가팀은 정보 수집, Canonical 변환, 추천, 사용자 승인, 실행계획을 만들고, KioBridge 공식 플랫폼은 계약 검증, 안전 검증, 가상 키오스크 재생, Evidence 생성을 담당합니다.</desc>
+
+  <style>
+    .bg    { fill: #ffffff; }
+    .zoneA { fill: #eef4ff; stroke: #6b8fd6; stroke-width: 1.5; }
+    .zoneB { fill: #f2f7f0; stroke: #6fa368; stroke-width: 1.5; }
+    .box   { fill: #ffffff; stroke: #9aa4b2; stroke-width: 1.2; rx: 6; }
+    .zt    { font-size: 15px; font-weight: 700; }
+    .ztA   { fill: #2c4f96; }
+    .ztB   { fill: #3d6b35; }
+    .sub   { font-size: 11px; fill: #64748b; }
+    .lbl   { font-size: 12.5px; fill: #1f2937; }
+    .num   { font-size: 11px; font-weight: 700; fill: #6b7280; }
+    .arrow { stroke: #64748b; stroke-width: 1.4; fill: none; marker-end: url(#a); }
+    .note  { font-size: 11.5px; fill: #7c4a03; }
+    .noteBox { fill: #fdf6e3; stroke: #d9a441; stroke-width: 1.2; rx: 5; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0f1419; }
+      .zoneA { fill: #16233d; stroke: #5b7fc4; }
+      .zoneB { fill: #17281a; stroke: #5f9257; }
+      .box { fill: #1c232c; stroke: #48525f; }
+      .ztA { fill: #9dbcf5; } .ztB { fill: #a3d199; }
+      .lbl { fill: #e5e7eb; } .sub { fill: #94a3b8; } .num { fill: #9ca3af; }
+      .arrow { stroke: #94a3b8; }
+      .noteBox { fill: #2b2312; stroke: #b8862f; } .note { fill: #e8c169; }
+    }
+  </style>
+
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="900" height="560"/>
+
+  <!-- Participant zone -->
+  <rect class="zoneA" x="24" y="52" width="392" height="378" rx="10"/>
+  <text class="zt ztA" x="44" y="80">참가팀이 만드는 것</text>
+  <text class="sub" x="44" y="98">수집 방식은 자유 · 추천 로직은 심사 대상</text>
+
+  <g>
+    <rect class="box" x="44" y="112" width="352" height="42"/>
+    <text class="num" x="58" y="138">1</text>
+    <text class="lbl" x="78" y="132">정보 수집 인터페이스</text>
+    <text class="sub" x="78" y="147">웹 · 앱 · 음성 · AI 대화 · 보호자 대리입력</text>
+
+    <rect class="box" x="44" y="164" width="352" height="42"/>
+    <text class="num" x="58" y="190">2</text>
+    <text class="lbl" x="78" y="184">Canonical 변환</text>
+    <text class="sub" x="78" y="199">profile (지속) + sessionContext (이번 세션)</text>
+
+    <rect class="box" x="44" y="216" width="352" height="42"/>
+    <text class="num" x="58" y="242">3</text>
+    <text class="lbl" x="78" y="236">후보 필터링 · 추천 · 이유 · 대안</text>
+    <text class="sub" x="78" y="251">hardConstraint 위반은 제외, 선호는 순위에 반영</text>
+
+    <rect class="box" x="44" y="268" width="352" height="42"/>
+    <text class="num" x="58" y="294">4</text>
+    <text class="lbl" x="78" y="288">사용자 설명 → 승인</text>
+    <text class="sub" x="78" y="303">승인 없는 실행계획은 거부됩니다</text>
+
+    <rect class="box" x="44" y="320" width="352" height="42"/>
+    <text class="num" x="58" y="346">5</text>
+    <text class="lbl" x="78" y="340">의미 기반 실행계획</text>
+    <text class="sub" x="78" y="355">target: {kind, id} — 좌표·컨트롤 ID 없음</text>
+  </g>
+
+  <text class="sub" x="44" y="392">Participant Starter 의 9개 함수가 이 다섯 단계입니다.</text>
+  <text class="sub" x="44" y="410">examples/minimal-participant-client/src/participant.ts</text>
+
+  <!-- Platform zone -->
+  <rect class="zoneB" x="484" y="52" width="392" height="378" rx="10"/>
+  <text class="zt ztB" x="504" y="80">KioBridge 공식 플랫폼</text>
+  <text class="sub" x="504" y="98">서버가 판정 · 브라우저는 재생만</text>
+
+  <g>
+    <rect class="box" x="504" y="112" width="352" height="42"/>
+    <text class="num" x="518" y="138">6</text>
+    <text class="lbl" x="538" y="132">계약 검증</text>
+    <text class="sub" x="538" y="147">스키마 · enum · 버전 · PII · 섹션 배치</text>
+
+    <rect class="box" x="504" y="164" width="352" height="42"/>
+    <text class="num" x="518" y="190">7</text>
+    <text class="lbl" x="538" y="184">안전 검증</text>
+    <text class="sub" x="538" y="199">결제는 계획에만 있어도 FAIL</text>
+
+    <rect class="box" x="504" y="216" width="352" height="42"/>
+    <text class="num" x="518" y="242">8</text>
+    <text class="lbl" x="538" y="236">가상 키오스크 재생</text>
+    <text class="sub" x="538" y="251">Simulation Driver · 상태 전환 검사</text>
+
+    <rect class="box" x="504" y="268" width="352" height="42"/>
+    <text class="num" x="518" y="294">9</text>
+    <text class="lbl" x="538" y="288">검토 경계에서 정지</text>
+    <text class="sub" x="538" y="303">결제 · 본인확인 · 행정확정 직전</text>
+
+    <rect class="box" x="504" y="320" width="352" height="42"/>
+    <text class="num" x="518" y="346">10</text>
+    <text class="lbl" x="538" y="340">Evidence 생성</text>
+    <text class="sub" x="538" y="355">resultScope: SIMULATION_VALIDATION_ONLY</text>
+  </g>
+
+  <text class="sub" x="504" y="392">Driver 교체 가능: SIMULATION (READY) / UPRLITE (PENDING_REAL_DEVICE)</text>
+  <text class="sub" x="504" y="410">같은 실행계획이 그대로 동작합니다.</text>
+
+  <!-- Arrows across the boundary -->
+  <path class="arrow" d="M 400 200 L 500 145"/>
+  <text class="sub" x="404" y="182">GET fixture</text>
+
+  <path class="arrow" d="M 400 341 L 500 130"/>
+  <text class="sub" x="410" y="336">POST submission</text>
+
+  <path class="arrow" d="M 500 350 L 400 428"/>
+  <text class="sub" x="404" y="424">Evidence 반환</text>
+
+  <!-- Bottom note -->
+  <rect class="noteBox" x="24" y="452" width="852" height="80"/>
+  <text class="note" x="44" y="476" font-weight="700">SIMULATION_ONLY · DIGITAL_TWIN</text>
+  <text class="note" x="44" y="496">실제 Windows 키오스크 · VoiceBridge · UPRLite · 결제 · 병원 접수 · 행정 시스템에 연결하지 않습니다.</text>
+  <text class="note" x="44" y="516">actualDeviceCommandSent 는 항상 false 이며, SIMULATION PASS 는 계약·안전 검증만 의미합니다.</text>
+</svg>

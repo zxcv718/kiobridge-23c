@@ -1,0 +1,41 @@
+{
+  "registryVersion": "1.0.0",
+  "environments": [
+    {
+      "environmentId": "chicken-store",
+      "inputContractVersion": "1.0.0",
+      "schemaRef": "domains/chicken-store.context.schema.json",
+      "vocabularyRef": "vocabularies/chicken-store.vocabulary.json",
+      "supportedProfileContractVersions": [
+        "1.0.0"
+      ]
+    },
+    {
+      "environmentId": "hospital",
+      "inputContractVersion": "1.0.0",
+      "schemaRef": "domains/hospital.context.schema.json",
+      "vocabularyRef": "vocabularies/hospital.vocabulary.json",
+      "supportedProfileContractVersions": [
+        "1.0.0"
+      ]
+    },
+    {
+      "environmentId": "public-office",
+      "inputContractVersion": "1.0.0",
+      "schemaRef": "domains/public-office.context.schema.json",
+      "vocabularyRef": "vocabularies/public-office.vocabulary.json",
+      "supportedProfileContractVersions": [
+        "1.0.0"
+      ]
+    },
+    {
+      "environmentId": "sandbox",
+      "inputContractVersion": "1.0.0",
+      "schemaRef": "domains/sandbox.context.schema.json",
+      "vocabularyRef": "vocabularies/sandbox.vocabulary.json",
+      "supportedProfileContractVersions": [
+        "1.0.0"
+      ]
+    }
+  ]
+}

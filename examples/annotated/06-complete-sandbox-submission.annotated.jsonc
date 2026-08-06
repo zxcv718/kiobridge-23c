@@ -1,0 +1,38 @@
+// ══════════════════════════════════════════════════════════════════════
+// 이 파일은 설명용입니다.
+// JSONC 주석이 있으므로 API 에 직접 제출하지 마세요 (JSON 파싱 실패).
+// 실행 예제는 ../submission-format-example/sandbox.json 을 사용하세요.
+// ══════════════════════════════════════════════════════════════════════
+
+// 전체 제출 — Sandbox 기준
+//
+// Sandbox 는 평가 대상이 아니므로 완성 형태를 보여줄 수 있습니다.
+// 공식 3환경(닭강정·병원·관공서)의 완성 recommendation·executionPlan 은
+// 이 폴더 어디에도 없습니다.
+//
+// 실행 가능한 파일: ../submission-format-example/sandbox.json
+{
+  // [필수] 현재 1.0.0. 이번 릴리스에서 바뀌지 않았습니다.
+  "inputContractVersion": "1.0.0",
+  // [필수] 제출 형식 버전
+  "submissionVersion": "1.0.0",
+  // [필수] 팀 ID
+  "teamId": "TEAM-EXAMPLE",
+  // [필수] 세션을 만든 환경과 같아야 합니다. 다르면 ENVIRONMENT_MISMATCH.
+  "environmentId": "sandbox",
+
+  // ↓ STEP 2 — 01-canonical-profile.annotated.jsonc 참고
+  "profile": { "…": "생략" },
+
+  // ↓ STEP 3 — 02-session-context-sandbox.annotated.jsonc 참고
+  "sessionContext": { "…": "생략" },
+
+  // ↓ STEP 5·6·7 — 03-recommendation.annotated.jsonc 참고
+  "recommendation": { "…": "생략" },
+
+  // ↓ STEP 8 — 04-user-decision.annotated.jsonc 참고
+  "userDecision": { "…": "생략" },
+
+  // ↓ STEP 9 — 05-execution-plan.annotated.jsonc 참고
+  "executionPlan": { "…": "생략" }
+}

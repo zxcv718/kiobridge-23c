@@ -1,0 +1,85 @@
+[
+  {
+    "candidateId": "SANDBOX-001",
+    "name": "연습 항목 A",
+    "domain": "sandbox",
+    "available": true,
+    "dataClassification": "SYNTHETIC_MOCK",
+    "price": 1000,
+    "supportedOptions": {
+      "SIZE": [
+        "SMALL",
+        "LARGE"
+      ]
+    }
+  },
+  {
+    "candidateId": "SANDBOX-002",
+    "name": "연습 항목 B",
+    "domain": "sandbox",
+    "available": true,
+    "dataClassification": "SYNTHETIC_MOCK",
+    "price": 2000,
+    "supportedOptions": {
+      "SIZE": [
+        "SMALL",
+        "LARGE"
+      ]
+    }
+  },
+  {
+    "candidateId": "SANDBOX-003",
+    "name": "연습 항목 (품절)",
+    "domain": "sandbox",
+    "available": false,
+    "dataClassification": "SYNTHETIC_MOCK",
+    "price": 1500,
+    "supportedOptions": {
+      "SIZE": [
+        "SMALL"
+      ]
+    }
+  },
+  {
+    "candidateId": "SANDBOX-004",
+    "name": "연습 항목 D",
+    "domain": "sandbox",
+    "available": true,
+    "dataClassification": "SYNTHETIC_MOCK",
+    "price": 1400,
+    "supportedOptions": {
+      "SIZE": [
+        "SMALL",
+        "LARGE"
+      ]
+    }
+  },
+  {
+    "candidateId": "SANDBOX-005",
+    "name": "연습 항목 E",
+    "domain": "sandbox",
+    "available": true,
+    "dataClassification": "SYNTHETIC_MOCK",
+    "price": 1600,
+    "supportedOptions": {
+      "SIZE": [
+        "SMALL",
+        "LARGE"
+      ]
+    }
+  },
+  {
+    "candidateId": "SANDBOX-006",
+    "name": "연습 항목 F",
+    "domain": "sandbox",
+    "available": true,
+    "dataClassification": "SYNTHETIC_MOCK",
+    "price": 1800,
+    "supportedOptions": {
+      "SIZE": [
+        "SMALL",
+        "LARGE"
+      ]
+    }
+  }
+]

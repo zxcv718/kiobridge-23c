@@ -1,0 +1,25 @@
+{
+  "coreContractVersion": "1.0.0",
+  "supportedInputContractVersions": [
+    "1.0.0"
+  ],
+  "defaultInputContractVersion": "1.0.0",
+  "supportedSubmissionVersions": [
+    "1.0.0"
+  ],
+  "frozenDuringHackathon": [
+    "core"
+  ],
+  "schemas": {
+    "canonicalProfile": "core/canonical-profile.schema.json",
+    "sessionContextBase": "core/session-context-base.schema.json",
+    "fieldMetadata": "core/field-metadata.schema.json",
+    "semanticAction": "core/semantic-action.schema.json",
+    "recommendation": "core/recommendation.schema.json",
+    "userDecision": "core/user-decision.schema.json",
+    "executionPlan": "core/execution-plan.schema.json",
+    "participantSubmission": "core/participant-submission.schema.json",
+    "evidence": "core/evidence.schema.json",
+    "environmentPack": "core/environment-pack.schema.json"
+  }
+}

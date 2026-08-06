@@ -1,0 +1,49 @@
+{
+  "vocabularyVersion": "1.0.0",
+  "description": "공통 sentinel 및 프로필 enum. 값은 UPPER_SNAKE_CASE.",
+  "sentinels": {
+    "UNKNOWN": "UNKNOWN",
+    "NOT_APPLICABLE": "NOT_APPLICABLE",
+    "NO_PREFERENCE": "NO_PREFERENCE"
+  },
+  "collectionChannel": [
+    "WEB_FORM",
+    "MOBILE_APP",
+    "VOICE",
+    "CHATBOT",
+    "ASSISTED_INPUT",
+    "IMPORTED",
+    "OTHER"
+  ],
+  "preferredInput": [
+    "TOUCH",
+    "VOICE",
+    "KEYBOARD",
+    "SWITCH",
+    "ASSISTED",
+    "MULTIMODAL"
+  ],
+  "retentionPolicy": [
+    "SESSION_ONLY",
+    "UNTIL_USER_DELETES",
+    "NOT_STORED"
+  ],
+  "fieldSource": [
+    "WEB_FORM",
+    "MOBILE_APP",
+    "VOICE",
+    "CHATBOT",
+    "ASSISTED_INPUT",
+    "IMPORTED",
+    "INFERRED",
+    "DEFAULTED",
+    "OTHER"
+  ],
+  "intentTask": [
+    "ORDER_FOOD",
+    "CHECK_IN",
+    "PUBLIC_SERVICE_GUIDANCE",
+    "PRACTICE"
+  ],
+  "languagePattern": "^[a-z]{2,3}(-[A-Z][a-z]{3})?-([A-Z]{2}|[0-9]{3})$"
+}

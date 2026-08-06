@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "environmentId": "sandbox",
+  "rules": [
+    {
+      "ruleId": "SANDBOX_SIZE_PREFERENCE",
+      "description": "연습용 크기 선호",
+      "source": {
+        "section": "preferences",
+        "path": "size"
+      },
+      "candidate": {
+        "source": "supportedOptions",
+        "key": "SIZE"
+      },
+      "operator": "IN",
+      "severity": "WARN",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "SIZE_PREFERENCE_MISMATCH",
+      "absentMeans": "NONE"
+    },
+    {
+      "ruleId": "SANDBOX_SELECTED_SIZE",
+      "description": "실행계획이 선택한 크기",
+      "evaluationScope": "EXECUTION_CHOICE",
+      "source": {
+        "section": "preferences",
+        "path": "size"
+      },
+      "target": {
+        "source": "executionSelectedOption",
+        "key": "SIZE"
+      },
+      "operator": "EQUALS_SELECTED",
+      "severity": "WARN",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "SELECTED_SIZE_MISMATCH",
+      "absentMeans": "NONE"
+    }
+  ]
+}

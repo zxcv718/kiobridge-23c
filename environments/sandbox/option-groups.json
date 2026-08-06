@@ -1,0 +1,4 @@
+[
+  { "groupId": "SIZE", "kind": "option", "label": "크기", "required": true,
+    "options": [ { "id": "SMALL", "label": "작게" }, { "id": "LARGE", "label": "크게" } ] }
+]

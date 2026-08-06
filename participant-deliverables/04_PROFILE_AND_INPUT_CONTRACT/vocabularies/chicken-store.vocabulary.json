@@ -1,0 +1,51 @@
+{
+  "vocabularyVersion": "1.0.0",
+  "environmentId": "chicken-store",
+  "preferences": {
+    "serviceType": [
+      "DINE_IN",
+      "TAKE_OUT",
+      "NO_PREFERENCE",
+      "UNKNOWN"
+    ],
+    "spicyLevel": [
+      "MILD",
+      "MEDIUM",
+      "HOT",
+      "NO_PREFERENCE",
+      "UNKNOWN"
+    ],
+    "boneType": [
+      "BONE",
+      "BONELESS",
+      "NO_PREFERENCE",
+      "UNKNOWN"
+    ],
+    "cupOption": [
+      "PAPER",
+      "REGULAR",
+      "NONE",
+      "NO_PREFERENCE",
+      "UNKNOWN"
+    ],
+    "quantity": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "hardConstraints": {
+    "allergenIds": [
+      "PEANUT",
+      "SOY",
+      "MILK",
+      "EGG",
+      "WHEAT",
+      "SHRIMP",
+      "UNKNOWN"
+    ],
+    "maxPriceKrw": {
+      "type": "number",
+      "minimum": 0
+    }
+  }
+}

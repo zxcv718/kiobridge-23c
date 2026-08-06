@@ -1,0 +1,72 @@
+{
+  "inputContractVersion": "1.0.0",
+  "environmentId": "chicken-store",
+  "teamId": "TEAM-001",
+  "profile": {
+    "profileId": "TEAM-001-PROFILE-001",
+    "displayName": "합성 사용자 1",
+    "dataClassification": "SYNTHETIC_PROFILE",
+    "source": {
+      "collectionChannel": "WEB_FORM",
+      "providerId": "TEAM-001",
+      "collectedAt": "2026-08-01T05:30:00.000Z"
+    },
+    "accessibility": {
+      "largeText": true,
+      "simpleSteps": true,
+      "visualGuidance": false,
+      "hearingSupport": false,
+      "mobilitySupport": false,
+      "highContrast": false,
+      "staffAssistancePreferred": false
+    },
+    "interaction": {
+      "preferredInput": "TOUCH",
+      "language": "ko-KR",
+      "confirmationRequired": true
+    },
+    "consent": {
+      "personalization": true,
+      "retentionPolicy": "SESSION_ONLY"
+    }
+  },
+  "sessionContext": {
+    "intent": {
+      "task": "ORDER_FOOD"
+    },
+    "facts": {},
+    "preferences": {
+      "serviceType": "TAKE_OUT",
+      "spicyLevel": "HOT",
+      "boneType": "BONELESS",
+      "quantity": 1
+    },
+    "hardConstraints": {
+      "allergenIds": [
+        "PEANUT"
+      ],
+      "maxPriceKrw": 10000
+    },
+    "capabilities": {},
+    "fieldMetadata": {
+      "/preferences/serviceType": {
+        "source": "WEB_FORM",
+        "confidence": 1,
+        "confirmedByUser": true,
+        "capturedAt": "2026-08-01T05:30:00.000Z"
+      },
+      "/preferences/spicyLevel": {
+        "source": "WEB_FORM",
+        "confidence": 1,
+        "confirmedByUser": true,
+        "capturedAt": "2026-08-01T05:30:05.000Z"
+      },
+      "/hardConstraints/allergenIds": {
+        "source": "WEB_FORM",
+        "confidence": 1,
+        "confirmedByUser": true,
+        "capturedAt": "2026-08-01T05:30:10.000Z"
+      }
+    }
+  }
+}

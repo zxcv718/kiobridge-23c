@@ -1,0 +1,46 @@
+{
+  "_note": "연습용 sandbox 환경입니다. 전체 연결 예제는 examples/sandbox-reference-client 를 보세요.",
+  "_expectedValidation": "VALID",
+  "inputContractVersion": "1.0.0",
+  "environmentId": "sandbox",
+  "teamId": "TEAM-EXAMPLE",
+  "profile": {
+    "profileId": "EXAMPLE-SANDBOX-001",
+    "dataClassification": "SYNTHETIC_PROFILE",
+    "source": {
+      "collectionChannel": "WEB_FORM",
+      "providerId": "TEAM-EXAMPLE",
+      "collectedAt": "2026-08-01T05:30:00.000Z"
+    },
+    "accessibility": {
+      "largeText": false,
+      "simpleSteps": false,
+      "visualGuidance": false,
+      "hearingSupport": false,
+      "mobilitySupport": false,
+      "highContrast": false,
+      "staffAssistancePreferred": false
+    },
+    "interaction": {
+      "preferredInput": "TOUCH",
+      "language": "ko-KR",
+      "confirmationRequired": true
+    },
+    "consent": {
+      "personalization": true,
+      "retentionPolicy": "SESSION_ONLY"
+    }
+  },
+  "sessionContext": {
+    "intent": {
+      "task": "PRACTICE"
+    },
+    "facts": {},
+    "preferences": {
+      "size": "SMALL"
+    },
+    "hardConstraints": {},
+    "capabilities": {},
+    "fieldMetadata": {}
+  }
+}

@@ -1,0 +1,62 @@
+// ══════════════════════════════════════════════════════════════════════
+// 이 파일은 설명용입니다.
+// JSONC 주석이 있으므로 API 에 직접 제출하지 마세요 (JSON 파싱 실패).
+// 실행 예제는 ../submission-format-example/sandbox.json 을 사용하세요.
+// ══════════════════════════════════════════════════════════════════════
+
+// CanonicalProfile — "이 사용자는 원래 어떤 사람인가"
+//
+// 누가 만드나: 참가팀 (STEP 2 mapToCanonicalInput)
+// 언제:       사용자가 정보를 준 직후
+// 재사용:     다음 방문에도 그대로 쓸 수 있어야 합니다
+{
+  // [필수] 팀이 정하는 식별자. 실제 개인정보를 넣지 마세요.
+  "profileId": "EXAMPLE-P1",
+
+  // [필수] 항상 SYNTHETIC_PROFILE. 실제 사람의 데이터를 넣지 않습니다.
+  //        다른 값을 넣으면 ENUM_VALUE_INVALID.
+  "dataClassification": "SYNTHETIC_PROFILE",
+
+  "source": {
+    // [필수] 어떻게 모았나. 공식 값: docs/ENUM_REFERENCE.md 의 COLLECTION_CHANNEL
+    "collectionChannel": "WEB_FORM",
+    // [필수] 수집한 서비스(=여러분) 식별자
+    "providerId": "TEAM-EXAMPLE",
+    // [필수] UTC ISO 8601. 반드시 대문자 Z 로 끝나야 합니다.
+    //        "2026-08-03" 이나 "+09:00" 은 INVALID_UTC_TIMESTAMP.
+    //        SDK 의 nowIso8601Utc() 를 쓰면 안전합니다.
+    "collectedAt": "2026-08-03T00:11:00Z"
+  },
+
+  // [필수] 모든 항목이 boolean. 모르면 false 가 아니라 "묻지 않았다" 를 뜻하므로,
+  //        가능하면 사용자에게 직접 물어보세요.
+  "accessibility": {
+    "largeText": true,
+    "simpleSteps": true,
+    "visualGuidance": false,
+    "hearingSupport": false,
+    "mobilitySupport": false,
+    "highContrast": false,
+    "staffAssistancePreferred": false
+  },
+
+  "interaction": {
+    // [필수] TOUCH · VOICE · KEYBOARD · SWITCH · ASSISTED · MULTIMODAL
+    "preferredInput": "TOUCH",
+    // [필수] 지역 코드까지 필요합니다. "ko" 만 쓰면 거부됩니다.
+    "language": "ko-KR",
+    // [필수] 실행 전 사용자 확인을 받을지
+    "confirmationRequired": true
+  },
+
+  "consent": {
+    // [필수] 개인화에 동의했는가
+    "personalization": true,
+    // [필수] SESSION_ONLY · UNTIL_USER_DELETES · NOT_STORED
+    //        키오스크는 회전이 빠르므로 SESSION_ONLY 가 기본입니다.
+    "retentionPolicy": "SESSION_ONLY"
+  }
+
+  // 여기에 "오늘 주문할 메뉴" 를 넣지 마세요 — 그것은 SessionContext 입니다.
+  // 주민번호·전화번호를 넣으면 PERSONAL_DATA_NOT_ALLOWED.
+}

@@ -1,0 +1,169 @@
+/*
+ * 참고 예제 스타일. 외부 폰트·CDN 을 쓰지 않습니다.
+ * 큰 글씨·고대비는 :root 의 변수만 바꿔 전체에 반영됩니다.
+ */
+:root {
+  --bg: #ffffff; --fg: #16202c; --muted: #5b6874; --line: #d7dee6;
+  --card: #f6f8fb; --accent: #1f5fbf; --accent-fg: #ffffff;
+  --ok: #1c7a4a; --warn: #8a5a00; --stop: #b3261e;
+  --fs: 17px; --radius: 12px; --tap: 44px;
+}
+html[data-large="on"] { --fs: 22px; --tap: 52px; }
+html[data-contrast="on"] {
+  --bg: #000000; --fg: #ffffff; --muted: #dcdcdc; --line: #ffffff;
+  --card: #101010; --accent: #ffd400; --accent-fg: #000000;
+  --ok: #4ee08a; --warn: #ffd400; --stop: #ff7a70;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: var(--fs)/1.6 -apple-system, "Segoe UI", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  padding-bottom: 3rem;
+}
+h2 { font-size: 1.25rem; margin: 0 0 .5rem; display: flex; align-items: center; gap: .5rem; }
+h3 { font-size: 1.05rem; margin: 1.2rem 0 .4rem; }
+h4 { font-size: .95rem; margin: .8rem 0 .2rem; }
+p { margin: .4rem 0; }
+a { color: var(--accent); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.skip { position: absolute; left: -9999px; }
+.skip:focus {
+  position: fixed; left: .5rem; top: .5rem; z-index: 20;
+  background: var(--accent); color: var(--accent-fg); padding: .6rem 1rem; border-radius: 8px;
+}
+
+.topbar {
+  display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between;
+  padding: .8rem 1rem; border-bottom: 2px solid var(--line);
+}
+.brand { display: flex; flex-direction: column; }
+.tag { font-size: .78em; color: var(--muted); }
+.a11y { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+.notice {
+  margin: 1rem; padding: .7rem .9rem; background: var(--card);
+  border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: var(--radius);
+  font-size: .92em;
+}
+/* 여러 문단으로 나눠 읽기 쉽게. 모바일에서 한 덩어리로 붙지 않게 간격을 둡니다. */
+.notice > p { margin: 0 0 .5rem; line-height: 1.55; max-width: 62ch; }
+.notice > p:last-child { margin-bottom: 0; }
+
+/* 참가팀 구현 안내. 첫 화면을 길게 만들지 않도록 접어 둡니다. */
+details.guide {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: .5rem .8rem; margin-top: .8rem; background: var(--card);
+}
+details.guide > summary { font-weight: 700; }
+details.guide > p { margin: .5rem 0 0; font-size: .93em; line-height: 1.55; max-width: 62ch; }
+
+footer p { margin: 0 0 .45rem; line-height: 1.55; max-width: 62ch; }
+footer p:last-child { margin-bottom: 0; }
+
+main { max-width: 720px; margin: 0 auto; padding: 0 1rem; }
+
+.step { border: 1px solid var(--line); border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; }
+.num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 1.8rem; height: 1.8rem; border-radius: 50%; flex: none;
+  background: var(--accent); color: var(--accent-fg); font-size: .85rem;
+}
+
+button {
+  font: inherit; cursor: pointer; color: var(--fg); background: var(--card);
+  border: 2px solid var(--line); border-radius: 10px;
+  min-height: var(--tap); padding: .5rem 1rem;
+}
+button:hover { border-color: var(--accent); }
+/* 키보드 사용자가 어디에 있는지 항상 보이게 합니다. */
+button:focus-visible, input:focus-visible, summary:focus-visible, a:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+button:disabled { opacity: .5; cursor: default; }
+
+/* button.big 의 display 가 UA 의 [hidden] 을 이겨서, 저장된 설정이 없는데도
+   "저장된 설정으로 시작" 버튼이 보이던 문제를 막습니다. */
+[hidden] { display: none !important; }
+
+.choices { display: grid; gap: .6rem; }
+button.big { text-align: left; padding: .9rem 1rem; display: grid; gap: .15rem; }
+button.big .t { font-weight: 600; }
+button.big .d { font-size: .85em; color: var(--muted); }
+button.big[aria-pressed="true"] .d { color: inherit; }
+
+fieldset { border: 1px solid var(--line); border-radius: 10px; margin: .8rem 0; padding: .7rem .9rem; }
+legend { padding: 0 .35rem; font-weight: 600; font-size: .95em; }
+
+.opt {
+  display: flex; align-items: center; gap: .6rem;
+  min-height: var(--tap); padding: .2rem 0; cursor: pointer;
+}
+.opt input { width: 1.3rem; height: 1.3rem; flex: none; }
+
+.row { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .9rem; }
+.muted { color: var(--muted); }
+.small { font-size: .87em; }
+
+.card { border: 2px solid var(--line); border-radius: var(--radius); padding: .9rem; background: var(--card); }
+.pick { border-color: var(--accent); }
+.pick-name { font-size: 1.15em; font-weight: 700; }
+.pick-price { color: var(--muted); }
+
+.reasons { margin: .3rem 0 0; padding-left: 1.2rem; }
+.reasons li { margin-bottom: .25rem; }
+
+.alts { display: grid; gap: .5rem; }
+.alt {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: .5rem; border: 1px solid var(--line); border-radius: 10px; padding: .6rem .8rem;
+}
+
+.context { display: grid; gap: .4rem; margin-bottom: .5rem; }
+.ctx {
+  display: flex; align-items: baseline; gap: .5rem;
+  border: 1px solid var(--line); border-radius: 8px; padding: .4rem .6rem; font-size: .9em;
+}
+.ctx .k { font-weight: 600; }
+.ctx .src { color: var(--muted); font-size: .85em; margin-left: auto; }
+
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: .3rem .8rem; margin: .5rem 0; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+
+.json {
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: .6rem .7rem; overflow-x: auto; font-size: .82em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  max-height: 22rem;
+}
+
+/* 상태는 색만으로 구분하지 않고 테두리와 접두 문자를 함께 씁니다. */
+.banner { border: 2px solid var(--line); border-radius: 10px; padding: .7rem .9rem; margin-bottom: .8rem; }
+.banner.server { border-color: var(--ok); }
+.banner.preview { border-color: var(--warn); border-style: dashed; }
+.banner.error { border-color: var(--stop); }
+.banner .label { font-weight: 700; display: block; }
+
+.alert-error {
+  margin: 1rem; padding: .7rem .9rem; border: 2px solid var(--stop);
+  border-radius: 10px; background: var(--card);
+}
+
+details { margin-top: .8rem; }
+summary { cursor: pointer; min-height: var(--tap); display: flex; align-items: center; }
+
+footer { max-width: 720px; margin: 2rem auto 0; padding: 1rem; border-top: 1px solid var(--line); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .step { transition: opacity .15s ease; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

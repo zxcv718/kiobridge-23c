@@ -1,0 +1,49 @@
+{
+  "vocabularyVersion": "1.0.0",
+  "environmentId": "hospital",
+  "facts": {
+    "visitType": [
+      "FIRST_VISIT",
+      "REVISIT",
+      "HEALTH_SCREENING",
+      "EXAM",
+      "UNKNOWN"
+    ],
+    "appointmentStatus": [
+      "HAS_APPOINTMENT",
+      "NO_APPOINTMENT",
+      "UNKNOWN"
+    ],
+    "departmentId": [
+      "INTERNAL_MEDICINE",
+      "ORTHOPEDICS",
+      "ENT",
+      "RADIOLOGY",
+      "HEALTH_SCREENING",
+      "UNSPECIFIED"
+    ],
+    "guardianPresent": {
+      "type": "boolean"
+    }
+  },
+  "preferences": {
+    "supportModes": [
+      "LARGE_TEXT",
+      "HEARING_SUPPORT",
+      "VISUAL_GUIDANCE",
+      "SIMPLE_STEPS",
+      "STAFF_HELP",
+      "GUARDIAN_MODE"
+    ]
+  },
+  "hardConstraints": {
+    "medicalInferenceAllowed": [
+      false
+    ]
+  },
+  "capabilities": {
+    "canUseSelfCheckIn": {
+      "type": "boolean"
+    }
+  }
+}

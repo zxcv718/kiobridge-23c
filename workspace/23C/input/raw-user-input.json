@@ -1,0 +1,23 @@
+{
+  "_note": "팀 23C 데모 페르소나 — 박순자(74). 합성 데이터이며 실제 개인정보가 아닙니다.",
+  "serviceType": "포장",
+  "spicyLevel": "매운맛",
+  "boneType": "순살",
+  "quantity": 1,
+  "cupOption": "종이컵",
+  "allergies": ["땅콩"],
+  "budgetKrw": 10000,
+  "largeText": true,
+  "simpleSteps": true,
+  "highContrast": false,
+  "hearingSupport": false,
+  "visualGuidance": true,
+  "mobilitySupport": false,
+  "staffAssistancePreferred": true,
+  "preferredInput": "TOUCH",
+  "language": "ko-KR",
+  "storeProfile": false,
+  "decision": "APPROVE",
+  "_collectedVia": "WEB_FORM",
+  "_confirmedByUser": true
+}

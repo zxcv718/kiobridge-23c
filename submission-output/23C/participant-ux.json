@@ -1,0 +1,38 @@
+{
+  "anonymousStartSupported": true,
+  "loginRequired": false,
+  "optionalLoginSupported": false,
+  "localProfileStorage": "OPTIONAL",
+  "deleteStoredProfileSupported": true,
+  "oneTimeUseSupported": true,
+  "recommendationReasonsShown": true,
+  "alternativesShown": true,
+  "recommendationCanBeRejected": true,
+  "userConfirmationRequired": true,
+  "externalApiUsed": false,
+  "externalApiFallbackDocumented": true,
+  "accessibilityChannels": [
+    "LARGE_TEXT",
+    "HIGH_CONTRAST",
+    "SIMPLE_STEPS",
+    "VISUAL_GUIDANCE",
+    "HEARING_SUPPORT",
+    "STAFF_HELP",
+    "GUARDIAN_MODE",
+    "LARGER_TOUCH_TARGETS"
+  ],
+  "manualReviewNotes": [
+    "접근성 채널은 화면에서 실제로 동작하는 것만 적었습니다. 각 토글이 바꾸는 것: LARGE_TEXT=글자·버튼 확대, HIGH_CONTRAST=검은 배경 반전, SIMPLE_STEPS=짧은 문장으로 교체, VISUAL_GUIDANCE=선택지에 그림 병기(글자는 항상 유지), HEARING_SUPPORT='이 서비스는 소리를 쓰지 않습니다' 고지, LARGER_TOUCH_TARGETS=타깃 48→68px·간격 확대, STAFF_HELP=직원 호출을 모든 화면 최상단 고정. GUARDIAN_MODE는 입력 방식 '옆에서 도와주기' 선택 시 대리 입력으로 기록됩니다(preferredInput=ASSISTED, collectionChannel=ASSISTED_INPUT).",
+    "음성 입력(VOICE)은 구현하지 않았으므로 선택지에 노출하지 않습니다. 없는 기능을 있다고 표시하지 않는다는 원칙이며, tests/a11y.test.ts가 소스에 VOICE 선택지가 없음을 검사합니다.",
+    "이 파일의 UI 보증(터치 타깃 48px 이상, focus-visible 3px, prefers-reduced-motion 존중, 네이티브 button만 사용, 아이콘 단독 금지, 모든 단계에서 직원 도움 도달)은 자기 선언에 그치지 않고 workspace/23C/tests/a11y.test.ts가 스타일·마크업을 직접 검사합니다. 선언을 바꾸려면 코드가 먼저 바뀌어야 합니다.",
+    "기기 저장은 선택 기능이며 기본은 '이번 한 번만'(SESSION_ONLY)입니다. 저장 대상은 지속값(알레르기·맵기·형태·접근성 설정)뿐이고, 이번 이용 값(이용방식·수량·예산·컵)은 저장하지 않습니다. 그래서 저장본으로 시작해도 이번 상황은 다시 여쭤보며, 같은 사람이 상황에 따라 다른 추천을 받는 것을 확인하실 수 있습니다.",
+    "저장본 재방문 시 자동 적용하지 않습니다 — 시작 화면 배너에 내용을 보여주고 확인한 뒤에만 사용하며 collectionChannel=IMPORTED로 기록합니다. '저장된 설정 지우기' 버튼을 함께 제공합니다.",
+    "재확인(requiresReconfirmation) 상태에서는 승인 버튼이 비활성화되어 승인 자체가 불가능합니다 — 알레르기 재확인 또는 직원 도움으로만 진행됩니다.",
+    "시작 화면의 '시연 사례' 버튼은 입력(profile·sessionContext)만 채우며, 추천은 직접 입력했을 때와 동일한 엔진이 그 자리에서 계산합니다. 결과 화면을 미리 만들어 두지 않았습니다.",
+    "외부 API를 사용하지 않습니다. 상황신호(시간대)는 기기 시계로만 만들며, sessionContext.extensions['TEAM_23C.contextSignals']에 출처(DEVICE_CLOCK)·관측시각·만료시각과 함께 기록합니다. 만료된 신호는 사용하지 않고 추천 이유에서도 언급하지 않습니다. 맥락은 정렬 순서만 바꾸며 후보를 제외하지 않고, 사용자가 이용 방식을 직접 고른 경우에는 개입하지 않습니다(선호가 맥락보다 우선).",
+    "Simulation API가 없는 환경(외부 배포본)에서는 실행 대신 주문 계획 JSON 내려받기로 전환되며, 그 화면에는 로컬 키트에서 실제로 받은 지난 Evidence를 '사전 생성 기록'임을 세션 ID·생성시각과 함께 명시해 보여줍니다. 방금 입력의 결과인 것처럼 표시하지 않습니다.",
+    "안전 시연(오류 주입)은 공식 7종 전부를 제공하며, 매번 새 세션을 만들어 같은 제출물을 다시 올린 뒤 주입합니다. 본 실행의 PASS Evidence가 덮어써지지 않습니다."
+  ],
+  "_loginRequired": "loginRequired=false 는 '로그인 기능이 전혀 없다'는 뜻이 아니라 '핵심 이용 흐름이 로그인에 의해 차단되지 않는다'는 뜻입니다. 로그인하지 않아도 추천·확인·제출 생성이 가능하면, 선택적 로그인 기능이 있어도 false 입니다.",
+  "_optionalLoginSupported": "서비스에 선택적 로그인 화면이 있으면 true 로 적으세요. true 여도 loginRequired 가 false 라면 정상입니다. 심사에서 익명 경로를 확인합니다."
+}

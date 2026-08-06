@@ -1,0 +1,28 @@
+{
+  "driver": "SIMULATION",
+  "screens": {
+    "WELCOME": {
+      "template": "LANDING"
+    },
+    "ITEM_SELECTION": {
+      "template": "FOUR_CARD_GRID",
+      "dataSource": "candidates",
+      "pageSize": 4,
+      "navigation": {
+        "enabled": true,
+        "classification": "SYNTHETIC_MOCK"
+      }
+    },
+    "OPTION_SELECTION": {
+      "template": "OPTION_GROUP_LIST",
+      "dataSource": "option-groups",
+      "groups": [
+        "SIZE"
+      ]
+    },
+    "REVIEW": {
+      "template": "BASIC_SANDBOX_REVIEW",
+      "dataSource": "review"
+    }
+  }
+}

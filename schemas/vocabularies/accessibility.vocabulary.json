@@ -1,0 +1,21 @@
+{
+  "vocabularyVersion": "1.0.0",
+  "description": "접근성 관련 표준 값.",
+  "profileAccessibilityFlags": [
+    "largeText",
+    "simpleSteps",
+    "visualGuidance",
+    "hearingSupport",
+    "mobilitySupport",
+    "highContrast",
+    "staffAssistancePreferred"
+  ],
+  "supportModes": [
+    "LARGE_TEXT",
+    "HEARING_SUPPORT",
+    "VISUAL_GUIDANCE",
+    "SIMPLE_STEPS",
+    "STAFF_HELP",
+    "GUARDIAN_MODE"
+  ]
+}

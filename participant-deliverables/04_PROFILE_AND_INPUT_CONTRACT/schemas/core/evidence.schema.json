@@ -1,0 +1,258 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/core/evidence.schema.json",
+  "title": "Evidence",
+  "description": "Server-generated auditable record (v1.2). Covers SIMULATION VALIDATION ONLY — contract, safety, state transitions and boundary. It does NOT represent recommendation quality or a hackathon score.",
+  "type": "object",
+  "required": [
+    "evidenceVersion",
+    "runId",
+    "sessionId",
+    "environmentId",
+    "fixtureVersion",
+    "submissionHash",
+    "createdAt",
+    "dataClassification",
+    "validationMode",
+    "executionEnvironment",
+    "actualDeviceCommandSent",
+    "participantSubmissionUsed",
+    "officialRecommendationGenerated",
+    "profileSummary",
+    "recommendation",
+    "userDecision",
+    "executionPlan",
+    "executedActions",
+    "stateHistory",
+    "safetyChecks",
+    "validationErrors",
+    "plannedPaymentActionCount",
+    "executedPaymentActionCount",
+    "blockedPaymentActionCount",
+    "lastBusinessState",
+    "terminalState",
+    "stopType",
+    "stopReason",
+    "boundaryReached",
+    "requiredVerifierExecuted",
+    "submissionValid",
+    "extensions",
+    "result",
+    "driverId",
+    "driverStatus",
+    "reviewSnapshot",
+    "sessionContextSummary",
+    "resultScope",
+    "simulationValidation",
+    "recommendationEvaluation",
+    "hackathonEvaluation"
+  ],
+  "properties": {
+    "evidenceVersion": {
+      "const": "1.2"
+    },
+    "runId": {
+      "type": "string"
+    },
+    "sessionId": {
+      "type": "string"
+    },
+    "teamId": {
+      "type": "string"
+    },
+    "environmentId": {
+      "type": "string"
+    },
+    "fixtureVersion": {
+      "type": "string"
+    },
+    "submissionHash": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string"
+    },
+    "dataClassification": {
+      "type": "object",
+      "required": [
+        "actualExtractedDataUsed",
+        "syntheticMockDataUsed"
+      ],
+      "properties": {
+        "actualExtractedDataUsed": {
+          "type": "boolean"
+        },
+        "syntheticMockDataUsed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "validationMode": {
+      "const": "SIMULATION_ONLY"
+    },
+    "executionEnvironment": {
+      "const": "DIGITAL_TWIN"
+    },
+    "actualDeviceCommandSent": {
+      "const": false
+    },
+    "participantSubmissionUsed": {
+      "const": true
+    },
+    "officialRecommendationGenerated": {
+      "const": false
+    },
+    "profileSummary": {
+      "type": "object"
+    },
+    "recommendation": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "userDecision": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "executionPlan": {
+      "type": "array"
+    },
+    "executedActions": {
+      "type": "array"
+    },
+    "stateHistory": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "safetyChecks": {
+      "type": "array"
+    },
+    "validationErrors": {
+      "type": "array"
+    },
+    "plannedPaymentActionCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "executedPaymentActionCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "blockedPaymentActionCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "lastBusinessState": {
+      "type": "string"
+    },
+    "terminalState": {
+      "type": "string"
+    },
+    "stopType": {
+      "enum": [
+        "NORMAL_BOUNDARY_STOP",
+        "SAFETY_STOP",
+        "NONE"
+      ]
+    },
+    "stopReason": {
+      "type": "string"
+    },
+    "boundaryReached": {
+      "type": "boolean"
+    },
+    "requiredVerifierExecuted": {
+      "type": "boolean"
+    },
+    "submissionValid": {
+      "type": "boolean"
+    },
+    "extensions": {
+      "type": "object"
+    },
+    "result": {
+      "enum": [
+        "PASS",
+        "FAIL"
+      ]
+    },
+    "driverId": {
+      "enum": [
+        "SIMULATION",
+        "UPRLITE"
+      ]
+    },
+    "driverStatus": {
+      "enum": [
+        "READY",
+        "PENDING_REAL_DEVICE"
+      ]
+    },
+    "reviewSnapshot": {
+      "type": "object",
+      "description": "Read-only review payload produced by the driver (cart / check-in / application)."
+    },
+    "sessionContextSummary": {
+      "type": "object",
+      "description": "제출된 SessionContext 의 intent + hardConstraints 요약."
+    },
+    "resultScope": {
+      "const": "SIMULATION_VALIDATION_ONLY"
+    },
+    "simulationValidation": {
+      "type": "object",
+      "required": [
+        "result",
+        "contractValid",
+        "safetyValid",
+        "stateTransitionValid",
+        "boundaryReached",
+        "requiredVerifierExecuted"
+      ],
+      "properties": {
+        "result": {
+          "enum": [
+            "PASS",
+            "FAIL"
+          ]
+        },
+        "contractValid": {
+          "type": "boolean"
+        },
+        "safetyValid": {
+          "type": "boolean"
+        },
+        "stateTransitionValid": {
+          "type": "boolean"
+        },
+        "boundaryReached": {
+          "type": "boolean"
+        },
+        "requiredVerifierExecuted": {
+          "type": "boolean"
+        }
+      }
+    },
+    "recommendationEvaluation": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "NOT_EVALUATED_PUBLICLY"
+        }
+      }
+    },
+    "hackathonEvaluation": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "PRIVATE_AND_JUDGE_EVALUATION_REQUIRED"
+        }
+      }
+    }
+  }
+}

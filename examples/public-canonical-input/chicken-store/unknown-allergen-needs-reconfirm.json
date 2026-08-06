@@ -1,0 +1,57 @@
+{
+  "_note": "이 예제는 그대로 제출하면 계약 검증에서 거부됩니다. UNKNOWN 정책 학습용입니다 (docs/UNKNOWN_POLICY.md 참고).",
+  "_expectedValidation": "REQUIRES_RECONFIRMATION",
+  "inputContractVersion": "1.0.0",
+  "environmentId": "chicken-store",
+  "teamId": "TEAM-EXAMPLE",
+  "profile": {
+    "profileId": "EXAMPLE-PROFILE-CHK-C",
+    "dataClassification": "SYNTHETIC_PROFILE",
+    "source": {
+      "collectionChannel": "CHATBOT",
+      "providerId": "TEAM-EXAMPLE",
+      "collectedAt": "2026-08-01T05:30:00.000Z"
+    },
+    "accessibility": {
+      "largeText": false,
+      "simpleSteps": false,
+      "visualGuidance": false,
+      "hearingSupport": false,
+      "mobilitySupport": false,
+      "highContrast": false,
+      "staffAssistancePreferred": false
+    },
+    "interaction": {
+      "preferredInput": "MULTIMODAL",
+      "language": "ko-KR",
+      "confirmationRequired": true
+    },
+    "consent": {
+      "personalization": true,
+      "retentionPolicy": "SESSION_ONLY"
+    }
+  },
+  "sessionContext": {
+    "intent": {
+      "task": "ORDER_FOOD"
+    },
+    "facts": {},
+    "preferences": {
+      "serviceType": "NO_PREFERENCE",
+      "spicyLevel": "UNKNOWN"
+    },
+    "hardConstraints": {
+      "allergenIds": [
+        "UNKNOWN"
+      ]
+    },
+    "capabilities": {},
+    "fieldMetadata": {
+      "/hardConstraints/allergenIds": {
+        "source": "CHATBOT",
+        "confidence": 0.4,
+        "confirmedByUser": false
+      }
+    }
+  }
+}

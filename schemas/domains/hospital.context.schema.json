@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/domains/hospital.context.schema.json",
+  "title": "hospital SessionContext",
+  "allOf": [
+    {
+      "$ref": "https://kiobridge.local/schemas/core/session-context-base.schema.json"
+    }
+  ],
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intent",
+    "facts",
+    "preferences",
+    "hardConstraints",
+    "capabilities"
+  ],
+  "properties": {
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task"
+      ],
+      "properties": {
+        "task": {
+          "const": "CHECK_IN"
+        }
+      }
+    },
+    "facts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "visitType": {
+          "enum": [
+            "FIRST_VISIT",
+            "REVISIT",
+            "HEALTH_SCREENING",
+            "EXAM",
+            "UNKNOWN"
+          ]
+        },
+        "appointmentStatus": {
+          "enum": [
+            "HAS_APPOINTMENT",
+            "NO_APPOINTMENT",
+            "UNKNOWN"
+          ]
+        },
+        "departmentId": {
+          "enum": [
+            "INTERNAL_MEDICINE",
+            "ORTHOPEDICS",
+            "ENT",
+            "RADIOLOGY",
+            "HEALTH_SCREENING",
+            "UNSPECIFIED"
+          ]
+        },
+        "guardianPresent": {
+          "type": "boolean"
+        }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "supportModes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "LARGE_TEXT",
+              "HEARING_SUPPORT",
+              "VISUAL_GUIDANCE",
+              "SIMPLE_STEPS",
+              "STAFF_HELP",
+              "GUARDIAN_MODE"
+            ]
+          }
+        }
+      }
+    },
+    "hardConstraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "medicalInferenceAllowed": {
+          "const": false
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "canUseSelfCheckIn": {
+          "type": "boolean"
+        }
+      }
+    },
+    "fieldMetadata": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "https://kiobridge.local/schemas/core/field-metadata.schema.json"
+      },
+      "propertyNames": {
+        "pattern": "^/"
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "팀 namespace 확장 (예: TEAM_001.contextSignals). Core 필드 이름은 쓸 수 없습니다.",
+      "propertyNames": {
+        "pattern": "^[A-Z][A-Z0-9_]*\\.[A-Za-z][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": true
+    }
+  }
+}

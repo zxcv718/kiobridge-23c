@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://kiobridge.local/schemas/core/canonical-profile.schema.json",
+  "title": "CanonicalProfile",
+  "description": "장기 지속되는 사용자 정보. 실제 개인정보 금지, profileId 는 가명 ID.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profileId",
+    "dataClassification",
+    "source",
+    "accessibility",
+    "interaction",
+    "consent"
+  ],
+  "properties": {
+    "profileId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "displayName": {
+      "type": "string",
+      "description": "선택 필드."
+    },
+    "dataClassification": {
+      "const": "SYNTHETIC_PROFILE"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "collectionChannel",
+        "providerId",
+        "collectedAt"
+      ],
+      "properties": {
+        "collectionChannel": {
+          "enum": [
+            "WEB_FORM",
+            "MOBILE_APP",
+            "VOICE",
+            "CHATBOT",
+            "ASSISTED_INPUT",
+            "IMPORTED",
+            "OTHER"
+          ]
+        },
+        "providerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "collectedAt": {
+          "$ref": "https://kiobridge.local/schemas/core/iso-8601-utc.schema.json"
+        }
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "largeText",
+        "simpleSteps",
+        "visualGuidance",
+        "hearingSupport",
+        "mobilitySupport",
+        "highContrast",
+        "staffAssistancePreferred"
+      ],
+      "properties": {
+        "largeText": {
+          "type": "boolean"
+        },
+        "simpleSteps": {
+          "type": "boolean"
+        },
+        "visualGuidance": {
+          "type": "boolean"
+        },
+        "hearingSupport": {
+          "type": "boolean"
+        },
+        "mobilitySupport": {
+          "type": "boolean"
+        },
+        "highContrast": {
+          "type": "boolean"
+        },
+        "staffAssistancePreferred": {
+          "type": "boolean"
+        }
+      }
+    },
+    "interaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "preferredInput",
+        "language",
+        "confirmationRequired"
+      ],
+      "properties": {
+        "preferredInput": {
+          "enum": [
+            "TOUCH",
+            "VOICE",
+            "KEYBOARD",
+            "SWITCH",
+            "ASSISTED",
+            "MULTIMODAL"
+          ]
+        },
+        "language": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Z][a-z]{3})?-([A-Z]{2}|[0-9]{3})$",
+          "description": "BCP 47 (예: ko-KR)"
+        },
+        "confirmationRequired": {
+          "type": "boolean"
+        }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "personalization",
+        "retentionPolicy"
+      ],
+      "properties": {
+        "personalization": {
+          "type": "boolean"
+        },
+        "retentionPolicy": {
+          "enum": [
+            "SESSION_ONLY",
+            "UNTIL_USER_DELETES",
+            "NOT_STORED"
+          ]
+        }
+      }
+    }
+  }
+}

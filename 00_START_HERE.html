@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KioBridge 시작하기 — 참가팀용</title>
+<style>
+  /* 인터넷 없이 열리는 페이지입니다. 외부 CDN·폰트·스크립트를 쓰지 않습니다. */
+  :root {
+    --bg: #ffffff; --fg: #16202c; --muted: #5b6874; --line: #d7dee6;
+    --card: #f7f9fb; --accent: #1f5fbf; --accent-fg: #ffffff;
+    --ok: #1c7a4a; --warn: #9a6400; --stop: #b3261e;
+    --radius: 10px; --gap: 1rem; --fs: 16px;
+  }
+  html[data-large="on"] { --fs: 20px; }
+  html[data-contrast="on"] {
+    --bg: #000000; --fg: #ffffff; --muted: #d8d8d8; --line: #ffffff;
+    --card: #101010; --accent: #ffd400; --accent-fg: #000000;
+    --ok: #4ee08a; --warn: #ffd400; --stop: #ff7a70;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+    font: var(--fs)/1.65 -apple-system, "Segoe UI", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
+  header { border-bottom: 2px solid var(--line); padding-bottom: 1rem; margin-bottom: 1.25rem; }
+  h1 { font-size: 1.6rem; margin: 0 0 .35rem; }
+  h2 { font-size: 1.15rem; margin: 2rem 0 .6rem; padding-top: .5rem; border-top: 1px solid var(--line); }
+  h3 { font-size: 1rem; margin: 0 0 .4rem; }
+  p { margin: .4rem 0; }
+  a { color: var(--accent); }
+  html[data-contrast="on"] a { color: var(--accent); }
+  .muted { color: var(--muted); font-size: .92em; }
+  .badges { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .5rem; }
+  .badge {
+    display: inline-block; border: 1px solid var(--line); border-radius: 999px;
+    padding: .1rem .6rem; font-size: .82rem; background: var(--card);
+  }
+  .toolbar { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .8rem; }
+  button {
+    font: inherit; font-size: .9rem; cursor: pointer; color: var(--fg);
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 8px; padding: .35rem .75rem;
+  }
+  button:hover { border-color: var(--accent); }
+  button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  .alert {
+    border: 2px solid var(--warn); border-radius: var(--radius);
+    padding: .8rem 1rem; margin: 1rem 0; background: var(--card);
+  }
+  .alert strong { color: var(--warn); }
+  ol.path { counter-reset: s; list-style: none; padding: 0; margin: .5rem 0; }
+  ol.path li {
+    counter-increment: s; position: relative; padding: .45rem 0 .45rem 2.4rem;
+    border-bottom: 1px solid var(--line);
+  }
+  ol.path li::before {
+    content: counter(s); position: absolute; left: 0; top: .45rem;
+    width: 1.7rem; height: 1.7rem; line-height: 1.7rem; text-align: center;
+    border-radius: 50%; background: var(--accent); color: var(--accent-fg); font-size: .85rem;
+  }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: var(--gap); }
+  .card {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--card); padding: .9rem 1rem;
+  }
+  .card h3 { display: flex; align-items: baseline; gap: .45rem; }
+  .card .n { color: var(--muted); font-size: .85rem; }
+  code, kbd {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .92em; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 5px; padding: .05rem .35rem;
+  }
+  html[data-contrast="on"] code { background: #1a1a1a; }
+  .cmd { display: flex; align-items: center; gap: .5rem; margin: .45rem 0; flex-wrap: wrap; }
+  .cmd code { flex: 1 1 260px; padding: .35rem .5rem; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; margin: .5rem 0; }
+  th, td { border: 1px solid var(--line); padding: .4rem .6rem; text-align: left; font-size: .93em; }
+  th { background: var(--card); }
+  .check { display: flex; gap: .55rem; align-items: flex-start; padding: .35rem 0; }
+  .check input { width: 1.15rem; height: 1.15rem; margin-top: .28rem; flex: none; }
+  .ok { color: var(--ok); } .stop { color: var(--stop); }
+  .skip { position: absolute; left: -9999px; }
+  .skip:focus { left: .5rem; top: .5rem; position: fixed; z-index: 10; background: var(--accent); color: var(--accent-fg); padding: .5rem .8rem; border-radius: 8px; }
+  footer { margin-top: 2.5rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+  @media print { .toolbar, .skip { display: none; } }
+  .win-note { border-left: 4px solid currentColor; padding: .6rem .9rem; margin: .6rem 0; }
+  .btn-checklist { display: inline-block; border: 2px solid currentColor; border-radius: 6px;
+                   padding: .55rem 1rem; min-height: 44px; line-height: 1.6; font-weight: 700; }
+  .btn-checklist:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+<div class="wrap">
+
+<header>
+  <h1>KioBridge Simulation Kit — 참가팀 시작 안내</h1>
+  <p class="muted">이 페이지는 인터넷 없이 열립니다. 링크는 모두 이 폴더 안의 파일입니다.</p>
+  <div class="badges">
+    <span class="badge">제품 버전 <strong>5.1.4</strong></span>
+    <span class="badge">inputContractVersion <strong>1.0.0</strong></span>
+    <span class="badge">Web <strong>3000</strong> · API <strong>4000</strong></span>
+  </div>
+  <div class="toolbar" role="group" aria-label="보기 설정">
+    <button id="big" aria-pressed="false">큰 글씨</button>
+    <button id="contrast" aria-pressed="false">고대비</button>
+    <button id="clear">체크 초기화</button>
+  </div>
+</header>
+
+<main id="main">
+
+<div class="alert" role="note">
+  <strong>참가팀은 키오스크 자체를 다시 만드는 팀이 아닙니다.</strong>
+  사용자가 키오스크 앞에서 겪는 정보 입력·탐색·이해·선택의 어려움을 줄이는
+  <strong>사용자 접점 서비스</strong>를 만듭니다.
+  웹·앱·PWA·QR·음성·카메라·보호자 입력·기기 내 저장·외부 API 등 구현 방식은 자유입니다.<br><br>
+  <strong>처음에는 두 곳만 보세요.</strong><br>
+  <code>00_START_HERE</code> 와 <code>participant-workspace/</code> 입니다.<br>
+  <code>packages</code>, <code>apps</code>, <code>environments</code>, <code>schemas</code> 는
+  플랫폼이 실행에 쓰는 파일이며 <strong>참가팀 구현 시작점이 아닙니다.</strong>
+</div>
+
+<h2>참가팀이 답해야 하는 다섯 가지</h2>
+<table>
+  <tr><th>질문</th><th>답</th></tr>
+  <tr><td>무엇을 만드나</td><td>사용자를 대신해 키오스크를 조작할 <strong>의미 기반 실행계획</strong>을 만드는 서비스. 키오스크 자체를 새로 만들지 않습니다.</td></tr>
+  <tr><td>어느 파일을 고치나</td><td><code>participant-workspace/src/participant.ts</code> (init 후에는 <code>workspace/&lt;팀ID&gt;/src/participant.ts</code>)</td></tr>
+  <tr><td>어떤 순서로</td><td>9개 함수를 위에서부터. <code>participant:progress</code> 가 남은 단계를 알려줍니다.</td></tr>
+  <tr><td>어떻게 확인하나</td><td><code>participant:validate</code> → SIMULATION PASS</td></tr>
+  <tr><td>무엇을 제출하나</td><td><code>participant:package</code> 가 만든 <code>submission-output/&lt;팀ID&gt;/</code> 폴더</td></tr>
+</table>
+
+<h2>권장 경로 — 이 순서 하나만 따르세요</h2>
+<ol class="path">
+  <li>ZIP 압축 해제</li>
+  <li>이 페이지(<code>00_START_HERE.html</code>) 열기 — 지금 하고 있습니다</li>
+  <li>운영체제에 맞는 시작파일 실행<br>
+      <span class="muted">macOS <code>start-macos.command</code> · Windows <code>start-windows.bat</code> · Linux <code>start-linux.sh</code></span></li>
+  <li><code>npm run participant:doctor</code></li>
+  <li><code>npm run participant:demo</code></li>
+  <li><code>npm run participant:init -- --team TEAM-001 --env sandbox</code></li>
+  <li><code>workspace/TEAM-001/src/participant.ts</code> 구현</li>
+  <li><code>npm run participant:progress</code></li>
+  <li><code>npm run participant:validate</code></li>
+  <li><code>npm run participant:package</code></li>
+  <li>생성된 <code>submission-output/</code> 폴더 제출</li>
+</ol>
+
+<h2 id="auth">로그인·저장·개인정보</h2>
+<p class="win-note">
+  <strong>로그인 기능은 선택사항입니다. 다만 핵심 기능은 로그인 없이도 이용할 수 있어야 합니다.</strong>
+</p>
+<ul>
+  <li>Example UI 는 로그인 없이 동작하는 <strong>참고 예제</strong>입니다. 공식 정답이 아닙니다.</li>
+  <li>로그인, 기기 내 저장, QR, 음성, 카메라 등은 <strong>자유롭게 구현</strong>할 수 있습니다.</li>
+  <li>해커톤·심사에는 실제 개인정보가 아닌 <strong>가상 데이터</strong>를 사용하세요.</li>
+  <li>실제 서비스로 확장할 때는 동의·최소수집·보관기간·삭제·보안 요건을 따로 충족해야 합니다.</li>
+</ul>
+<p><a href="docs/LOGINLESS_QR_PROFILE_GUIDE.md">자세히 — 무로그인 QR 프로필 가이드</a></p>
+
+<h2 id="windows">Windows 사용자</h2>
+<p class="win-note">Windows 사용자는 <code>start-windows.bat</code> 실행 전
+   <code>WINDOWS_FINAL_CHECKLIST.md</code> 를 먼저 확인하세요.
+   압축 해제 위치·Node 버전·포트 충돌·SmartScreen 경고를 순서대로 짚어 줍니다.</p>
+<p><a class="btn-checklist" href="./WINDOWS_FINAL_CHECKLIST.md">Windows 최종 체크리스트 열기</a></p>
+
+<h2>명령어</h2>
+<div id="cmds"></div>
+
+<h2>단계별 진행</h2>
+<p class="muted">체크는 이 브라우저에만 저장됩니다(localStorage). 서버로 전송되지 않습니다.</p>
+<div id="checks"></div>
+
+<h2>카드</h2>
+<div class="cards">
+  <div class="card"><h3><span class="n">1</span> 5분 설치 확인</h3>
+    <p>Node 20 이상이면 됩니다. <code>participant:doctor</code> 가 버전·포트·필수 파일을 한 번에 봅니다.</p>
+    <p><a href="README_FIRST.md">README_FIRST.md</a></p></div>
+
+  <div class="card"><h3><span class="n">2</span> Sandbox 첫 실행</h3>
+    <p>연습용 환경입니다. 완성 예제가 들어 있어 전체 흐름을 바로 볼 수 있습니다.</p>
+    <p><a href="docs/QUICK_START_10_MINUTES.md">10분 시작 가이드</a></p></div>
+
+  <div class="card"><h3><span class="n">3</span> 참가팀이 만드는 것</h3>
+    <p>정보 수집 → Canonical 변환 → 추천 → 사용자 승인 → 의미 기반 실행계획.</p>
+    <p><a href="docs/WHAT_YOU_BUILD.md">WHAT_YOU_BUILD.md</a> ·
+       <a href="docs/PARTICIPANT_IDEA_CATALOG.md">아이디어 카탈로그</a></p></div>
+
+  <div class="card"><h3><span class="n">4</span> 수정할 파일</h3>
+    <p><code>participant-workspace/</code> 안에서만 작업하세요.</p>
+    <p><a href="participant-workspace/EDIT_ONLY_THIS_FOLDER.md">수정 범위</a> ·
+       <a href="DO_NOT_EDIT_PLATFORM_FILES.md">수정 금지 영역</a></p>
+    <p><a href="participant-workspace/example-ui/index.html">사용자 접점 예제 UI 열기</a></p></div>
+
+  <div class="card"><h3><span class="n">5</span> 환경 선택</h3>
+    <p>닭강정 · 병원 · 관공서 중 하나를 고르세요. Sandbox 는 연습용입니다.</p>
+    <p><a href="docs/environments/README.md">환경별 가이드</a></p></div>
+
+  <div class="card"><h3><span class="n">6</span> 제출 검증</h3>
+    <p>계약 · 안전 · 상태 전환을 서버가 검사합니다.</p>
+    <p><a href="docs/SUBMISSION_GUIDE.md">SUBMISSION_GUIDE.md</a></p></div>
+
+  <div class="card"><h3><span class="n">7</span> 최종 제출 만들기</h3>
+    <p><code>participant:package</code> 가 제출 폴더와 SHA-256 을 만들어 줍니다.</p>
+    <p><a href="FINAL_SUBMISSION_CHECKLIST.md">최종 제출 체크리스트</a></p></div>
+
+  <div class="card"><h3><span class="n">8</span> 오류 해결</h3>
+    <p>오류코드 → 뜻 → 고칠 파일 순으로 찾으세요.</p>
+    <p><a href="docs/ERROR_CATALOG.md">오류 카탈로그</a> ·
+       <a href="docs/TROUBLESHOOTING_DECISION_TREE.md">문제 해결 흐름</a></p></div>
+
+  <div class="card"><h3><span class="n">9</span> PASS 의 의미</h3>
+    <p><strong>SIMULATION PASS</strong> 는 형식·안전 검증만 통과했다는 뜻입니다.
+       추천 품질과 접근성 UX 는 별도 심사입니다.</p>
+    <p><a href="docs/PASS_SCOPE.md">PASS_SCOPE.md</a></p></div>
+
+  <div class="card"><h3><span class="n">10</span> 실제 키오스크와의 차이</h3>
+    <p>이 키트는 <strong>디지털 트윈</strong>입니다. 실제 키오스크·결제·병원 접수·행정 시스템에
+       아무것도 보내지 않습니다.</p>
+    <p><a href="docs/WHAT_WE_PROVIDE.md">WHAT_WE_PROVIDE.md</a></p></div>
+
+  <div class="card"><h3><span class="n">W</span> Windows 최종 확인</h3>
+    <p>Windows 에서는 압축 해제 위치와 경로 길이가 가장 흔한 실패 원인입니다.
+       <code>start-windows.bat</code> 을 누르기 전에 확인하세요.</p>
+    <p><a href="./WINDOWS_FINAL_CHECKLIST.md">WINDOWS_FINAL_CHECKLIST.md</a></p></div>
+</div>
+
+<h2>용어</h2>
+<table>
+  <tr><th>용어</th><th>뜻</th></tr>
+  <tr><td>Canonical Profile</td><td>수집 방식과 무관하게 KioBridge 가 공통으로 이해하는 사용자 정보 형식</td></tr>
+  <tr><td>SessionContext</td><td>이번 이용에만 해당하는 맥락 (오늘 무엇을 하러 왔는가)</td></tr>
+  <tr><td>Fixture</td><td>해당 환경의 후보·옵션·화면·상태전환이 들어 있는 공개 데이터</td></tr>
+  <tr><td>Semantic ExecutionPlan</td><td>좌표가 아니라 무엇을 어떤 순서로 선택할지를 나타내는 계획</td></tr>
+  <tr><td>Evidence</td><td>서버가 생성한 시뮬레이션 실행 증거</td></tr>
+</table>
+
+</main>
+
+<footer>
+  <p class="muted">
+    문제가 생기면 <a href="docs/TROUBLESHOOTING.md">TROUBLESHOOTING.md</a> 를 먼저 보세요.<br>
+    공식 판정은 운영진이 깨끗한 v5.1.4 패키지에서 <code>participant-submission.json</code> 을 재실행한 결과입니다.
+  </p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var root = document.documentElement;
+
+  /* 보기 설정 — 새로고침해도 유지 */
+  function toggle(id, key, attr) {
+    var btn = document.getElementById(id);
+    var on = localStorage.getItem(key) === "on";
+    function apply() {
+      root.setAttribute(attr, on ? "on" : "off");
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    }
+    apply();
+    btn.addEventListener("click", function () {
+      on = !on; localStorage.setItem(key, on ? "on" : "off"); apply();
+    });
+  }
+  toggle("big", "kio.large", "data-large");
+  toggle("contrast", "kio.contrast", "data-contrast");
+
+  /* 명령어 카드 + 복사 버튼 */
+  var COMMANDS = [
+    ["npm run participant:doctor", "설치·서버·버전을 한 번에 점검"],
+    ["npm run participant:demo", "Sandbox 왕복 시연 (연습용)"],
+    ["npm run participant:init -- --team TEAM-001 --env sandbox", "내 작업폴더 생성"],
+    ["npm run participant:progress", "9단계 구현 상태"],
+    ["npm run participant:validate -- --file ./workspace/TEAM-001/output/participant-submission.json --execute", "내 제출물 검증"],
+    ["npm run participant:package -- --team TEAM-001 --file ./workspace/TEAM-001/output/participant-submission.json", "최종 제출 폴더 생성"]
+  ];
+  var box = document.getElementById("cmds");
+  COMMANDS.forEach(function (row) {
+    var div = document.createElement("div");
+    div.className = "cmd";
+    var code = document.createElement("code");
+    code.textContent = row[0];
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "복사";
+    btn.setAttribute("aria-label", row[0] + " 복사");
+    btn.addEventListener("click", function () {
+      copy(row[0], btn);
+    });
+    var note = document.createElement("span");
+    note.className = "muted";
+    note.textContent = row[1];
+    div.appendChild(code); div.appendChild(btn); div.appendChild(note);
+    box.appendChild(div);
+  });
+
+  /* 클립보드 API 가 없거나 file:// 에서 막히는 브라우저를 위한 대체 경로 */
+  function copy(text, btn) {
+    var done = function () {
+      var old = btn.textContent;
+      btn.textContent = "복사됨";
+      setTimeout(function () { btn.textContent = old; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+    } else {
+      fallback(text, done);
+    }
+  }
+  function fallback(text, done) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { /* 브라우저가 막으면 수동 복사 */ }
+    document.body.removeChild(ta);
+  }
+
+  /* 진행 체크박스 */
+  var STEPS = [
+    "ZIP 압축 해제",
+    "시작파일 실행 (start-macos.command / start-windows.bat / start-linux.sh)",
+    "participant:doctor 가 READY",
+    "participant:demo 가 SIMULATION PASS",
+    "participant:init 으로 내 작업폴더 생성",
+    "participant.ts 9개 함수 구현",
+    "participant:progress 가 9/9",
+    "participant:validate 통과",
+    "participant:package 로 제출폴더 생성",
+    "README.md 빈칸 채우고 제출"
+  ];
+  var checks = document.getElementById("checks");
+  STEPS.forEach(function (label, i) {
+    var key = "kio.step." + i;
+    var row = document.createElement("label");
+    row.className = "check";
+    var input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = localStorage.getItem(key) === "1";
+    input.addEventListener("change", function () {
+      localStorage.setItem(key, input.checked ? "1" : "0");
+    });
+    var span = document.createElement("span");
+    span.textContent = (i + 1) + ". " + label;
+    row.appendChild(input); row.appendChild(span);
+    checks.appendChild(row);
+  });
+
+  document.getElementById("clear").addEventListener("click", function () {
+    STEPS.forEach(function (_, i) { localStorage.removeItem("kio.step." + i); });
+    var boxes = checks.querySelectorAll("input");
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
+  });
+})();
+</script>
+</body>
+</html>

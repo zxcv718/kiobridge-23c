@@ -1,0 +1,144 @@
+{
+  "version": "1.0.0",
+  "environmentId": "chicken-store",
+  "title": "주문 내용",
+  "notice": "결제 직전에서 정지합니다. 실제 결제는 수행되지 않습니다.",
+  "fields": [
+    {
+      "fieldId": "serviceType",
+      "label": "서비스 방식",
+      "required": true,
+      "sources": [
+        {
+          "type": "selectedOption",
+          "key": "SERVICE_TYPE"
+        },
+        {
+          "type": "sessionContext",
+          "path": "preferences.serviceType"
+        }
+      ],
+      "valueLabels": {
+        "DINE_IN": "매장 이용",
+        "TAKE_OUT": "포장",
+        "UNKNOWN": "확인 필요"
+      }
+    },
+    {
+      "fieldId": "menuName",
+      "label": "메뉴명",
+      "required": true,
+      "sources": [
+        {
+          "type": "selectedCandidateField",
+          "key": "name"
+        }
+      ]
+    },
+    {
+      "fieldId": "quantity",
+      "label": "수량",
+      "required": true,
+      "sources": [
+        {
+          "type": "uiState",
+          "path": "quantity"
+        }
+      ]
+    },
+    {
+      "fieldId": "spicyLevel",
+      "label": "맵기",
+      "sources": [
+        {
+          "type": "selectedOption",
+          "key": "SPICY_LEVEL"
+        },
+        {
+          "type": "selectedCandidateSupportedOption",
+          "key": "SPICY_LEVEL",
+          "strategy": "FIRST"
+        }
+      ],
+      "valueLabels": {
+        "MILD": "순한맛",
+        "MEDIUM": "보통맛",
+        "HOT": "매운맛"
+      }
+    },
+    {
+      "fieldId": "boneType",
+      "label": "뼈 유무",
+      "sources": [
+        {
+          "type": "selectedOption",
+          "key": "BONE_TYPE"
+        },
+        {
+          "type": "selectedCandidateSupportedOption",
+          "key": "BONE_TYPE",
+          "strategy": "FIRST"
+        }
+      ],
+      "valueLabels": {
+        "BONELESS": "순살",
+        "BONE": "뼈"
+      }
+    },
+    {
+      "fieldId": "allergenCheck",
+      "label": "알레르기 확인",
+      "required": true,
+      "sources": [
+        {
+          "type": "uiState",
+          "path": "allergenCheckLabel"
+        }
+      ]
+    },
+    {
+      "fieldId": "unitPrice",
+      "label": "단가",
+      "required": true,
+      "sources": [
+        {
+          "type": "selectedCandidateField",
+          "key": "price"
+        }
+      ]
+    },
+    {
+      "fieldId": "totalPrice",
+      "label": "총액",
+      "required": true,
+      "sources": [
+        {
+          "type": "uiState",
+          "path": "totalPriceLabel"
+        }
+      ]
+    },
+    {
+      "fieldId": "targetMatch",
+      "label": "추천·실행 대상 일치",
+      "required": true,
+      "sources": [
+        {
+          "type": "uiState",
+          "path": "targetMatchLabel"
+        }
+      ]
+    },
+    {
+      "fieldId": "paymentNotice",
+      "label": "결제 안내",
+      "required": true,
+      "sources": [
+        {
+          "type": "constant",
+          "value": "결제 직전 STOP — 실제 결제 없음"
+        }
+      ]
+    }
+  ]
+}

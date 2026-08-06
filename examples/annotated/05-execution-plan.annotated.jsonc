@@ -1,0 +1,60 @@
+// ══════════════════════════════════════════════════════════════════════
+// 이 파일은 설명용입니다.
+// JSONC 주석이 있으므로 API 에 직접 제출하지 마세요 (JSON 파싱 실패).
+// 실행 예제는 ../submission-format-example/sandbox.json 을 사용하세요.
+// ══════════════════════════════════════════════════════════════════════
+
+// ExecutionPlan — "무엇을 어떤 순서로 누를 것인가"
+//
+// 누가 만드나: 참가팀 (STEP 9)
+//
+// 좌표·UIA ID·컨트롤 ID 를 쓰지 않습니다. 의미만 적으면
+// Simulation Driver 가 화면 페이지와 슬롯을 알아서 찾습니다.
+{
+  // [필수] 팀이 정하는 식별자
+  "planId": "EXAMPLE-PLAN",
+
+  // [필수] 항상 SIMULATION_ONLY. 다른 값이면 INVALID_FIXED_PRINCIPLE.
+  "validationMode": "SIMULATION_ONLY",
+
+  // [필수] 항상 DIGITAL_TWIN
+  "executionEnvironment": "DIGITAL_TWIN",
+
+  // [필수] 항상 false. 실제 키오스크에는 아무것도 보내지 않습니다.
+  "actualDeviceCommandSent": false,
+
+  // [필수] 0 부터 연속. 사용자가 거절했다면 빈 배열.
+  "actions": [
+    {
+      // [필수] 0 부터 시작해 1씩 증가
+      "actionIndex": 0,
+
+      // [필수] fixture.transitions 에 있는 action 이름
+      "action": "<action>",
+
+      // [필수] 의미 대상.
+      //   kind: "candidate" | "option" | "review" | "staff" | 그 외 화면별 kind
+      //   option 이면 groupId 가 필요합니다.
+      "target": { "kind": "candidate", "id": "<후보ID>" },
+
+      // [필수] 이 Action 직전 화면 상태. 어긋나면 STATE_MISMATCH.
+      "expectedBeforeState": "<상태>",
+
+      // [필수] 이 Action 직후 화면 상태
+      "expectedAfterState": "<상태>"
+    }
+
+    // 이어서:
+    //  - 필수 옵션 그룹을 사용자가 고른 값으로 선택
+    //    (빠뜨리면 EXECUTION_REQUIRED_OPTION_MISSING)
+    //    (같은 그룹을 다른 값으로 두 번 = EXECUTION_OPTION_DUPLICATE)
+    //  - manifest.reviewBoundaryState 까지 진행
+    //    (못 가면 BOUNDARY_NOT_REACHED)
+    //  - 마지막에 verifier action
+    //    (없으면 MISSING_VERIFIER, 뒤에 뭘 더 넣으면 ACTION_AFTER_VERIFIER)
+    //
+    // 넣으면 안 되는 것:
+    //  - 결제 / 본인확인 완료 / 행정처리 확정 → FORBIDDEN_ACTION (계획에만 있어도 FAIL)
+    //  - 페이지 이동 → 필요 없습니다. Driver 가 넘깁니다.
+  ]
+}

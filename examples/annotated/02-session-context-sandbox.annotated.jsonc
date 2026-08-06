@@ -1,0 +1,63 @@
+// ══════════════════════════════════════════════════════════════════════
+// 이 파일은 설명용입니다.
+// JSONC 주석이 있으므로 API 에 직접 제출하지 마세요 (JSON 파싱 실패).
+// 실행 예제는 ../submission-format-example/sandbox.json 을 사용하세요.
+// ══════════════════════════════════════════════════════════════════════
+
+// SessionContext — "오늘 이 사람이 무엇을 하러 왔는가"
+//
+// 누가 만드나: 참가팀 (STEP 3 createSessionContext)
+// 언제:       매 이용마다 새로
+//
+// 섹션이 나뉜 이유: 의미가 다르기 때문입니다. 섞으면 DOMAIN_CONTEXT_MISMATCH.
+{
+  // [필수] 무엇을 하러 왔는가
+  "intent": {
+    // 환경마다 다릅니다: ORDER_FOOD · CHECK_IN · PUBLIC_SERVICE_GUIDANCE · PRACTICE
+    "task": "PRACTICE"
+    // "requestedServiceId": "..."  // 관공서에서 특정 업무를 지목했다면
+  },
+
+  // [필수 섹션] 확인된 사실. 양보의 대상이 아닙니다.
+  //   병원: visitType · appointmentStatus · departmentId · guardianPresent
+  //   관공서: serviceCategory
+  "facts": {},
+
+  // [필수 섹션] 선호. 맞지 않으면 경고(WARN)이지 차단이 아닙니다.
+  "preferences": {
+    "size": "SMALL"
+  },
+
+  // [필수 섹션] 절대 조건. 맞지 않으면 차단(BLOCK)입니다.
+  //   닭강정: allergenIds · maxPriceKrw
+  //   병원/관공서: medicalInferenceAllowed · legalEligibilityInferenceAllowed
+  "hardConstraints": {},
+
+  // [필수 섹션] 쓸 수 있는 수단.
+  //   관공서: availableAuthMethods  ← 선호가 아니라 "가진 것"
+  //   병원:   canUseSelfCheckIn
+  "capabilities": {},
+
+  // [필수 섹션] 각 값을 얼마나 믿을 수 있는가. 키는 JSON Pointer 입니다.
+  "fieldMetadata": {
+    "/preferences/size": {
+      // [필수] 어디서 왔나
+      "source": "WEB_FORM",
+      // [필수] 0~1. 낮으면 플랫폼이 재확인을 요구할 수 있습니다.
+      "confidence": 1,
+      // [필수] 사용자가 직접 확인했는가. false + 낮은 confidence 는 UNKNOWN 취급.
+      "confirmedByUser": true
+      // "capturedAt": "2026-08-03T00:11:00Z"   // 넣는다면 UTC Z 형식
+    }
+  }
+
+  // 외부 맥락(날씨·혼잡도)은 Core 를 건드리지 말고 여기에:
+  // "extensions": {
+  //   "TEAM_001.contextSignals": [
+  //     { "type": "WEATHER", "key": "condition", "value": "RAIN",
+  //       "source": "WEATHER_API", "observedAt": "2026-08-03T00:00:00Z",
+  //       "expiresAt": "2026-08-03T01:00:00Z", "confidence": 1 }
+  //   ]
+  // }
+  // extensions 는 Core 값을 덮어쓰거나 hardConstraints 를 무시할 수 없습니다.
+}

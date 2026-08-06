@@ -1,0 +1,12 @@
+{
+  "vocabularyVersion": "1.0.0",
+  "environmentId": "sandbox",
+  "preferences": {
+    "size": [
+      "SMALL",
+      "LARGE",
+      "NO_PREFERENCE",
+      "UNKNOWN"
+    ]
+  }
+}

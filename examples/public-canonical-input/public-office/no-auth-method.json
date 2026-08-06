@@ -1,0 +1,53 @@
+{
+  "_note": "공식 평가 환경입니다. Canonical Profile 과 SessionContext 형식만 제공합니다. recommendation 과 executionPlan 은 참가팀이 직접 개발해야 하므로 포함하지 않습니다.",
+  "_expectedValidation": "VALID",
+  "inputContractVersion": "1.0.0",
+  "environmentId": "public-office",
+  "teamId": "TEAM-EXAMPLE",
+  "profile": {
+    "profileId": "EXAMPLE-PROFILE-GOV-B",
+    "dataClassification": "SYNTHETIC_PROFILE",
+    "source": {
+      "collectionChannel": "ASSISTED_INPUT",
+      "providerId": "TEAM-EXAMPLE",
+      "collectedAt": "2026-08-01T05:30:00.000Z"
+    },
+    "accessibility": {
+      "largeText": false,
+      "simpleSteps": false,
+      "visualGuidance": false,
+      "hearingSupport": false,
+      "mobilitySupport": false,
+      "highContrast": false,
+      "staffAssistancePreferred": true
+    },
+    "interaction": {
+      "preferredInput": "ASSISTED",
+      "language": "ko-KR",
+      "confirmationRequired": true
+    },
+    "consent": {
+      "personalization": true,
+      "retentionPolicy": "SESSION_ONLY"
+    }
+  },
+  "sessionContext": {
+    "intent": {
+      "task": "PUBLIC_SERVICE_GUIDANCE"
+    },
+    "facts": {
+      "serviceCategory": "UNKNOWN"
+    },
+    "preferences": {
+      "stepByStep": true,
+      "simpleLanguage": true
+    },
+    "hardConstraints": {
+      "legalEligibilityInferenceAllowed": false
+    },
+    "capabilities": {
+      "availableAuthMethods": []
+    },
+    "fieldMetadata": {}
+  }
+}

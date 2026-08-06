@@ -1,0 +1,125 @@
+{
+  "version": "1.0.0",
+  "environmentId": "hospital",
+  "rules": [
+    {
+      "ruleId": "HOSPITAL_VISIT_TYPE_COMPATIBILITY",
+      "description": "방문유형 호환성",
+      "source": {
+        "section": "facts",
+        "path": "visitType"
+      },
+      "candidate": {
+        "source": "supportedOptions",
+        "key": "VISIT_TYPE"
+      },
+      "operator": "IN",
+      "severity": "BLOCK",
+      "unknownPolicy": "RECONFIRM",
+      "errorCode": "VISIT_TYPE_MISMATCH",
+      "minConfidence": 0.8
+    },
+    {
+      "ruleId": "HOSPITAL_APPOINTMENT_COMPATIBILITY",
+      "description": "예약 여부 호환성",
+      "source": {
+        "section": "facts",
+        "path": "appointmentStatus"
+      },
+      "candidate": {
+        "source": "supportedOptions",
+        "key": "APPOINTMENT"
+      },
+      "operator": "IN",
+      "severity": "BLOCK",
+      "unknownPolicy": "RECONFIRM",
+      "errorCode": "APPOINTMENT_MISMATCH",
+      "minConfidence": 0.8
+    },
+    {
+      "ruleId": "HOSPITAL_DEPARTMENT_COMPATIBILITY",
+      "description": "진료과 호환성 (증상 기반 추론 금지)",
+      "source": {
+        "section": "facts",
+        "path": "departmentId"
+      },
+      "candidate": {
+        "source": "supportedOptions",
+        "key": "DEPARTMENT"
+      },
+      "operator": "IN",
+      "severity": "BLOCK",
+      "unknownPolicy": "RECONFIRM",
+      "errorCode": "DEPARTMENT_MISMATCH",
+      "neutralValues": [
+        "NOT_APPLICABLE",
+        "NO_PREFERENCE"
+      ],
+      "wildcardCandidateValues": [
+        "UNSPECIFIED"
+      ],
+      "minConfidence": 0.8
+    },
+    {
+      "ruleId": "HOSPITAL_SELECTED_VISIT_TYPE",
+      "description": "실행계획이 선택한 방문유형",
+      "evaluationScope": "EXECUTION_CHOICE",
+      "source": {
+        "section": "facts",
+        "path": "visitType"
+      },
+      "target": {
+        "source": "executionSelectedOption",
+        "key": "VISIT_TYPE"
+      },
+      "operator": "EQUALS_SELECTED",
+      "severity": "BLOCK",
+      "unknownPolicy": "RECONFIRM",
+      "errorCode": "SELECTED_VISIT_TYPE_MISMATCH",
+      "minConfidence": 0.8
+    },
+    {
+      "ruleId": "HOSPITAL_SELECTED_APPOINTMENT",
+      "description": "실행계획이 선택한 예약상태",
+      "evaluationScope": "EXECUTION_CHOICE",
+      "source": {
+        "section": "facts",
+        "path": "appointmentStatus"
+      },
+      "target": {
+        "source": "executionSelectedOption",
+        "key": "APPOINTMENT"
+      },
+      "operator": "EQUALS_SELECTED",
+      "severity": "BLOCK",
+      "unknownPolicy": "RECONFIRM",
+      "errorCode": "SELECTED_APPOINTMENT_MISMATCH",
+      "minConfidence": 0.8
+    },
+    {
+      "ruleId": "HOSPITAL_SELECTED_DEPARTMENT",
+      "description": "실행계획이 선택한 진료과",
+      "evaluationScope": "EXECUTION_CHOICE",
+      "source": {
+        "section": "facts",
+        "path": "departmentId"
+      },
+      "target": {
+        "source": "executionSelectedOption",
+        "key": "DEPARTMENT"
+      },
+      "operator": "EQUALS_SELECTED",
+      "severity": "BLOCK",
+      "unknownPolicy": "RECONFIRM",
+      "errorCode": "SELECTED_DEPARTMENT_MISMATCH",
+      "neutralValues": [
+        "NOT_APPLICABLE",
+        "NO_PREFERENCE"
+      ],
+      "wildcardCandidateValues": [
+        "UNSPECIFIED"
+      ],
+      "minConfidence": 0.8
+    }
+  ]
+}

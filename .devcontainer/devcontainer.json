@@ -1,0 +1,24 @@
+{
+  "name": "KioBridge Simulation Kit",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "forwardPorts": [3000, 4000, 4100],
+  "portsAttributes": {
+    "3000": { "label": "Simulator Web" },
+    "4000": { "label": "Core API" },
+    "4100": { "label": "Participant Adapter" }
+  },
+  "postCreateCommand": "npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-playwright.playwright"
+      ]
+    }
+  },
+  "remoteUser": "node"
+}
