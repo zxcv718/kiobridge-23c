@@ -73,3 +73,52 @@ describe("STEP 9 buildExecutionPlanCore", () => {
     expect(buildExecutionPlanCore(APPROVE, rec(), fx, CTX).actualDeviceCommandSent).toBe(false);
   });
 });
+
+describe("선택 옵션 — 못 맞추면 대체하지 않는다 (SELECTED_CUP_OPTION_MISMATCH 회귀)", () => {
+  const fixture = loadChickenFixture();
+  /** CUP 을 PAPER 만 지원하는 후보 (일반컵 요청을 만족시킬 수 없다) */
+  const paperOnly = fixture.candidates.find(
+    (c) => (c.supportedOptions?.CUP ?? []).join() === "PAPER",
+  )!;
+  const approve = { approved: true, decision: "APPROVE" as const };
+  const rec = (id: string) => ({
+    recommendedCandidateId: id, alternativeCandidateIds: [], excludedCandidates: [],
+    recommendationReasons: [], confidence: 0.9, requiresReconfirmation: false,
+  });
+  const cupOf = (plan: { actions: { target: { groupId?: string; id: string } }[] }) =>
+    plan.actions.find((a) => a.target?.groupId === "CUP")?.target.id;
+
+  it("일반컵을 원했는데 후보가 종이컵만 지원하면 컵을 아예 선택하지 않는다", () => {
+    const plan = buildExecutionPlanCore(approve, rec(paperOnly.candidateId), fixture, {
+      preferences: { cupOption: "REGULAR" }, hardConstraints: {},
+    });
+    expect(cupOf(plan)).toBeUndefined(); // PAPER 로 몰래 바꾸지 않는다
+  });
+
+  it("후보가 원하는 컵을 지원하면 그대로 선택한다", () => {
+    const both = fixture.candidates.find(
+      (c) => (c.supportedOptions?.CUP ?? []).includes("REGULAR"),
+    )!;
+    const plan = buildExecutionPlanCore(approve, rec(both.candidateId), fixture, {
+      preferences: { cupOption: "REGULAR" }, hardConstraints: {},
+    });
+    expect(cupOf(plan)).toBe("REGULAR");
+  });
+
+  it("컵 선호가 없으면 선택하지 않는다", () => {
+    const plan = buildExecutionPlanCore(approve, rec(paperOnly.candidateId), fixture, {
+      preferences: {}, hardConstraints: {},
+    });
+    expect(cupOf(plan)).toBeUndefined();
+  });
+
+  it("필수 그룹은 못 맞춰도 후보가 지원하는 값으로 채운다 (미선택 시 REQUIRED_OPTION_MISSING)", () => {
+    const plan = buildExecutionPlanCore(approve, rec(paperOnly.candidateId), fixture, {
+      preferences: { spicyLevel: "MILD" }, hardConstraints: {}, // paperOnly 가 MILD 를 지원하지 않아도
+    });
+    const chosen = plan.actions.filter((a) => a.target?.groupId).map((a) => a.target.groupId);
+    for (const g of fixture.optionGroups.filter((x) => x.required && x.groupId !== "SERVICE_TYPE")) {
+      expect(chosen, `필수 그룹 ${g.groupId} 미선택`).toContain(g.groupId);
+    }
+  });
+});

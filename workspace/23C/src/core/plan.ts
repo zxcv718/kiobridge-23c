@@ -21,11 +21,23 @@ function transitionTo(fixture: PublicFixture, from: string, action: string): str
   return t.to;
 }
 
-/** 옵션 그룹에서 실제 선택할 값 결정: 사용자 선호가 후보 지원 목록에 있으면 선호, 아니면 후보가 지원하는 첫 값. */
-function chooseOptionValue(groupId: string, pref: string | undefined, candidate: Candidate): string | undefined {
+/**
+ * 옵션 그룹에서 실제 선택할 값 결정.
+ *
+ * 필수 그룹은 반드시 하나를 골라야 하므로(REQUIRED_OPTION_MISSING), 선호를 못 맞추면
+ * 후보가 지원하는 첫 값으로 대체한다 — 계약이 강제하는 어쩔 수 없는 대체다.
+ *
+ * 선택 그룹은 다르다. 넣지 않아도 되므로, 선호를 정확히 만족하지 못하면 **아무것도 넣지 않는다**.
+ * 못 맞추는데 다른 값으로 바꿔 넣으면 사용자가 말하지 않은 것을 우리가 정하는 셈이고,
+ * 호환규칙도 그것을 잡아낸다(예: CHICKEN_SELECTED_CUP_OPTION — 사용자 REGULAR vs 실행 PAPER).
+ */
+function chooseOptionValue(
+  groupId: string, pref: string | undefined, candidate: Candidate, required: boolean,
+): string | undefined {
   const supported = candidate.supportedOptions?.[groupId] ?? [];
   if (supported.length === 0) return undefined;
   if (definite(pref) && supported.includes(pref)) return pref;
+  if (!required) return undefined; // 선택 그룹은 선호를 못 맞추면 건드리지 않는다
   return supported[0];
 }
 
@@ -66,15 +78,15 @@ export function buildExecutionPlanCore(
     state = to;
   };
 
-  // 1) 이용 방식 — 선호가 명확하면 선호, 아니면 후보가 지원하는 값
-  const serviceChoice = chooseOptionValue("SERVICE_TYPE", ctx.preferences.serviceType, candidate);
+  // 1) 이용 방식 — 필수 그룹이므로 선호를 못 맞춰도 후보가 지원하는 값으로 진행한다
+  const serviceChoice = chooseOptionValue("SERVICE_TYPE", ctx.preferences.serviceType, candidate, true);
   if (!serviceChoice) throw new Error("후보가 지원하는 이용 방식이 없습니다");
   push("select_service", { kind: "service_type", id: serviceChoice });
 
   // 2) 메뉴 선택 — 추천 후보 정확히 1회
   push("select_menu", { kind: "candidate", id: candidate.candidateId });
 
-  // 3) 옵션 — 필수 그룹은 반드시, 선택 그룹(CUP)은 선호가 있을 때만
+  // 3) 옵션 — 필수 그룹은 반드시, 선택 그룹(CUP)은 선호를 정확히 만족할 때만
   const groups = fixture.optionGroups.filter((g) => g.groupId !== "SERVICE_TYPE");
   for (const g of groups) {
     const prefMap: Record<string, string | undefined> = {
@@ -89,9 +101,9 @@ export function buildExecutionPlanCore(
       push("select_option", { kind: "option", groupId: g.groupId, id: opt.id }, (opt as { value?: number }).value ?? null);
       continue;
     }
-    const choice = chooseOptionValue(g.groupId, prefMap[g.groupId], candidate);
+    // 선택 그룹에서 선호가 없거나 후보가 못 맞추면 chooseOptionValue 가 undefined 를 준다 → 건너뛴다
+    const choice = chooseOptionValue(g.groupId, prefMap[g.groupId], candidate, g.required === true);
     if (choice === undefined) continue;
-    if (!g.required && !definite(prefMap[g.groupId])) continue; // 선택 그룹은 선호 없으면 건드리지 않는다
     push("select_option", { kind: "option", groupId: g.groupId, id: choice });
   }
 
