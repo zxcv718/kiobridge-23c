@@ -1,12 +1,12 @@
 {
   "evidenceVersion": "1.2",
-  "runId": "RUN-chicken-store-20260806074737-yznx9u",
-  "sessionId": "SIM-20260806-031",
+  "runId": "RUN-chicken-store-20260806080209-rbwngz",
+  "sessionId": "SIM-20260806-034",
   "teamId": "23C",
   "environmentId": "chicken-store",
   "fixtureVersion": "chicken-store@0.2.0",
-  "submissionHash": "sha-fnv1a-1bb2e558",
-  "createdAt": "2026-08-06T07:47:37.309Z",
+  "submissionHash": "sha-fnv1a-c20b82af",
+  "createdAt": "2026-08-06T08:02:09.045Z",
   "driverId": "SIMULATION",
   "driverStatus": "READY",
   "dataClassification": {
@@ -80,7 +80,7 @@
       "등록하신 알레르기와 겹치는 메뉴 1개를 제외했습니다.",
       "품절된 메뉴 1개를 제외했습니다.",
       "원하시는 이용 방식이 불가능한 메뉴 1개를 제외했습니다.",
-      "이용 방식을 직접 골라 주셔서, 시간대(한산한 시간)는 순서에 반영하지 않았습니다."
+      "이용 방식을 직접 골라 주셔서, 시간대(저녁 붐빔)는 순서에 반영하지 않았습니다."
     ],
     "unmetConditions": [],
     "confidence": 0.64,
@@ -89,7 +89,7 @@
   "userDecision": {
     "approved": true,
     "decision": "APPROVE",
-    "confirmedAt": "2026-08-06T07:47:26.501Z"
+    "confirmedAt": "2026-08-06T08:02:08.571Z"
   },
   "executionPlan": [
     {

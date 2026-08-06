@@ -1,7 +1,7 @@
 /** STEP 9 실행계획 테스트 — 전이 정합·경계 정지·결제 0건. */
 import { describe, it, expect } from "vitest";
 import { buildRecommendation, type EngineContext } from "../src/core/engine";
-import { buildExecutionPlanCore } from "../src/core/plan";
+import { buildExecutionPlanCore , substitutionsFor } from "../src/core/plan";
 import { loadChickenFixture } from "./helpers";
 
 const fx = loadChickenFixture();
@@ -74,7 +74,7 @@ describe("STEP 9 buildExecutionPlanCore", () => {
   });
 });
 
-describe("선택 옵션 — 못 맞추면 대체하지 않는다 (SELECTED_CUP_OPTION_MISMATCH 회귀)", () => {
+describe("선택 옵션 — 못 맞추면 대체하고 알린다", () => {
   const fixture = loadChickenFixture();
   /** CUP 을 PAPER 만 지원하는 후보 (일반컵 요청을 만족시킬 수 없다) */
   const paperOnly = fixture.candidates.find(
@@ -88,37 +88,101 @@ describe("선택 옵션 — 못 맞추면 대체하지 않는다 (SELECTED_CUP_O
   const cupOf = (plan: { actions: { target: { groupId?: string; id: string } }[] }) =>
     plan.actions.find((a) => a.target?.groupId === "CUP")?.target.id;
 
-  it("일반컵을 원했는데 후보가 종이컵만 지원하면 컵을 아예 선택하지 않는다", () => {
+  it("일반컵을 원했는데 후보가 종이컵만 지원하면 종이컵으로 대체한다", () => {
+    // 생략하면 결과가 '컵 없음(NONE)'에 가까워져 사용자 의도에서 더 멀어진다.
     const plan = buildExecutionPlanCore(approve, rec(paperOnly.candidateId), fixture, {
       preferences: { cupOption: "REGULAR" }, hardConstraints: {},
     });
-    expect(cupOf(plan)).toBeUndefined(); // PAPER 로 몰래 바꾸지 않는다
+    expect(cupOf(plan)).toBe("PAPER");
   });
 
-  it("후보가 원하는 컵을 지원하면 그대로 선택한다", () => {
-    const both = fixture.candidates.find(
-      (c) => (c.supportedOptions?.CUP ?? []).includes("REGULAR"),
-    )!;
+  it("대체한 사실을 화면이 알릴 수 있도록 목록으로 내놓는다", () => {
+    const subs = substitutionsFor(fixture, paperOnly, { preferences: { cupOption: "REGULAR" }, hardConstraints: {} });
+    expect(subs).toEqual([{ groupId: "CUP", wanted: "REGULAR", used: "PAPER" }]);
+  });
+
+  it("후보가 원하는 컵을 지원하면 그대로 선택하고 대체 목록은 비어 있다", () => {
+    const both = fixture.candidates.find((c) => (c.supportedOptions?.CUP ?? []).includes("REGULAR"))!;
     const plan = buildExecutionPlanCore(approve, rec(both.candidateId), fixture, {
       preferences: { cupOption: "REGULAR" }, hardConstraints: {},
     });
     expect(cupOf(plan)).toBe("REGULAR");
+    expect(substitutionsFor(fixture, both, { preferences: { cupOption: "REGULAR" }, hardConstraints: {} })).toEqual([]);
   });
 
-  it("컵 선호가 없으면 선택하지 않는다", () => {
+  it("컵 선호를 말하지 않았으면 선택 그룹을 건드리지 않는다", () => {
     const plan = buildExecutionPlanCore(approve, rec(paperOnly.candidateId), fixture, {
       preferences: {}, hardConstraints: {},
     });
     expect(cupOf(plan)).toBeUndefined();
+    expect(substitutionsFor(fixture, paperOnly, { preferences: {}, hardConstraints: {} })).toEqual([]);
   });
 
-  it("필수 그룹은 못 맞춰도 후보가 지원하는 값으로 채운다 (미선택 시 REQUIRED_OPTION_MISSING)", () => {
+  it("필수 그룹은 못 맞춰도 반드시 채운다 (REQUIRED_OPTION_MISSING 방지)", () => {
     const plan = buildExecutionPlanCore(approve, rec(paperOnly.candidateId), fixture, {
-      preferences: { spicyLevel: "MILD" }, hardConstraints: {}, // paperOnly 가 MILD 를 지원하지 않아도
+      preferences: { spicyLevel: "MILD" }, hardConstraints: {},
     });
     const chosen = plan.actions.filter((a) => a.target?.groupId).map((a) => a.target.groupId);
     for (const g of fixture.optionGroups.filter((x) => x.required && x.groupId !== "SERVICE_TYPE")) {
       expect(chosen, `필수 그룹 ${g.groupId} 미선택`).toContain(g.groupId);
     }
+  });
+});
+
+describe("대체는 특정 옵션에 한정되지 않는다 (전 그룹 공통)", () => {
+  const fixture = loadChickenFixture();
+  const approve = { approved: true, decision: "APPROVE" as const };
+  const rec = (id: string) => ({
+    recommendedCandidateId: id, alternativeCandidateIds: [], excludedCandidates: [],
+    recommendationReasons: [], confidence: 0.9, requiresReconfirmation: false,
+  });
+
+  /** 각 옵션 그룹마다 "후보가 지원하지 않는 값"을 골라 넣고 대체되는지 본다 */
+  const cases = [
+    { group: "SPICY_LEVEL", prefs: { spicyLevel: "MILD" } },
+    { group: "BONE_TYPE", prefs: { boneType: "BONELESS" } },
+    { group: "CUP", prefs: { cupOption: "REGULAR" } },
+  ] as const;
+
+  for (const { group, prefs } of cases) {
+    it(`${group} — 후보가 못 맞추면 지원값으로 대체한다`, () => {
+      const cand = fixture.candidates.find((c) => {
+        const sup = c.supportedOptions?.[group] ?? [];
+        return sup.length > 0 && !sup.includes(Object.values(prefs)[0] as string);
+      })!;
+      expect(cand, `${group} 를 못 맞추는 후보가 fixture 에 없습니다`).toBeDefined();
+      const plan = buildExecutionPlanCore(approve, rec(cand.candidateId), fixture, {
+        preferences: prefs, hardConstraints: {},
+      });
+      const chosen = plan.actions.find((a) => a.target?.groupId === group)?.target.id;
+      expect(chosen).toBeDefined();
+      expect(chosen).not.toBe(Object.values(prefs)[0]);       // 대체됐다
+      expect(cand.supportedOptions?.[group]).toContain(chosen); // 후보가 지원하는 값이다
+    });
+  }
+
+  it("이용 방식(SERVICE_TYPE)도 대체된다", () => {
+    const takeOutOnly = fixture.candidates.find(
+      (c) => (c.supportedOptions?.SERVICE_TYPE ?? []).join() === "TAKE_OUT",
+    )!;
+    const plan = buildExecutionPlanCore(approve, rec(takeOutOnly.candidateId), fixture, {
+      preferences: { serviceType: "DINE_IN" }, hardConstraints: {},
+    });
+    expect(plan.actions[0].target.id).toBe("TAKE_OUT");
+  });
+
+  it("화면 안내와 실행계획이 같은 매핑을 쓴다 — 어긋날 수 없다", () => {
+    const cand = fixture.candidates.find((c) => c.candidateId === "CHICKEN-003")!;
+    const ctx = {
+      preferences: { spicyLevel: "MILD", boneType: "BONELESS", cupOption: "REGULAR" },
+      hardConstraints: {},
+    };
+    const subs = substitutionsFor(fixture, cand, ctx);
+    const plan = buildExecutionPlanCore(approve, rec(cand.candidateId), fixture, ctx);
+    for (const s of subs) {
+      const inPlan = plan.actions.find((a) => a.target?.groupId === s.groupId)?.target.id;
+      expect(inPlan, `${s.groupId}: 안내는 ${s.used} 인데 계획은 ${inPlan}`).toBe(s.used);
+    }
+    expect(subs.length).toBeGreaterThan(0);
   });
 });

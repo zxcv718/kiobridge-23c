@@ -11,6 +11,7 @@ import {
   type RawUserInput, type UiRecommendation, type RunOutcome,
 } from "./logic";
 import { TIME_SLOT_KO, timeSlotOf } from "../../src/core/context";
+import { substitutionsFor } from "../../src/core/plan";
 
 type Step = "start" | "a11y" | "wizard" | "recommend" | "confirm" | "run" | "result" | "staff" | "edit";
 
@@ -24,6 +25,17 @@ const INJECTIONS: { code: string; label: string; desc: string }[] = [
   { code: "FORBIDDEN_ACTION", label: "금지된 동작을 하면?", desc: "허용 목록에 없는 동작을 시도해 봅니다" },
   { code: "UNKNOWN_STATE", label: "모르는 화면을 만나면?", desc: "정의되지 않은 화면 상태를 참조해 봅니다" },
 ];
+
+/** 실행계획에 들어가는 옵션 값의 한국어 이름 — 대체 안내에 쓴다 */
+const OPTION_KO: Record<string, string> = {
+  PAPER: "종이컵", REGULAR: "일반컵", NONE: "컵 없음",
+  MILD: "순한맛", MEDIUM: "보통맛", HOT: "매운맛",
+  BONE: "뼈", BONELESS: "순살",
+  DINE_IN: "먹고 가기", TAKE_OUT: "포장",
+};
+const GROUP_KO: Record<string, string> = {
+  CUP: "컵", SPICY_LEVEL: "맵기", BONE_TYPE: "형태", SERVICE_TYPE: "이용 방식",
+};
 
 const STOP_KO: Record<string, string> = {
   NORMAL_BOUNDARY_STOP: "정상 경계 정지",
@@ -691,6 +703,30 @@ export function App() {
             <p className="total">
               합계 {((candidatePrice(fixture, uiRec.rec.recommendedCandidateId) ?? 0) * Number(uiRec.engineCtx.preferences.quantity ?? 1)).toLocaleString()}원
             </p>
+            {(() => {
+              // 실행계획과 같은 매핑(preferenceByGroup)을 쓰므로 화면 안내와 계획이 어긋날 수 없다
+              const chosen = fixture.candidates.find((c) => c.candidateId === uiRec.rec.recommendedCandidateId);
+              const subs = chosen ? substitutionsFor(fixture, chosen, uiRec.engineCtx) : [];
+              if (subs.length === 0) return null;
+              // 승인 전에 반드시 보게 한다 — 우리가 바꾼 것을 사용자가 모르고 승인하면 안 된다.
+              return (
+                <div className="banner warn" role="alert">
+                  <b>이 메뉴에서 바꿔야 하는 것이 있습니다.</b>
+                  <ul style={{ margin: "8px 0 0", paddingLeft: 20 }}>
+                    {subs.map((x) => (
+                      <li key={x.groupId}>
+                        {GROUP_KO[x.groupId] ?? x.groupId} — 원하신 <b>{OPTION_KO[x.wanted] ?? x.wanted}</b>는 이 메뉴에 없어
+                        {" "}<b>{OPTION_KO[x.used] ?? x.used}</b>로 진행합니다.
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="btnrow" style={{ marginTop: 12 }}>
+                    <button type="button" className="btn ghost" onClick={() => setStep("recommend")}>다른 메뉴 보기</button>
+                    <button type="button" className="btn ghost" onClick={openEdit}>조건 바꾸기</button>
+                  </div>
+                </div>
+              );
+            })()}
             <div className="banner ok">가상 키오스크에서 장바구니 확인까지만 진행합니다. <b>실제 결제·주문은 일어나지 않습니다.</b></div>
             <div className="savebox">
               <button type="button" className="toggle" aria-pressed={storeToggle} onClick={toggleStore}>

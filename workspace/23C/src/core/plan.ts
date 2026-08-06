@@ -24,21 +24,58 @@ function transitionTo(fixture: PublicFixture, from: string, action: string): str
 /**
  * 옵션 그룹에서 실제 선택할 값 결정.
  *
- * 필수 그룹은 반드시 하나를 골라야 하므로(REQUIRED_OPTION_MISSING), 선호를 못 맞추면
- * 후보가 지원하는 첫 값으로 대체한다 — 계약이 강제하는 어쩔 수 없는 대체다.
+ * 선호를 못 맞추면 **후보가 지원하는 값으로 대체한다** — 선택 그룹이라도 마찬가지다.
  *
- * 선택 그룹은 다르다. 넣지 않아도 되므로, 선호를 정확히 만족하지 못하면 **아무것도 넣지 않는다**.
- * 못 맞추는데 다른 값으로 바꿔 넣으면 사용자가 말하지 않은 것을 우리가 정하는 셈이고,
- * 호환규칙도 그것을 잡아낸다(예: CHICKEN_SELECTED_CUP_OPTION — 사용자 REGULAR vs 실행 PAPER).
+ * 생략이 아니라 대체인 이유:
+ *  - `preferences` 는 사전 정의상 "지키면 좋지만 필수는 아님 · 불일치해도 BLOCK 아님 →
+ *    추천 점수/이유에 반영"이다. 즉 불일치는 **허용하되 알리는** 것이지 피할 대상이 아니다.
+ *  - `cupOption` 에는 "컵 필요 없음"을 뜻하는 `NONE` 이 따로 있다. 사용자가 REGULAR 라고
+ *    말했는데 우리가 생략하면 결과가 NONE 에 가까워져 **의도에서 더 멀어진다**.
+ *    종이컵이라도 받는 편이 사용자에게 낫다.
+ *  - 호환규칙이 이 대체를 WARN 으로 기록한다(CHICKEN_SELECTED_CUP_OPTION). 그 WARN 은
+ *    없애야 할 흠이 아니라 **무엇을 못 맞췄는지 남긴 정직한 기록**이다.
+ *
+ * 대신 대체했다는 사실을 사용자가 승인 전에 반드시 보게 한다 —
+ * `engine.ts` 의 unmetConditions 와 최종 확인 화면의 대체 안내가 그 역할을 한다.
  */
-function chooseOptionValue(
-  groupId: string, pref: string | undefined, candidate: Candidate, required: boolean,
-): string | undefined {
+function chooseOptionValue(groupId: string, pref: string | undefined, candidate: Candidate): string | undefined {
   const supported = candidate.supportedOptions?.[groupId] ?? [];
   if (supported.length === 0) return undefined;
   if (definite(pref) && supported.includes(pref)) return pref;
-  if (!required) return undefined; // 선택 그룹은 선호를 못 맞추면 건드리지 않는다
   return supported[0];
+}
+
+/**
+ * 옵션 그룹 ↔ 선호 필드 매핑 — **환경 의존적인 유일한 지점**이다.
+ * 실행계획과 화면 안내가 반드시 같은 값을 보게 하려고 여기 한 곳에만 둔다.
+ * (병원·관공서를 붙일 때 바꿀 곳도 여기 하나다)
+ */
+export function preferenceByGroup(prefs: EngineContext["preferences"]): Record<string, string | undefined> {
+  const p = prefs as Record<string, unknown>;
+  return {
+    SERVICE_TYPE: p.serviceType as string | undefined,
+    SPICY_LEVEL: p.spicyLevel as string | undefined,
+    BONE_TYPE: p.boneType as string | undefined,
+    CUP: p.cupOption as string | undefined,
+  };
+}
+
+/** 사용자 선호와 다르게 대체된 옵션 목록 — 화면에서 "무엇이 바뀌었는지" 알리는 데 쓴다. */
+export interface Substitution { groupId: string; wanted: string; used: string }
+
+export function substitutionsFor(
+  fixture: PublicFixture, candidate: Candidate, ctx: EngineContext,
+): Substitution[] {
+  const byGroup = preferenceByGroup(ctx.preferences);
+  const out: Substitution[] = [];
+  for (const g of fixture.optionGroups) {
+    const pref = byGroup[g.groupId];
+    if (!definite(pref)) continue;
+    const supported = candidate.supportedOptions?.[g.groupId] ?? [];
+    if (supported.length === 0 || supported.includes(pref)) continue;
+    out.push({ groupId: g.groupId, wanted: pref, used: supported[0] });
+  }
+  return out;
 }
 
 export function buildExecutionPlanCore(
@@ -78,22 +115,18 @@ export function buildExecutionPlanCore(
     state = to;
   };
 
-  // 1) 이용 방식 — 필수 그룹이므로 선호를 못 맞춰도 후보가 지원하는 값으로 진행한다
-  const serviceChoice = chooseOptionValue("SERVICE_TYPE", ctx.preferences.serviceType, candidate, true);
+  // 1) 이용 방식 — 선호를 못 맞춰도 후보가 지원하는 값으로 진행한다
+  const serviceChoice = chooseOptionValue("SERVICE_TYPE", ctx.preferences.serviceType, candidate);
   if (!serviceChoice) throw new Error("후보가 지원하는 이용 방식이 없습니다");
   push("select_service", { kind: "service_type", id: serviceChoice });
 
   // 2) 메뉴 선택 — 추천 후보 정확히 1회
   push("select_menu", { kind: "candidate", id: candidate.candidateId });
 
-  // 3) 옵션 — 필수 그룹은 반드시, 선택 그룹(CUP)은 선호를 정확히 만족할 때만
+  // 3) 옵션 — 필수 그룹은 반드시, 선택 그룹(CUP)은 사용자가 선호를 말했을 때만
   const groups = fixture.optionGroups.filter((g) => g.groupId !== "SERVICE_TYPE");
+  const prefMap = preferenceByGroup(ctx.preferences); // 화면 안내와 같은 매핑을 쓴다
   for (const g of groups) {
-    const prefMap: Record<string, string | undefined> = {
-      SPICY_LEVEL: ctx.preferences.spicyLevel,
-      BONE_TYPE: ctx.preferences.boneType,
-      CUP: ctx.preferences.cupOption,
-    };
     if (g.groupId === "QUANTITY") {
       const wanted = ctx.preferences.quantity ?? 1;
       const opt =
@@ -101,9 +134,11 @@ export function buildExecutionPlanCore(
       push("select_option", { kind: "option", groupId: g.groupId, id: opt.id }, (opt as { value?: number }).value ?? null);
       continue;
     }
-    // 선택 그룹에서 선호가 없거나 후보가 못 맞추면 chooseOptionValue 가 undefined 를 준다 → 건너뛴다
-    const choice = chooseOptionValue(g.groupId, prefMap[g.groupId], candidate, g.required === true);
+    const choice = chooseOptionValue(g.groupId, prefMap[g.groupId], candidate);
     if (choice === undefined) continue;
+    // 선택 그룹은 사용자가 아무 말도 안 했으면 건드리지 않는다.
+    // (선호를 말했는데 못 맞추는 경우는 위에서 대체값이 잡히므로 여기서 걸리지 않는다)
+    if (!g.required && !definite(prefMap[g.groupId])) continue;
     push("select_option", { kind: "option", groupId: g.groupId, id: choice });
   }
 
