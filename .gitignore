@@ -18,3 +18,5 @@ playwright-report/
 
 # 로컬 실행 산출물 (제출 패키지는 submission-output/ 아래에 별도로 보관한다)
 workspace/*/output/
+.vercel
+.env*
