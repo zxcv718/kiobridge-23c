@@ -78,6 +78,43 @@ export function substitutionsFor(
   return out;
 }
 
+/** 실행계획의 각 옵션이 어떻게 정해졌는지 — 확인 화면에서 그대로 보여준다. */
+export type SelectionOrigin =
+  | "USER"          // 사용자가 그 값을 골랐고 그대로 반영됨
+  | "AUTO"          // "상관없어요"/미입력이라 이 메뉴의 값으로 우리가 정함
+  | "SUBSTITUTED";  // 원한 값을 이 메뉴가 지원하지 않아 다른 값으로 대체됨
+
+export interface PlanSelection {
+  groupId: string;
+  id: string;
+  origin: SelectionOrigin;
+  /** SUBSTITUTED 일 때 원래 원했던 값 */
+  wanted?: string;
+}
+
+/**
+ * 사용자가 승인 전에 "무엇을 주문하게 되는지" 전부 보게 하려고 만든다.
+ * 필수 그룹은 "상관없어요"여도 반드시 하나가 정해지므로, 그 사실을 숨기지 않는다.
+ */
+export function explainSelections(
+  fixture: PublicFixture, plan: ExecutionPlan, ctx: EngineContext,
+): PlanSelection[] {
+  const byGroup = preferenceByGroup(ctx.preferences);
+  const out: PlanSelection[] = [];
+  for (const a of plan.actions) {
+    const t = a.target as { kind?: string; groupId?: string; id?: string } | undefined;
+    if (!t?.id) continue;
+    // 옵션 그룹으로 환원되는 타깃만 (kind 가 option 이거나 그룹 이름과 같은 종류)
+    const groupId = t.groupId ?? (t.kind ? t.kind.toUpperCase() : undefined);
+    if (!groupId || !fixture.optionGroups.some((g) => g.groupId === groupId)) continue;
+    const wanted = byGroup[groupId];
+    if (!definite(wanted)) out.push({ groupId, id: t.id, origin: "AUTO" });
+    else if (wanted === t.id) out.push({ groupId, id: t.id, origin: "USER" });
+    else out.push({ groupId, id: t.id, origin: "SUBSTITUTED", wanted });
+  }
+  return out;
+}
+
 export function buildExecutionPlanCore(
   decision: UserDecision,
   rec: Recommendation,

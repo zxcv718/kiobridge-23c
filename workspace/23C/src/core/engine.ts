@@ -154,7 +154,10 @@ export function computeConfidence(ranked: Scored[], hardConstraintUnknown: boole
   if (lowTrustInput) return 0.5;
   if (ranked.length === 1) return 0.9;
   const [top, second] = ranked;
-  const margin = top.total <= 0 ? 0 : (top.total - second.total) / top.total;
+  // 선호를 말하지 않은 축은 모든 후보에 같은 중립점을 얹는다. 그 공통분이 분모에 들어가면
+  // 실제 격차가 희석되므로, 후보 간 점수 "폭"을 기준으로 1·2위 격차를 잰다.
+  const spread = top.total - ranked[ranked.length - 1].total;
+  const margin = spread <= 0 ? 0 : (top.total - second.total) / spread;
   return Math.round(Math.min(0.95, 0.6 + margin * 0.35) * 100) / 100;
 }
 
@@ -202,6 +205,11 @@ function unmetConditions(top: Scored | undefined, ctx: EngineContext): string[] 
 const SPICY_KO: Record<string, string> = { MILD: "순한맛", MEDIUM: "보통맛", HOT: "매운맛" };
 const BONE_KO: Record<string, string> = { BONE: "뼈", BONELESS: "순살" };
 
+/** 사용자가 선호를 하나도 말하지 않았는가 (전부 "상관없어요"/미입력) */
+function noStatedPreference(p: ChickenPrefs): boolean {
+  return !definite(p.serviceType) && !definite(p.spicyLevel) && !definite(p.boneType) && !definite(p.cupOption);
+}
+
 export function explainCore(rec: Recommendation, ctx: EngineContext): string[] {
   const reasons: string[] = [];
   const p = ctx.preferences;
@@ -218,6 +226,14 @@ export function explainCore(rec: Recommendation, ctx: EngineContext): string[] {
       reasons.push(`${BONE_KO[p.boneType] ?? p.boneType}을 선호하셔서 ${BONE_KO[p.boneType] ?? p.boneType} 메뉴를 골랐습니다.`);
     if (h.maxPriceKrw !== undefined)
       reasons.push(`예산 ${h.maxPriceKrw.toLocaleString()}원 이내의 메뉴만 추천 대상에 두었습니다.`);
+
+    // 무엇이 순위를 갈랐는지 밝힌다 — 근거를 말하지 않는 추천은 설명이 아니다.
+    if (noStatedPreference(p)) {
+      reasons.push(
+        "맵기·형태·이용 방식을 모두 '상관없어요'로 답해 주셔서, 그 항목들은 순위에 반영하지 않았습니다. " +
+          "남은 기준이 가격뿐이라 가장 저렴한 메뉴를 먼저 보여드립니다.",
+      );
+    }
   }
 
   const byReason = new Map<string, number>();

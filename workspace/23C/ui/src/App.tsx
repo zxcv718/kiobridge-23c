@@ -11,7 +11,7 @@ import {
   type RawUserInput, type UiRecommendation, type RunOutcome,
 } from "./logic";
 import { TIME_SLOT_KO, timeSlotOf } from "../../src/core/context";
-import { substitutionsFor } from "../../src/core/plan";
+import { buildExecutionPlanCore, explainSelections } from "../../src/core/plan";
 
 type Step = "start" | "a11y" | "wizard" | "recommend" | "confirm" | "run" | "result" | "staff" | "edit";
 
@@ -32,9 +32,10 @@ const OPTION_KO: Record<string, string> = {
   MILD: "순한맛", MEDIUM: "보통맛", HOT: "매운맛",
   BONE: "뼈", BONELESS: "순살",
   DINE_IN: "먹고 가기", TAKE_OUT: "포장",
+  Q1: "1개", Q2: "2개", Q3: "3개",
 };
 const GROUP_KO: Record<string, string> = {
-  CUP: "컵", SPICY_LEVEL: "맵기", BONE_TYPE: "형태", SERVICE_TYPE: "이용 방식",
+  CUP: "컵", SPICY_LEVEL: "맵기", BONE_TYPE: "형태", SERVICE_TYPE: "이용 방식", QUANTITY: "수량",
 };
 
 const STOP_KO: Record<string, string> = {
@@ -704,27 +705,38 @@ export function App() {
               합계 {((candidatePrice(fixture, uiRec.rec.recommendedCandidateId) ?? 0) * Number(uiRec.engineCtx.preferences.quantity ?? 1)).toLocaleString()}원
             </p>
             {(() => {
-              // 실행계획과 같은 매핑(preferenceByGroup)을 쓰므로 화면 안내와 계획이 어긋날 수 없다
-              const chosen = fixture.candidates.find((c) => c.candidateId === uiRec.rec.recommendedCandidateId);
-              const subs = chosen ? substitutionsFor(fixture, chosen, uiRec.engineCtx) : [];
-              if (subs.length === 0) return null;
-              // 승인 전에 반드시 보게 한다 — 우리가 바꾼 것을 사용자가 모르고 승인하면 안 된다.
+              // 실제로 만들어질 실행계획을 그대로 읽어 보여준다 — 화면과 계획이 어긋날 수 없다.
+              // 필수 옵션은 "상관없어요"여도 하나가 정해지므로, 그 사실을 숨기지 않는다.
+              const preview = buildExecutionPlanCore(
+                { approved: true, decision: "APPROVE" }, uiRec.rec, fixture, uiRec.engineCtx,
+              );
+              const sels = explainSelections(fixture, preview, uiRec.engineCtx);
+              if (sels.length === 0) return null;
+              const need = sels.filter((x) => x.origin !== "USER");
               return (
-                <div className="banner warn" role="alert">
-                  <b>이 메뉴에서 바꿔야 하는 것이 있습니다.</b>
-                  <ul style={{ margin: "8px 0 0", paddingLeft: 20 }}>
-                    {subs.map((x) => (
-                      <li key={x.groupId}>
-                        {GROUP_KO[x.groupId] ?? x.groupId} — 원하신 <b>{OPTION_KO[x.wanted] ?? x.wanted}</b>는 이 메뉴에 없어
-                        {" "}<b>{OPTION_KO[x.used] ?? x.used}</b>로 진행합니다.
+                <>
+                  <h3 className="selhead">키오스크에서 이렇게 선택합니다</h3>
+                  <ul className="sellist">
+                    {sels.map((x) => (
+                      <li key={x.groupId} data-origin={x.origin}>
+                        <span className="sg">{GROUP_KO[x.groupId] ?? x.groupId}</span>
+                        <span className="sv">{OPTION_KO[x.id] ?? x.id}</span>
+                        <span className="so">
+                          {x.origin === "USER" && "고르신 대로"}
+                          {x.origin === "AUTO" && "상관없다고 하셔서 이 메뉴의 값으로 정했습니다"}
+                          {x.origin === "SUBSTITUTED" &&
+                            `원하신 ${OPTION_KO[x.wanted!] ?? x.wanted}는 이 메뉴에 없어 바꿨습니다`}
+                        </span>
                       </li>
                     ))}
                   </ul>
-                  <div className="btnrow" style={{ marginTop: 12 }}>
-                    <button type="button" className="btn ghost" onClick={() => setStep("recommend")}>다른 메뉴 보기</button>
-                    <button type="button" className="btn ghost" onClick={openEdit}>조건 바꾸기</button>
-                  </div>
-                </div>
+                  {need.length > 0 && (
+                    <div className="btnrow" style={{ marginTop: 4, marginBottom: 8 }}>
+                      <button type="button" className="btn ghost" onClick={() => setStep("recommend")}>다른 메뉴 보기</button>
+                      <button type="button" className="btn ghost" onClick={openEdit}>조건 바꾸기</button>
+                    </div>
+                  )}
+                </>
               );
             })()}
             <div className="banner ok">가상 키오스크에서 장바구니 확인까지만 진행합니다. <b>실제 결제·주문은 일어나지 않습니다.</b></div>

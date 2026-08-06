@@ -1,7 +1,7 @@
 /** STEP 9 실행계획 테스트 — 전이 정합·경계 정지·결제 0건. */
 import { describe, it, expect } from "vitest";
 import { buildRecommendation, type EngineContext } from "../src/core/engine";
-import { buildExecutionPlanCore , substitutionsFor } from "../src/core/plan";
+import { buildExecutionPlanCore , substitutionsFor , explainSelections } from "../src/core/plan";
 import { loadChickenFixture } from "./helpers";
 
 const fx = loadChickenFixture();
@@ -184,5 +184,65 @@ describe("대체는 특정 옵션에 한정되지 않는다 (전 그룹 공통)"
       expect(inPlan, `${s.groupId}: 안내는 ${s.used} 인데 계획은 ${inPlan}`).toBe(s.used);
     }
     expect(subs.length).toBeGreaterThan(0);
+  });
+});
+
+describe('"상관없어요" 가 필수/선택 그룹에서 어떻게 끝나는가', () => {
+  const fixture = loadChickenFixture();
+  const approve = { approved: true, decision: "APPROVE" as const };
+  const rec = (id: string) => ({
+    recommendedCandidateId: id, alternativeCandidateIds: [], excludedCandidates: [],
+    recommendationReasons: [], confidence: 0.9, requiresReconfirmation: false,
+  });
+  /** 맵기 HOT · 형태 BONE · 컵 PAPER 만 지원하는 후보 */
+  const c3 = fixture.candidates.find((c) => c.candidateId === "CHICKEN-003")!;
+
+  it("필수 그룹은 상관없어도 반드시 하나가 정해진다", () => {
+    const plan = buildExecutionPlanCore(approve, rec(c3.candidateId), fixture, {
+      preferences: {}, hardConstraints: {},
+    });
+    const groups = plan.actions.filter((a) => a.target?.groupId).map((a) => a.target.groupId);
+    for (const g of fixture.optionGroups.filter((x) => x.required && x.groupId !== "SERVICE_TYPE")) {
+      expect(groups, `필수 ${g.groupId} 가 정해지지 않았습니다`).toContain(g.groupId);
+    }
+  });
+
+  it("선택 그룹은 상관없으면 정해지지 않는다", () => {
+    const plan = buildExecutionPlanCore(approve, rec(c3.candidateId), fixture, {
+      preferences: {}, hardConstraints: {},
+    });
+    expect(plan.actions.find((a) => a.target?.groupId === "CUP")).toBeUndefined();
+  });
+
+  it("자동으로 정해진 값은 AUTO 로 표시돼 사용자가 승인 전에 본다", () => {
+    const ctx = { preferences: {}, hardConstraints: {} };
+    const plan = buildExecutionPlanCore(approve, rec(c3.candidateId), fixture, ctx);
+    const sels = explainSelections(fixture, plan, ctx);
+    // 필수 그룹은 전부 사용자가 말하지 않았으므로 AUTO 여야 한다
+    expect(sels.length).toBeGreaterThan(0);
+    expect(sels.every((x) => x.origin === "AUTO")).toBe(true);
+    expect(sels.map((x) => x.groupId)).toContain("SPICY_LEVEL");
+  });
+
+  it("고른 대로면 USER, 못 맞추면 SUBSTITUTED 로 구분된다", () => {
+    const ctx = { preferences: { spicyLevel: "HOT", boneType: "BONELESS" }, hardConstraints: {} };
+    const plan = buildExecutionPlanCore(approve, rec(c3.candidateId), fixture, ctx);
+    const sels = explainSelections(fixture, plan, ctx);
+    expect(sels.find((x) => x.groupId === "SPICY_LEVEL")?.origin).toBe("USER");
+    const bone = sels.find((x) => x.groupId === "BONE_TYPE");
+    expect(bone?.origin).toBe("SUBSTITUTED");
+    expect(bone?.wanted).toBe("BONELESS");
+    expect(bone?.id).toBe("BONE");
+  });
+
+  it("화면에 보이는 선택이 실행계획과 정확히 같다", () => {
+    const ctx = { preferences: { cupOption: "REGULAR" }, hardConstraints: {} };
+    const plan = buildExecutionPlanCore(approve, rec(c3.candidateId), fixture, ctx);
+    // select_service 는 groupId 없이 kind:"service_type" 을 쓴다 — 코드와 같은 방식으로 환원한다
+    const groupOf = (t: { kind?: string; groupId?: string }) => t.groupId ?? t.kind?.toUpperCase();
+    for (const sel of explainSelections(fixture, plan, ctx)) {
+      const inPlan = plan.actions.find((a) => groupOf(a.target) === sel.groupId)?.target.id;
+      expect(inPlan, `${sel.groupId}`).toBe(sel.id);
+    }
   });
 });
