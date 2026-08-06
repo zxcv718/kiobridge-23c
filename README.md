@@ -1,3 +1,64 @@
+# 팀 23C — 주문 도우미 (KioBridge 해커톤)
+
+키오스크 앞에서 작은 글씨·깊은 옵션 때문에 주문을 포기하는 사용자가,
+로그인 없이 큰 버튼 질문에 답하면 **알레르기·예산을 지킨 추천과 그 이유**를 받고,
+확인 후 가상 키오스크에서 장바구니까지 안전하게 완주하는 서비스.
+
+| | |
+| --- | --- |
+| 배포 | https://kiobridge-23c-demo.vercel.app |
+| 환경 | `chicken-store` |
+| 상태 | SIMULATION **PASS** · `NORMAL_BOUNDARY_STOP` · 결제 계획 0 / 실행 0 |
+
+## 로컬 실행
+
+```bash
+npm ci
+npm run start:api                                        # :4000 공식 Simulation API
+npx vite --config workspace/23C/ui/vite.config.ts        # :5173 우리 서비스
+npx vite --config workspace/23C/tools/simulator-web.vite.config.ts   # :3000 공식 시뮬레이터
+```
+
+> `npm run dev` 는 쓰지 않는다 — API가 node_modules 감시로 수 초마다 재시작된다(제보함).
+> `:3000` 은 우리 설정으로 띄운다 — 원본 설정은 첫 화면 문서 링크와 헬스체크 배지가 깨진다(제보함).
+
+## 검증
+
+```bash
+npx vitest run --config workspace/23C/vitest.config.ts                  # 58
+npx playwright test --config workspace/23C/tests/e2e/playwright.config.ts  # 접근성 실측 6
+npx tsx tools/participant-cli.mjs validate --file workspace/23C/output/participant-submission.json --execute
+npx tsx tools/participant-cli.mjs doctor                                # 플랫폼 무결성 182
+```
+
+## 구조
+
+```
+workspace/23C/
+  src/participant.ts      공식 측정 표면 — 9단계 함수
+  src/core/               판단 로직 (CLI·UI 공유, 순수 모듈)
+    normalize.ts            동의어 → 공식 enum
+    canonical.ts            Profile · SessionContext
+    engine.ts               필터 · 랭킹 · 설명 · 대안
+    plan.ts                 의미 기반 실행계획 (전이표 파생)
+    context.ts              상황신호 (기기 시계만, 정렬 순서만 조정)
+    submission-meta.ts      선택 채널 3종
+  ui/                     사용자 접점 (React + Vite)
+  tests/                  자체 58 + 접근성 실측 6
+  tools/                  로컬 실행 보조 설정
+submission-output/23C/    제출 패키지 8종
+```
+
+**플랫폼 파일(`apps/` `packages/` `environments/` `schemas/` `tools/verify-*` `tests/`)은 수정하지 않는다.**
+공식 판정은 운영진의 깨끗한 v5.1.4에서 제출 JSON을 재실행한 결과다.
+
+## 자동 배포
+
+`main` 에 push 하면 Vercel이 `vercel.json` 설정으로 빌드·배포한다.
+
+---
+---
+
 # KioBridge Simulation Kit v5.1.4
 
 > ## KioBridge Simulation Platform 은 추천 서비스를 제공하지 않습니다.
