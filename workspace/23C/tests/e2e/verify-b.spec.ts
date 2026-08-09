@@ -1,0 +1,232 @@
+/**
+ * B·C계열 — 화면 동작 검증.
+ *
+ * 실행: npx playwright test -c workspace/23C/tests/e2e/playwright.config.ts verify-b
+ * 시나리오 정의: `키오브릿지-검증-시나리오.md`
+ *
+ * keyboard.spec.ts 가 접근성 실측을 맡고, 여기서는 **여러 화면이 상태로 얽히는 경로**와
+ * **participant-ux.json 선언이 화면에서 실제로 동작하는지**를 본다.
+ * 단위 테스트로는 잡히지 않는 회귀(저장본 마이그레이션·링크 인계·재확인 카운터)가 대상이다.
+ */
+import { expect, test, type Page } from "@playwright/test";
+
+const start = async (page: Page) => {
+  await page.goto("http://localhost:5173/");
+  await expect(page.getByRole("heading", { name: /닭강정 가게 주문/ })).toBeVisible();
+};
+
+/** 알레르기 → 맵기 → 형태 순으로 답한다 (조기 종료가 걸리는 조합) */
+async function answerEarlyStopPath(page: Page) {
+  await page.getByRole("button", { name: /시작하기/ }).click();
+  await page.getByRole("button", { name: "땅콩", exact: true }).click();
+  await page.getByRole("button", { name: "콩(대두)" }).click();
+  await page.getByRole("button", { name: /다음/ }).click();
+  await page.getByRole("button", { name: "매운맛", exact: true }).click();
+  await page.getByRole("button", { name: /다음/ }).click();
+  await page.getByRole("button", { name: "뼈", exact: true }).click();
+  await page.getByRole("button", { name: /다음/ }).click();
+}
+
+test.describe("B계열 — 신규 동작", () => {
+  test("B1 조기 종료 + 생략 고지 + AUTO 사유가 '여쭤보지 않아서'", async ({ page }) => {
+    await start(page);
+    await answerEarlyStopPath(page);
+
+    await expect(page.getByText(/여쭤보지 않았습니다/)).toBeVisible();
+    await expect(page.locator("#qtitle")).toHaveCount(0);
+
+    await page.getByRole("button", { name: "네, 좋아요" }).click();
+    await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+    await expect(page.getByText(/여쭤보지 않아서 이 메뉴의 값으로 정했습니다/).first()).toBeVisible();
+  });
+
+  test("B2 전부 '상관없어요'면 끝까지 묻고 사유는 '상관없다고 하셔서'", async ({ page }) => {
+    await start(page);
+    await page.getByRole("button", { name: /시작하기/ }).click();
+    await page.getByRole("button", { name: "없어요", exact: true }).click(); // 알레르기 없음
+    await page.getByRole("button", { name: /다음/ }).click();
+
+    // 맵기·형태·이용방식은 상관없어요
+    for (let i = 0; i < 3; i++) {
+      await page.getByRole("button", { name: "상관없어요" }).click();
+      await page.getByRole("button", { name: /다음/ }).click();
+    }
+    await page.getByRole("button", { name: "1개" }).click();
+    await page.getByRole("button", { name: /다음/ }).click();
+    await page.getByRole("button", { name: "상관없어요" }).click(); // 컵
+    await page.getByRole("button", { name: /다음/ }).click();
+    await page.getByRole("button", { name: "없어요", exact: true }).click(); // 예산
+    await page.getByRole("button", { name: /추천 보기|다음/ }).click();
+
+    // 전부 답했으므로 생략 고지가 없어야 한다
+    await expect(page.getByText(/여쭤보지 않았습니다/)).toHaveCount(0);
+    await page.getByRole("button", { name: "네, 좋아요" }).click();
+    await expect(page.getByText(/상관없다고 하셔서 이 메뉴의 값으로 정했습니다/).first()).toBeVisible();
+  });
+
+  test("B4 재확인 2회째에 안전 중단 전용 화면", async ({ page }) => {
+    await start(page);
+    await page.getByRole("button", { name: /시작하기/ }).click();
+    await page.getByRole("button", { name: "잘 모르겠어요" }).click();
+    await page.getByRole("button", { name: /다음/ }).click();
+
+    /* 알레르기가 UNKNOWN 이면 requiresReconfirmation 이 걸려 조기 종료가 막힌다.
+       그래서 남은 질문을 끝까지 묻는다 — 게이트가 의도대로 동작한다는 뜻이다. */
+    for (let i = 0; i < 6; i++) {
+      if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
+      await page.locator(".choices .choice").first().click();
+      await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+    }
+
+    // 1회차 — 경고는 뜨지만 중단 화면은 아니다
+    await expect(page.getByText(/확실하지 않은 정보가 있어요/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /확인이 어려워/ })).toHaveCount(0);
+
+    // 조건 수정 → 그대로 다시 추천 → 2회차
+    await page.getByRole("button", { name: "조건 수정" }).click();
+    await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
+    await expect(page.getByRole("heading", { name: /확인이 어려워/ })).toBeVisible();
+    await expect(page.getByText(/주문 준비는 시작되지 않았습니다/)).toBeVisible();
+  });
+
+  test("B5 화면 글씨 문답이 접근성 설정을 산출한다", async ({ page }) => {
+    await start(page);
+    await page.getByRole("button", { name: "화면·안내 설정" }).click();
+    await page.getByRole("button", { name: "화면 글씨 맞춰보기" }).click();
+    await page.getByRole("button", { name: "조금 작아요" }).click();
+    await page.getByRole("button", { name: "조금 작아요" }).click();
+    await page.getByRole("button", { name: "잘 보여요" }).click();
+
+    await expect(page.getByText(/큰 글씨·고대비·그림 안내를 켰습니다/)).toBeVisible();
+    // 실제로 반영됐는지 — 루트 클래스로 확인
+    await expect(page.locator(".app")).toHaveClass(/large/);
+    await expect(page.locator(".app")).toHaveClass(/contrast/);
+    await expect(page.locator(".app")).toHaveClass(/icons/);
+  });
+
+  test("B6 v3 저장본이 살아남고 v4 키로 옮겨진다", async ({ page }) => {
+    await page.goto("http://localhost:5173/");
+    await page.evaluate(() => {
+      localStorage.clear();
+      localStorage.setItem("kb23c-saved-settings-v3", JSON.stringify({
+        answers: { allergies: ["땅콩"], spicyLevel: "매운맛", boneType: "순살" },
+        a11y: { largeText: true, highContrast: false },
+        scope: "LASTING", savedAt: "2026-08-08T10:00:00.000Z",
+      }));
+    });
+    await page.reload();
+    await expect(page.getByRole("heading", { name: /지난번 설정을 이 기기에서 찾았어요/ })).toBeVisible();
+    await expect(page.getByText(/땅콩/)).toBeVisible();
+
+    const moved = await page.evaluate(() => ({
+      v4: localStorage.getItem("kb23c-saved-settings-v4") !== null,
+      v3: localStorage.getItem("kb23c-saved-settings-v3") === null,
+    }));
+    expect(moved.v4).toBe(true);
+    expect(moved.v3).toBe(true);
+  });
+
+  test("B8 링크 인계는 확인 화면부터 시작하고 넘어온 사실을 밝힌다", async ({ page, context }) => {
+    await start(page);
+    await answerEarlyStopPath(page);
+    await page.getByRole("button", { name: "네, 좋아요" }).click();
+    await page.getByRole("button", { name: /매장 기기로 넘기기/ }).click();
+
+    const url = await page.locator("input[aria-label='넘기기 주소']").inputValue();
+    expect(url).toContain("?plan=");
+    // 개인정보가 주소에 없다 (담기는 것은 메뉴·옵션·화면 설정뿐)
+    expect(url).not.toMatch(/name|phone|tel|addr/i);
+
+    const p2 = await context.newPage();
+    await p2.goto(url);
+    await expect(p2.getByText(/다른 기기에서 넘어온 주문입니다/)).toBeVisible();
+    await expect(p2.locator("#qtitle")).toHaveCount(0); // 질문부터 다시 묻지 않는다
+    await expect(p2.getByRole("button", { name: "네, 좋아요" })).toBeVisible(); // 확인을 거쳐야 진행
+    await p2.close();
+  });
+
+  test("B3 첫 질문은 항상 알레르기다 (조기 종료가 그 앞에서 발동할 수 없게)", async ({ page }) => {
+    await start(page);
+    await page.getByRole("button", { name: /시작하기/ }).click();
+    await expect(page.locator("#qtitle")).toHaveText(/알레르기/);
+  });
+
+  test("B7 지난 주문 재현은 확인을 거쳐야 진행된다", async ({ page }) => {
+    await page.goto("http://localhost:5173/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+
+    await page.getByRole("button", { name: /시작하기/ }).click();
+    for (let i = 0; i < 7; i++) {
+      if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
+      await page.locator(".choices .choice").first().click();
+      await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+    }
+    await page.getByRole("button", { name: "네, 좋아요" }).click();
+    await page.getByRole("button", { name: /이 설정을 이 기기에 저장/ }).click(); // 저장 켜기
+
+    // 라이브(시뮬레이터 연결)면 "가상 키오스크에서 실행", 아니면 "주문 확정하기"
+    const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });
+    await ((await live.count()) > 0 ? live : page.getByRole("button", { name: /주문 확정하기/ })).click();
+
+    await page.getByRole("button", { name: "처음으로" }).click();
+    await expect(page.getByRole("heading", { name: /지난번처럼 준비할까요/ })).toBeVisible();
+
+    await page.getByRole("button", { name: /네, 그렇게 해주세요/ }).click();
+    // 실행으로 직행하지 않는다 — 확인을 거쳐야 한다
+    await expect(page.getByRole("button", { name: "네, 좋아요" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /실행 결과|주문이 완성되었습니다/ })).toHaveCount(0);
+  });
+
+  /* C계열 — participant-ux.json 의 선언이 화면에서 실제로 동작하는가.
+     수기 검토(MANUAL_REVIEW) 대상이라 선언과 화면이 어긋나면 그 자체가 감점이다. */
+  test("C1 선언한 접근성 채널이 전부 화면을 실제로 바꾼다", async ({ page }) => {
+    await start(page);
+    await page.getByRole("button", { name: "화면·안내 설정" }).click();
+
+    // 상단바 토글과 이름이 겹치므로 설정 목록(.a11ylist) 안으로 범위를 좁힌다
+    const app = page.locator(".app");
+    const row = (name: string) => page.locator(".a11ylist .a11yrow", { hasText: name });
+
+    // largeText 는 기본 켜짐 — 끄고 켜며 실제로 바뀌는지 확인
+    await row("큰 글씨").click();
+    await expect(app).not.toHaveClass(/large/);
+    await row("큰 글씨").click();
+    await expect(app).toHaveClass(/large/);
+
+    await row("고대비").click();
+    await expect(app).toHaveClass(/contrast/);
+
+    await row("누르기 편하게").click();
+    await expect(app).toHaveClass(/roomy/);   // LARGER_TOUCH_TARGETS
+
+    await row("그림 함께 보기").click();
+    await expect(app).toHaveClass(/icons/);   // VISUAL_GUIDANCE
+
+    await row("직원 도움 먼저").click();
+    await expect(page.locator(".staffbar")).toBeVisible(); // STAFF_HELP
+
+    await row("소리 없이 보기").click();
+    await page.getByRole("button", { name: "설정 마치기" }).click();
+    await expect(page.getByText(/소리 안내를 사용하지 않습니다/)).toBeVisible(); // HEARING_SUPPORT
+  });
+
+  test("C3 QR 기능이 없으므로 화면에 QR 표현이 없다", async ({ page }) => {
+    await start(page);
+    const body = await page.locator("body").innerText();
+    expect(body).not.toMatch(/QR|큐알/i);
+  });
+
+  test("B9 조건 수정의 메뉴 목록에 제외된 후보가 없다", async ({ page }) => {
+    await start(page);
+    await answerEarlyStopPath(page); // 땅콩·콩 알레르기 → 해당 후보 제외됨
+    await page.getByRole("button", { name: "조건 수정" }).click();
+    await page.getByRole("button", { name: /^메뉴/ }).click();
+
+    const names = await page.locator(".editbody .choices .choice").allInnerTexts();
+    expect(names.length).toBeGreaterThan(0);
+    // 땅콩 토핑(PEANUT)·간장 순살(SOY)은 제외됐으므로 목록에 없어야 한다
+    expect(names.join(" ")).not.toContain("땅콩 토핑");
+    expect(names.join(" ")).not.toContain("간장 순살");
+  });
+});
