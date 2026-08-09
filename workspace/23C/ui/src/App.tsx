@@ -25,6 +25,25 @@ const CALC_MS = 600;
 const prefersReducedMotion = (): boolean =>
   typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
+/* ───────────────────── S02 화면 맞춤 문답 ─────────────────────
+ * 화면목록 S02 «실시간 변동되는 화면을 통해 최적 화면 맞춤».
+ *
+ * 토글 7개를 먼저 보여주면 "무엇을 켜야 나에게 맞는지"를 사용자가 알아야 한다.
+ * 대신 실제 크기로 렌더한 문장을 보여주고 보이는지만 묻는다 — 판단 대상이
+ * 설정 이름이 아니라 **자기 눈에 보이는 화면**이 된다.
+ *
+ * 산출 결과는 곧바로 화면에 반영되고, 아래 토글에서 언제든 바꿀 수 있다.
+ * (자동으로 정해 놓고 못 바꾸게 하면 «자동으로 불러온 정보의 재확인» 원칙에 어긋난다) */
+const PROBE_SIZES = ["1em", "1.4em", "1.9em"];
+const PROBE_SAMPLE = "매운 순살 닭강정 6,000원";
+
+/** 단계별 산출값 — 더 키워야 보인다는 것은 글씨 외의 도움도 필요하다는 신호로 본다. */
+const PROBE_RESULT: Partial<A11y>[] = [
+  { largeText: false },
+  { largeText: true },
+  { largeText: true, highContrast: true, visualGuidance: true },
+];
+
 /** 실행계획의 옵션 그룹 ↔ 마법사 질문 key — "왜 이 값이 됐는지" 문구를 가르는 데 쓴다. */
 const GROUP_TO_KEY: Record<string, string> = {
   SERVICE_TYPE: "serviceType", SPICY_LEVEL: "spicyLevel", BONE_TYPE: "boneType",
@@ -332,6 +351,10 @@ export function App() {
   const [skipped, setSkipped] = useState<string[]>([]);
   /** 확정되지 않은 추천을 몇 번 만났는가 — 2회째면 안전 중단(S12) */
   const [reconfirmCount, setReconfirmCount] = useState(0);
+  /** S02 화면 맞춤 문답 — null 이면 안 하는 중, 0~2 는 지금 보여주는 크기 단계 */
+  const [probeStep, setProbeStep] = useState<number | null>(null);
+  /** 문답으로 정해진 단계 — 결과를 화면에 밝혀 준다 */
+  const [probeResult, setProbeResult] = useState<number | null>(null);
   /** 계산 화면(S11) 타이머 — 화면을 벗어나면 남은 전환이 덮어쓰지 않게 관리한다 */
   const calcTimer = useRef<number | null>(null);
   useEffect(() => () => { if (calcTimer.current !== null) window.clearTimeout(calcTimer.current); }, []);
@@ -621,6 +644,44 @@ export function App() {
           <section className="card" aria-label="화면과 안내 설정">
             <h2>화면과 안내를 맞춰 드릴게요</h2>
             <p className="hint">켜면 이 화면이 바로 바뀝니다. 언제든 다시 끌 수 있습니다.</p>
+
+            {/* 화면목록 S02 — 설정 이름 대신 실제 크기로 렌더한 문장을 보고 답하게 한다 */}
+            {probeStep === null ? (
+              <div className="btnrow" style={{ marginBottom: 18 }}>
+                <button type="button" className="btn ghost" onClick={() => { setProbeStep(0); setProbeResult(null); }}>
+                  화면 글씨 맞춰보기
+                </button>
+                {probeResult !== null && (
+                  <span className="hint">
+                    {probeResult === 0 && "기본 크기로 두었습니다."}
+                    {probeResult === 1 && "큰 글씨를 켰습니다."}
+                    {probeResult === 2 && "큰 글씨·고대비·그림 안내를 켰습니다."}
+                    {" "}아래에서 언제든 바꾸실 수 있습니다.
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="card" style={{ marginBottom: 18 }} aria-labelledby="probehead">
+                <h2 id="probehead">화면 글씨가 잘 보이시나요?</h2>
+                <p aria-hidden="true" style={{ fontSize: PROBE_SIZES[probeStep], fontWeight: 700, margin: "18px 0" }}>
+                  {PROBE_SAMPLE}
+                </p>
+                <p className="hint">위 문장이 편하게 읽히시면 «잘 보여요»를 눌러 주세요.</p>
+                <div className="choices" role="group" aria-label="글씨 크기 확인">
+                  <button type="button" className="choice" onClick={() => {
+                    setA11y((s) => ({ ...s, ...PROBE_RESULT[probeStep] }));
+                    setProbeResult(probeStep); setProbeStep(null);
+                  }}>잘 보여요</button>
+                  <button type="button" className="choice" onClick={() => {
+                    if (probeStep < PROBE_SIZES.length - 1) { setProbeStep(probeStep + 1); return; }
+                    const last = PROBE_SIZES.length - 1;
+                    setA11y((s) => ({ ...s, ...PROBE_RESULT[last] }));
+                    setProbeResult(last); setProbeStep(null);
+                  }}>조금 작아요</button>
+                </div>
+              </div>
+            )}
+
             <div className="a11ylist">
               {A11Y_ITEMS.map((it) => (
                 <button key={it.key} type="button" className="a11yrow" aria-pressed={a11y[it.key] === true}
