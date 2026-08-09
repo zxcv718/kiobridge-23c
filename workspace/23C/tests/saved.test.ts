@@ -24,25 +24,30 @@ describe("저장본 마이그레이션", () => {
     expect(m!.v).toBe(SAVED_VERSION);
   });
 
-  it("v3 에는 지난 주문이 없으므로 lastOrder 는 비어 있다", () => {
-    expect(migrateSaved(v3)!.lastOrder).toBeUndefined();
+  it("v3 에는 지난 메뉴 개념이 없으므로 lastCandidateId 는 비어 있다", () => {
+    expect(migrateSaved(v3)!.lastCandidateId).toBeUndefined();
   });
 
-  it("v4 저장본의 지난 주문은 보존된다", () => {
+  it("지난번에 고른 메뉴는 보존된다", () => {
+    const m = migrateSaved({ ...v3, v: 4, lastCandidateId: "CHICKEN-001" });
+    expect(m!.lastCandidateId).toBe("CHICKEN-001");
+  });
+
+  it("중간 형식(lastOrder 객체)에 남은 메뉴도 읽어 온다 — 형식이 바뀌어도 버리지 않는다", () => {
     const m = migrateSaved({
       ...v3, v: 4,
-      lastOrder: { candidateId: "CHICKEN-001", answers: { spicyLevel: "매운맛" }, savedAt: "2026-08-09T00:00:00.000Z" },
+      lastOrder: { candidateId: "CHICKEN-003", answers: { spicyLevel: "매운맛" }, savedAt: "2026-08-09T00:00:00.000Z" },
     });
-    expect(m!.lastOrder?.candidateId).toBe("CHICKEN-001");
+    expect(m!.lastCandidateId).toBe("CHICKEN-003");
   });
 
   it("알 수 없는 scope 는 ALL 로 되돌린다 — 저장 범위를 임의로 넓히지 않는다", () => {
     expect(migrateSaved({ ...v3, scope: "EVERYTHING" })!.scope).toBe("ALL");
   });
 
-  it("형태가 깨진 lastOrder 는 버리되 나머지 설정은 살린다", () => {
-    const m = migrateSaved({ ...v3, v: 4, lastOrder: { candidateId: 123 } });
-    expect(m!.lastOrder).toBeUndefined();
+  it("메뉴 ID 가 문자열이 아니면 버리되 나머지 설정은 살린다", () => {
+    const m = migrateSaved({ ...v3, v: 4, lastCandidateId: 123 });
+    expect(m!.lastCandidateId).toBeUndefined();
     expect(m!.answers).toEqual(v3.answers);
   });
 

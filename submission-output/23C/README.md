@@ -12,7 +12,7 @@
 | 접근성 고려사항 | (채우세요) |
 | 실행 방법 | (채우세요) |
 | 알려진 제한사항 | (채우세요) |
-| Submission SHA-256 | `6f89fd71d687c1ce5e674069f6f2d87e5da7fb6e7b805ae3e3e8082867ceb493` |
+| Submission SHA-256 | `f917940f0c0c541506c1aec1b8dc2bb3dfe5b4941d0271e859e805ba605a35e5` |
 
 ## 포함 파일
 

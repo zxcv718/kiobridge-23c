@@ -12,36 +12,37 @@ export const SAVED_VERSION = 4;
 
 export type SaveScope = "ALL" | "LASTING";
 
-/** 지난번에 확정한 주문 — «지난번처럼 준비할까요?»(화면목록 S05)의 근거. */
-export interface LastOrder {
-  candidateId: string;
-  answers: Record<string, unknown>;
-  savedAt: string;
-}
-
 export interface SavedSettings {
   v: number;
+  /**
+   * 저장된 답변. **무엇이 들어 있는지는 scope 가 정한다** —
+   * ALL 이면 7문항 전부, LASTING 이면 오래 쓰는 값(알레르기·맵기·형태)만.
+   *
+   * 지난 주문을 따로 저장하지 않는 이유: scope=ALL 인 저장본이 곧 "지난번 주문"이다.
+   * 둘을 따로 두면 같은 데이터가 두 벌 생기고, 화면에서도 "전부 쓸까 설정만 쓸까"를
+   * 저장할 때 한 번 묻고 시작할 때 또 묻게 된다(같은 결정을 두 번 묻는 셈).
+   */
   answers: Record<string, unknown>;
   /** 화면 설정. UI 의 A11y 타입과 합치는 것은 화면 쪽 책임이다(기본값 병합). */
   a11y: Record<string, unknown>;
   scope: SaveScope;
   savedAt: string;
-  lastOrder?: LastOrder;
+  /**
+   * 지난번에 확정된 메뉴. 답변만 재현하면 엔진이 다시 1위를 뽑으므로, 대안을 직접
+   * 고른 경우 되살릴 근거가 필요하다. 되살릴지 여부는 화면이 판단한다(생존 후보인지 확인).
+   */
+  lastCandidateId?: string;
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** 형태가 온전한 지난 주문만 살린다 — 반쯤 깨진 값으로 "지난번처럼"을 제안하지 않는다. */
-function pickLastOrder(v: unknown): LastOrder | undefined {
-  if (!isObj(v)) return undefined;
-  if (typeof v.candidateId !== "string" || v.candidateId.length === 0) return undefined;
-  if (!isObj(v.answers)) return undefined;
-  return {
-    candidateId: v.candidateId,
-    answers: v.answers,
-    savedAt: typeof v.savedAt === "string" ? v.savedAt : "",
-  };
+/** 문자열인 후보 ID 만 받는다. 옛 형식(lastOrder.candidateId)도 함께 읽는다. */
+function pickCandidateId(raw: Record<string, unknown>): string | undefined {
+  const direct = raw.lastCandidateId;
+  if (typeof direct === "string" && direct.length > 0) return direct;
+  const legacy = isObj(raw.lastOrder) ? raw.lastOrder.candidateId : undefined;
+  return typeof legacy === "string" && legacy.length > 0 ? legacy : undefined;
 }
 
 /**
@@ -61,6 +62,6 @@ export function migrateSaved(raw: unknown): SavedSettings | null {
     // 모르는 값이면 좁은 쪽이 아니라 기본값으로 되돌린다 — 저장 범위를 임의로 넓히지 않는다
     scope: raw.scope === "LASTING" ? "LASTING" : "ALL",
     savedAt: typeof raw.savedAt === "string" ? raw.savedAt : "",
-    ...(pickLastOrder(raw.lastOrder) ? { lastOrder: pickLastOrder(raw.lastOrder) } : {}),
+    ...(pickCandidateId(raw) ? { lastCandidateId: pickCandidateId(raw) } : {}),
   };
 }

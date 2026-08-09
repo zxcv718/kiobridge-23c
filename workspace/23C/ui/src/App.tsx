@@ -15,7 +15,7 @@ import { buildExecutionPlanCore, explainSelections } from "../../src/core/plan";
 import { canStopAsking, shouldSafetyStop, isUnresolved } from "../../src/core/ask";
 import {
   migrateSaved, SAVED_VERSION,
-  type SavedSettings as CoreSaved, type SaveScope, type LastOrder,
+  type SavedSettings as CoreSaved, type SaveScope,
 } from "../../src/core/saved";
 
 type Step =
@@ -479,47 +479,26 @@ export function App() {
     const loaded = QUESTIONS.map((qq) => qq.key).filter((k) => next[k] !== undefined);
     const start = nextToAsk(0, loaded);
     if (start >= QUESTIONS.length) {
+      // 저장 범위가 ALL 이라 더 여쭤볼 것이 없다 = 지난번 주문을 그대로 되살리는 경우다
+      const u = computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date());
+      /* 지난번에 직접 고른 메뉴를 되살린다.
+       * 답변만 재현하면 엔진이 다시 1위를 뽑으므로, 대안을 골랐던 경우 지난번과 달라진다.
+       * 되살리는 대상은 scoreBreakdown 에 남은 **생존 후보뿐**이다 — 그 사이 품절되었거나
+       * 알레르기를 새로 등록해 제외된 메뉴는 여기서 되살아나지 않는다. */
+      const wanted = saved.lastCandidateId;
+      const pinned = !!wanted
+        && Object.keys(u.rec.scoreBreakdown ?? {}).includes(wanted)
+        && u.rec.recommendedCandidateId !== wanted;
       goRecommend(
-        computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date()),
+        pinned ? withManualSelection(u, fixture, wanted) : u,
         unansweredIn(next),
         0, // 저장본으로 시작하는 것도 새 흐름이다
+        pinned,
       );
       return;
     }
     setQIndex(start);
     setStep("wizard");
-  };
-
-  /**
-   * 화면목록 S05 «지난번처럼 준비할까요?» — 한 번 눌러 지난 주문을 되살린다.
-   *
-   * 되살린 뒤에도 **추천 확인 화면부터** 시작한다. 곧바로 실행으로 보내면 사용자의 명시적
-   * 확인 없이 실행계획이 만들어져 ACTIONS_WITHOUT_APPROVAL 이 된다. 빠르게 하는 것이지
-   * 확인을 건너뛰는 것이 아니다.
-   */
-  const repeatLastOrder = () => {
-    if (!fixture || !saved?.lastOrder) return;
-    const next = { ...saved.lastOrder.answers };
-    setAnswers(next); setA11y(saved.a11y); setCarried(Object.keys(next));
-    setFromSaved(true); setStoreToggle(true); setSaveScope(saved.scope);
-    setManual(false); setDemoHour(null); resetRun();
-    const u = computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date());
-
-    /* 지난번에 직접 고른 메뉴를 되살린다.
-     * 답변만 재현하면 엔진이 다시 1위를 뽑으므로, 대안을 직접 골랐던 경우 "지난번처럼"이
-     * 지난번과 다른 메뉴를 준다. 다만 되살리는 대상은 **이번에도 고를 수 있는 후보뿐**이다 —
-     * scoreBreakdown 에는 STEP 4 를 통과한 생존 후보만 들어 있으므로, 그 사이 품절되었거나
-     * 알레르기를 새로 등록해 제외된 메뉴는 여기서 자동으로 되살아나지 않는다. */
-    const wanted = saved.lastOrder.candidateId;
-    const stillSelectable = Object.keys(u.rec.scoreBreakdown ?? {}).includes(wanted);
-    const pinned = stillSelectable && u.rec.recommendedCandidateId !== wanted;
-
-    goRecommend(
-      pinned ? withManualSelection(u, fixture, wanted) : u,
-      unansweredIn(next),
-      0,
-      pinned,
-    );
   };
 
   const applyPreset = (p: Preset) => {
@@ -555,25 +534,26 @@ export function App() {
     );
   };
 
-  /** 저장. lastOrder 를 새로 주지 않으면 이미 저장돼 있던 지난 주문을 그대로 둔다. */
-  const persist = (lastOrder?: LastOrder) => {
-    const keep = lastOrder ?? saved?.lastOrder;
+  /** 저장. 메뉴를 새로 주지 않으면 이미 저장돼 있던 것을 그대로 둔다. */
+  const persist = (lastCandidateId?: string) => {
+    const keep = lastCandidateId ?? saved?.lastCandidateId;
     const s: SavedSettings = {
       v: SAVED_VERSION,
       answers: pickByScope(answers, saveScope), a11y, scope: saveScope, savedAt: new Date().toISOString(),
-      ...(keep ? { lastOrder: keep } : {}),
+      ...(keep ? { lastCandidateId: keep } : {}),
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); setSaved(s); } catch { /* 저장 불가 환경이면 조용히 건너뜀 */ }
   };
 
   /**
-   * 확정한 주문을 «지난번처럼»의 근거로 남긴다 (화면목록 S05).
-   * 저장을 켠 경우에만 기록한다 — 저장 여부는 끝까지 사용자가 정한다.
+   * 확정된 메뉴를 남긴다 (화면목록 S05). 답변은 persist 가 저장 범위대로 이미 저장하므로
+   * 여기서 따로 복제하지 않는다 — 같은 데이터를 두 벌 두면 어느 쪽이 사실인지 알 수 없어진다.
+   * 저장을 켠 경우에만 기록한다. 저장 여부는 끝까지 사용자가 정한다.
    */
   const rememberOrder = () => {
     const id = uiRec?.rec.recommendedCandidateId;
     if (!storeToggle || !id) return;
-    persist({ candidateId: id, answers: { ...answers }, savedAt: new Date().toISOString() });
+    persist(id);
   };
 
   /** 토글 = 즉시 반영: 켜는 순간 저장되고, 끄면 저장본이 삭제된다 (사용자 기대와 일치). */
@@ -584,7 +564,7 @@ export function App() {
     const rec: SavedSettings = {
       v: SAVED_VERSION,
       answers: pickByScope(answers, next), a11y, scope: next, savedAt: new Date().toISOString(),
-      ...(saved?.lastOrder ? { lastOrder: saved.lastOrder } : {}),
+      ...(saved?.lastCandidateId ? { lastCandidateId: saved.lastCandidateId } : {}),
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rec)); setSaved(rec); } catch { /* 무시 */ }
   };
@@ -613,7 +593,10 @@ export function App() {
     }
   };
 
-  const lastOrder = saved?.lastOrder;
+  /* 저장 범위가 곧 "무엇을 되살릴지"의 답이다 — 저장할 때 이미 고른 것을 시작 화면에서
+     다시 묻지 않는다. ALL 이면 더 여쭤볼 것이 없으니 지난번 주문을 그대로 되살리는 것이고,
+     LASTING 이면 지속값만 채우고 이번 이용 정보는 다시 여쭤본다. */
+  const resumesWholeOrder = saved?.scope === "ALL";
   const q = QUESTIONS[qIndex];
   const answered = q ? answers[q.key] !== undefined : false;
   const ev = outcome?.evidence as (Evidence & Record<string, unknown>) | undefined;
@@ -658,48 +641,30 @@ export function App() {
 
         {step === "start" && (
           <>
-            {/* 화면목록 S05 — 지난 주문이 있으면 한 번에 되살릴 수 있게 한다.
-                되살려도 확인 화면부터 시작한다(승인 없는 실행계획 생성 금지). */}
-            {/* 저장된 것은 한 곳에서만 보여준다 — 지난 주문과 설정을 각각 다른 카드로 띄우면
-                "새로 시작" 버튼이 세 곳에 흩어져 무엇을 고르는 화면인지 알 수 없게 된다. */}
+            {/* 화면목록 S01 case2 / S05 — 저장본이 있으면 되살릴 길을 하나만 준다.
+             *
+             * 되살리기 버튼은 **하나뿐이다.** 무엇을 되살릴지는 저장할 때 고른 범위가 이미
+             * 정해 놓았기 때문이다. 여기서 "전부 쓸까 / 설정만 쓸까"를 또 물으면 같은 결정을
+             * 두 번 묻는 것이고, 실제로 저장 범위가 '전부'면 두 선택지는 하는 일이 같아진다.
+             * 그래서 버튼 라벨이 저장 범위에 따라 "무슨 일이 일어나는지"를 그대로 말한다. */}
             {saved && fixture && (
               <section className="card" style={{ borderColor: "var(--brand)", borderWidth: 2 }} aria-label="이 기기에 저장된 기록">
                 <h2>이 기기에 지난번 기록이 있어요</h2>
-                <p className="hint">
-                  자동으로 적용하지 않습니다 — 무엇이 저장돼 있는지 보시고 골라 주세요.
-                  어느 쪽을 고르셔도 <b>확인 화면을 거쳐야</b> 진행됩니다.
-                </p>
-
-                {lastOrder && (
+                <p className="hint" style={{ fontSize: "1em", color: "var(--fg)" }}>{savedSummary(saved)}</p>
+                {saved.lastCandidateId && (
                   <p className="hint" style={{ fontSize: "1em", color: "var(--fg)" }}>
-                    <b>지난 주문</b> — {candidateName(fixture, lastOrder.candidateId)}
-                    {QUESTIONS.filter((qq) => lastOrder.answers[qq.key] !== undefined)
-                      .map((qq) => ` · ${EDIT_LABELS[qq.key] ?? qq.key} ${answerLabel(qq.key, lastOrder.answers[qq.key])}`)
-                      .join("")}
+                    지난번에 고르신 메뉴 — {candidateName(fixture, saved.lastCandidateId)}
                   </p>
                 )}
-                <p className="hint" style={{ fontSize: "1em", color: "var(--fg)" }}>
-                  <b>저장된 설정</b> — {savedSummary(saved)}
+                <p className="hint">
+                  자동으로 적용하지 않습니다 — 내용을 확인하시고 골라 주세요.
+                  {resumesWholeOrder
+                    ? " 저장해 두신 항목은 다시 여쭤보지 않고 확인 화면으로 넘어갑니다."
+                    : " 저장 범위가 '오래 쓰는 것만'이라 수량·예산 같은 이번 이용 정보는 다시 여쭤봅니다."}
                 </p>
-                {!simple && (
-                  <p className="hint">
-                    {saved.scope === "ALL"
-                      ? "저장해 두신 항목은 다시 여쭤보지 않습니다."
-                      : "저장 범위가 '오래 쓰는 것만'이라, 수량·예산 같은 이번 이용 정보는 다시 여쭤봅니다."}
-                  </p>
-                )}
-
-                {/* 되살리는 범위가 넓은 것부터 — 같은 뜻의 버튼을 여러 카드에 흩어 놓지 않는다.
-                    "새로 시작"은 아래 시작 카드 하나로만 둔다. */}
                 <div className="btnrow">
-                  {lastOrder && (
-                    <button type="button" className="btn primary" onClick={repeatLastOrder} disabled={!fixture}>
-                      지난번과 똑같이 주문하기
-                    </button>
-                  )}
-                  <button type="button" className={lastOrder ? "btn ghost" : "btn primary"}
-                    onClick={startFromSaved} disabled={!fixture}>
-                    설정만 가져오기
+                  <button type="button" className="btn primary" onClick={startFromSaved} disabled={!fixture}>
+                    {resumesWholeOrder ? "지난번과 똑같이 주문하기" : "저장된 설정으로 시작하기"}
                   </button>
                   <button type="button" className="btn danger" onClick={deleteSaved}>기록 지우기</button>
                   {staffBtn()}
