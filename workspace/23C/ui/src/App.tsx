@@ -17,6 +17,7 @@ import {
   migrateSaved, SAVED_VERSION,
   type SavedSettings as CoreSaved, type SaveScope, type LastOrder,
 } from "../../src/core/saved";
+import { decodePlanLink, encodePlanLink, type PlanLinkPayload } from "../../src/core/plan-link";
 
 type Step =
   | "start" | "a11y" | "wizard" | "calculating" | "recommend"
@@ -365,6 +366,12 @@ export function App() {
   const [skipped, setSkipped] = useState<string[]>([]);
   /** 확정되지 않은 추천을 몇 번 만났는가 — 2회째면 안전 중단(S12) */
   const [reconfirmCount, setReconfirmCount] = useState(0);
+  /** 링크로 넘어온 주문 계획 — fixture 가 준비되면 이어받는다 */
+  const [incoming, setIncoming] = useState<PlanLinkPayload | null>(null);
+  /** 이번 흐름이 다른 기기에서 넘어온 것인가 — 화면에 밝히고 재확인을 받는다 */
+  const [handedOff, setHandedOff] = useState(false);
+  /** 다른 기기로 넘기기 링크 (확인 화면에서 생성) */
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   /** S02 화면 맞춤 문답 — null 이면 안 하는 중, 0~2 는 지금 보여주는 크기 단계 */
   const [probeStep, setProbeStep] = useState<number | null>(null);
   /** 문답으로 정해진 단계 — 결과를 화면에 밝혀 준다 */
@@ -376,6 +383,9 @@ export function App() {
   useEffect(() => {
     fetchFixture().then((r) => { setFixture(r.fixture); setLive(r.live); });
     setSaved(loadSaved());
+    // 화면목록 S04 — 다른 기기에서 넘어온 주문 계획. 깨진 링크는 decodePlanLink 가 null 로 흡수한다.
+    const code = new URLSearchParams(window.location.search).get("plan");
+    if (code) setIncoming(decodePlanLink(code));
   }, []);
 
   /** 프리셋이 시각을 지정했으면 그 시각으로, 아니면 지금으로 계산한다. */
@@ -401,6 +411,7 @@ export function App() {
   const startWizard = () => {
     setAnswers({}); setQIndex(0); setManual(false); setFromSaved(false); setCarried([]);
     setStoreToggle(false); setDemoHour(null); setSkipped([]); setReconfirmCount(0);
+    setHandedOff(false); setShareUrl(null);
     resetRun(); setStep("wizard");
   };
 
@@ -598,6 +609,30 @@ export function App() {
       setStep("result");
     }
   };
+
+  /**
+   * 링크로 넘어온 계획 이어받기 (화면목록 S04).
+   *
+   * 이어받아도 **확인 화면부터** 시작한다 — 링크만으로 실행계획이 만들어지면 사용자의
+   * 명시적 확인 없이 승인된 셈이 된다. 넘어온 값이라는 사실도 화면에 밝히고,
+   * 입력 출처는 IMPORTED 로 기록한다(자동으로 불러온 정보의 재확인).
+   */
+  useEffect(() => {
+    if (!fixture || !incoming) return;
+    const next = { ...incoming.answers };
+    const nextA11y: A11y = { ...A11Y_DEFAULT, ...(incoming.a11y as Partial<A11y>) };
+    setAnswers(next); setA11y(nextA11y); setCarried(Object.keys(next));
+    setFromSaved(true); setHandedOff(true); setManual(false); setStoreToggle(false);
+    goRecommend(
+      computeRecommendation(buildRawInput(next, nextA11y, true, false), fixture, new Date()),
+      unansweredIn(next),
+      0,
+    );
+    setIncoming(null);
+    // 주소창에서 지운다 — 새로고침할 때마다 다시 이어받지 않게
+    window.history.replaceState(null, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixture, incoming]);
 
   const lastOrder = saved?.lastOrder;
   const q = QUESTIONS[qIndex];
@@ -843,6 +878,12 @@ export function App() {
                 확실하지 않은 정보가 있어요. 임의로 판단하지 않습니다 — 알레르기 항목을 다시 확인해 주시거나, 직원 도움을 이용해 주세요.
               </div>
             )}
+            {handedOff && (
+              <div className="banner ok" role="note">
+                다른 기기에서 넘어온 주문입니다. <b>자동으로 실행하지 않습니다</b> —
+                내용을 확인하시고 진행해 주세요. 바꾸실 것이 있으면 «조건 수정»을 눌러 주세요.
+              </div>
+            )}
             {/* 생략은 숨기지 않는다 — 무엇을 안 물었는지, 그 값이 어디서 보이는지 함께 밝힌다 */}
             {skipped.length > 0 && (
               <div className="banner ok" role="note">
@@ -1025,6 +1066,33 @@ export function App() {
               );
             })()}
             <div className="banner ok">가상 키오스크에서 장바구니 확인까지만 진행합니다. <b>실제 결제·주문은 일어나지 않습니다.</b></div>
+
+            {/* 화면목록 S04 — 모바일에서 확정하고 매장에서는 실행만. 뒷사람 눈치(53.6%)를
+                줄이는 구조가 여기서 완성된다. 서버가 없으므로 계획을 주소에 실어 넘긴다. */}
+            <div className="savebox">
+              <button type="button" className="btn ghost" onClick={() => {
+                const code = encodePlanLink({
+                  v: 1, answers, a11y: a11y as unknown as Record<string, boolean | string>,
+                });
+                const url = `${window.location.origin}${window.location.pathname}?plan=${code}`;
+                setShareUrl(url);
+                navigator.clipboard?.writeText(url).catch(() => { /* 복사 실패해도 아래에 그대로 보인다 */ });
+              }}>이 주문을 매장 기기로 넘기기</button>
+              {shareUrl && (
+                <>
+                  <p className="hint" style={{ marginTop: 10 }}>
+                    아래 주소를 매장 기기에서 열면 <b>이 확인 화면부터</b> 이어집니다.
+                    실행은 그 기기에서 다시 확인한 뒤에 일어납니다.
+                  </p>
+                  <input readOnly value={shareUrl} aria-label="넘기기 주소"
+                    onFocus={(e) => e.currentTarget.select()} />
+                  <p className="hint">
+                    이름·전화번호 같은 개인 정보는 이 주소에 담기지 않습니다 — 메뉴·옵션·화면 설정만 들어갑니다.
+                  </p>
+                </>
+              )}
+            </div>
+
             <div className="savebox">
               <button type="button" className="toggle" aria-pressed={storeToggle} onClick={toggleStore}>
                 이 설정을 이 기기에 저장 {storeToggle ? "— 저장됨 ✓" : "— 저장 안 함 (기본)"}
