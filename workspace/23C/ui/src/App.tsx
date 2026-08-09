@@ -12,9 +12,9 @@ import {
 } from "./logic";
 import { TIME_SLOT_KO, timeSlotOf } from "../../src/core/context";
 import { buildExecutionPlanCore, explainSelections } from "../../src/core/plan";
-import { canStopAsking } from "../../src/core/ask";
+import { canStopAsking, shouldSafetyStop, isUnresolved } from "../../src/core/ask";
 
-type Step = "start" | "a11y" | "wizard" | "recommend" | "confirm" | "run" | "result" | "staff" | "edit";
+type Step = "start" | "a11y" | "wizard" | "recommend" | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
 
 /** 오류 주입 시연 — 공식 7종 전부(API_CONTRACT). 한국어 제목이 기본, 코드는 참조용 병기. */
 const INJECTIONS: { code: string; label: string; desc: string }[] = [
@@ -315,6 +315,8 @@ export function App() {
   const [demoHour, setDemoHour] = useState<number | null>(null); // 프리셋의 시간대 시연용
   /** 조기 종료로 여쭤보지 않은 질문 key — 추천 화면에서 무엇을 안 물었는지 밝힌다 */
   const [skipped, setSkipped] = useState<string[]>([]);
+  /** 확정되지 않은 추천을 몇 번 만났는가 — 2회째면 안전 중단(S12) */
+  const [reconfirmCount, setReconfirmCount] = useState(0);
 
   useEffect(() => {
     fetchFixture().then((r) => { setFixture(r.fixture); setLive(r.live); });
@@ -343,18 +345,27 @@ export function App() {
 
   const startWizard = () => {
     setAnswers({}); setQIndex(0); setManual(false); setFromSaved(false); setCarried([]);
-    setStoreToggle(false); setDemoHour(null); setSkipped([]); resetRun(); setStep("wizard");
+    setStoreToggle(false); setDemoHour(null); setSkipped([]); setReconfirmCount(0);
+    resetRun(); setStep("wizard");
   };
 
   /** 아직 답하지 않은 질문 — 조기 종료 시 "여쭤보지 않은 항목"으로 알린다. */
   const unansweredIn = (a: Record<string, unknown>): string[] =>
     QUESTIONS.filter((q) => a[q.key] === undefined).map((q) => q.key);
 
-  const goRecommend = (u: UiRecommendation, skippedKeys: string[]) => {
+  /**
+   * 추천 화면으로 — 모든 경로(마법사 종료·조기 종료·조건 수정·시연 프리셋)가 여기를 지난다.
+   * 미확정 추천이 반복되면 여기서 안전 중단으로 보낸다(화면목록 S12).
+   */
+  const goRecommend = (u: UiRecommendation, skippedKeys: string[], priorAttempts = reconfirmCount) => {
+    // priorAttempts 를 인자로 받는 이유: 새 흐름을 시작하는 경로(시연 프리셋·저장본 시작)는
+    // setReconfirmCount(0) 을 호출해도 이 렌더의 클로저에는 옛 값이 잡혀 있다. 0 을 명시해 넘긴다.
+    const attempts = isUnresolved(u.rec) ? priorAttempts + 1 : 0;
+    setReconfirmCount(attempts);
     setSkipped(skippedKeys);
     setUiRec(u);
     setManual(false);
-    setStep("recommend");
+    setStep(shouldSafetyStop(u.rec, attempts) ? "stopped" : "recommend");
   };
 
   const finishWizard = () => {
@@ -403,6 +414,7 @@ export function App() {
       goRecommend(
         computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date()),
         unansweredIn(next),
+        0, // 저장본으로 시작하는 것도 새 흐름이다
       );
       return;
     }
@@ -421,6 +433,7 @@ export function App() {
     goRecommend(
       computeRecommendation(buildRawInput(p.answers, nextA11y, false, false), fixture, nextHour === null ? new Date() : d),
       unansweredIn(p.answers),
+      0, // 시연 프리셋은 새 흐름이다 — 이전 시도 횟수를 물려받지 않는다
     );
   };
 
@@ -435,9 +448,11 @@ export function App() {
   const applyEditAndRecommend = () => {
     if (!fixture) return;
     if (storeToggle) persist();
-    setUiRec(computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle), fixture, now));
-    setManual(false);
-    setStep("recommend");
+    // 고쳐서 다시 받는 경로 — 여기서도 미확정이면 시도 횟수가 올라가고, 2회째면 안전 중단이다
+    goRecommend(
+      computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle), fixture, now),
+      unansweredIn(answers),
+    );
   };
 
   const persist = () => {
@@ -985,6 +1000,33 @@ export function App() {
                 </div>
               </div>
             )}
+          </section>
+        )}
+
+        {/* 화면목록 S12 — 재확인 2회째도 확정되지 않았을 때. 정상 종료가 아니라는 것,
+            그리고 아무 준비도 시작되지 않았다는 것을 분명히 말한다. */}
+        {step === "stopped" && (
+          <section className="card" aria-labelledby="stophead">
+            <div className="banner warn" role="alert">여기서 멈췄습니다 — 정상적으로 끝난 것이 아닙니다.</div>
+            <h2 id="stophead">확인이 어려워 진행을 멈췄어요</h2>
+            <p className="hint" style={{ fontSize: "1em", color: "var(--fg)" }}>
+              {t(
+                "두 번 여쭤봤는데도 확실하지 않았습니다. 어려우시면 직원을 불러주세요.",
+                "두 번 확인을 요청드렸는데도 조건이 확실해지지 않았습니다. 임의로 판단해서 진행하지 않습니다 — 어려우시면 직원을 불러주세요.",
+              )}
+            </p>
+            <p className="hint">
+              <b>주문 준비는 시작되지 않았습니다.</b> 승인 전이므로 실행 계획이 만들어지지 않았고,
+              장바구니에도 아무것도 담기지 않았습니다.
+            </p>
+            <div className="btnrow">
+              {staffBtn("btn primary")}
+              <button type="button" className="btn ghost"
+                onClick={() => { setReconfirmCount(0); setEditOpen("allergies"); setStep("edit"); }}>
+                조건 다시 보기
+              </button>
+              <button type="button" className="btn ghost" onClick={() => setStep("start")}>처음으로</button>
+            </div>
           </section>
         )}
 

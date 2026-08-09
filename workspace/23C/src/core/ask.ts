@@ -70,6 +70,30 @@ export function preferenceAxisAsked(ctx: EngineContext): boolean {
  * `origin=AUTO` 로 밝힌다(plan.ts `explainSelections`). 그래서 «추천 이유와 대안을
  * 설명해야» 하는 의무는 생략과 무관하게 지켜진다 — 단, 그 고지를 끄면 이 전제가 무너진다.
  */
+/** 재확인을 몇 번까지 시도하는가 — 화면목록 S12 «재확인 질문 2회째도 확정 안 됨». */
+export const MAX_RECONFIRM_ATTEMPTS = 2;
+
+/**
+ * 확정되지 않은 추천인가 — 재확인이 걸렸거나, 조건에 맞는 후보가 아예 없거나.
+ * 화면목록 S12 가 두 경우를 같은 종착지로 묶는다.
+ */
+export function isUnresolved(rec: Recommendation): boolean {
+  return rec.requiresReconfirmation || rec.recommendedCandidateId === null;
+}
+
+/**
+ * 안전 중단으로 보내야 하는가 (화면목록 S12).
+ *
+ * 첫 번째 미확정에서 바로 막다른 길로 보내지 않는다 — 그건 «막다른 길을 만들지 않는다»는
+ * 원칙과 충돌한다. 조건을 고쳐 다시 시도할 기회를 한 번 주고, 그러고도 확정되지 않으면 멈춘다.
+ *
+ * 멈춘 상태에서는 아무 준비도 시작되지 않는다 — 승인이 없으므로 buildExecutionPlanCore 가
+ * 빈 actions 를 돌려주고, 그건 이 함수와 무관하게 계약으로 이미 보장된다.
+ */
+export function shouldSafetyStop(rec: Recommendation, attempts: number): boolean {
+  return isUnresolved(rec) && attempts >= MAX_RECONFIRM_ATTEMPTS;
+}
+
 export function canStopAsking(rec: Recommendation, ctx: EngineContext): boolean {
   if (!allergensAnswered(ctx)) return false;    // 하드제약 미확인 상태로는 절대 확정하지 않는다
   if (!preferenceAxisAsked(ctx)) return false;  // 안 물어봐서 생긴 확신으로 끝내지 않는다

@@ -64,7 +64,9 @@ describe("접근성 — 선언한 보증이 실제로 코드에 있는가", () =
     expect(APP).toMatch(/const staffBtn = /);
     // 같은 step 문자열이 조건부 배너 등에서도 쓰이므로, 등장 지점마다 살펴
     // 그중 하나라도 뒤따르는 렌더 블록에 직원 도움이 있으면 통과로 본다.
-    for (const step of ["start", "wizard", "recommend", "edit"]) {
+    // 새 화면을 만들면 여기 배열에 반드시 추가한다 — 목록이 하드코딩이라 자동으로 늘지 않는다.
+    // 특히 "stopped"(안전 중단)는 직원 도움이 그 화면의 존재 이유다.
+    for (const step of ["start", "wizard", "recommend", "edit", "stopped"]) {
       const parts = APP.split(`step === "${step}"`).slice(1);
       const reachable = parts.some((seg) => /staffBtn\(/.test(seg.slice(0, 3000)));
       expect(reachable, `${step} 화면에 직원 도움 경로가 없습니다`).toBe(true);

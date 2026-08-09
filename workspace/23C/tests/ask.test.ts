@@ -14,7 +14,8 @@ import { loadChickenFixture } from "./helpers";
 import { buildChickenContext } from "../src/core/canonical";
 import { buildRecommendation } from "../src/core/engine";
 import {
-  allergensAnswered, canStopAsking, preferenceAxisAsked, EARLY_STOP_CONFIDENCE,
+  allergensAnswered, canStopAsking, preferenceAxisAsked, shouldSafetyStop, isUnresolved,
+  EARLY_STOP_CONFIDENCE, MAX_RECONFIRM_ATTEMPTS,
 } from "../src/core/ask";
 
 const fixture = loadChickenFixture();
@@ -65,6 +66,35 @@ describe("조기 종료 게이트 — 계약 조건", () => {
     const { rec, ctx } = recFor({ allergies: ["모름"], spicyLevel: "매운맛" });
     expect(rec.requiresReconfirmation).toBe(true);
     expect(canStopAsking(rec, ctx)).toBe(false);
+  });
+});
+
+describe("안전 중단 판정 — 화면목록 S12", () => {
+  it("알레르기를 모른다고 답한 추천은 미확정으로 본다", () => {
+    const { rec } = recFor({ allergies: ["모름"], spicyLevel: "매운맛" });
+    expect(isUnresolved(rec)).toBe(true);
+  });
+
+  it("조건에 맞는 후보가 아예 없는 추천도 미확정으로 본다", () => {
+    const { rec } = recFor({ allergies: ["땅콩", "콩"], budgetKrw: 3000 });
+    expect(rec.recommendedCandidateId).toBeNull();
+    expect(isUnresolved(rec)).toBe(true);
+  });
+
+  it("첫 번째 미확정에서는 멈추지 않는다 — 고쳐볼 기회를 한 번 준다", () => {
+    const { rec } = recFor({ allergies: ["모름"], spicyLevel: "매운맛" });
+    expect(shouldSafetyStop(rec, 1)).toBe(false);
+  });
+
+  it("두 번째에도 확정되지 않으면 멈춘다", () => {
+    const { rec } = recFor({ allergies: ["모름"], spicyLevel: "매운맛" });
+    expect(shouldSafetyStop(rec, MAX_RECONFIRM_ATTEMPTS)).toBe(true);
+  });
+
+  it("확정된 추천은 시도 횟수와 무관하게 멈추지 않는다", () => {
+    const { rec } = recFor({ allergies: [], spicyLevel: "매운맛", boneType: "뼈" });
+    expect(isUnresolved(rec)).toBe(false);
+    expect(shouldSafetyStop(rec, 99)).toBe(false);
   });
 });
 
