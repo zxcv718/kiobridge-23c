@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import type { Evidence, ParticipantSubmission, PublicFixture } from "@kiobridge/participant-sdk";
 import {
   computeRecommendation, withManualSelection, buildUiSubmission, runOnSimulator, injectError,
-  fetchFixture, candidateName, candidatePrice, downloadSubmission, ARCHIVED_RUN,
+  fetchFixture, candidateName, candidatePrice, downloadSubmission, summarizeOrderPlan,
   type RawUserInput, type UiRecommendation, type RunOutcome,
 } from "./logic";
 import { TIME_SLOT_KO, timeSlotOf } from "../../src/core/context";
@@ -780,14 +780,14 @@ export function App() {
               </>
             ) : (
               <>
-                <p className="hint">완성된 주문 계획을 파일로 받아, 시뮬레이션 서버가 있는 컴퓨터에서 검증·실행할 수 있습니다.</p>
                 <div className="btnrow">
                   <button type="button" className="btn ghost" onClick={() => setStep("recommend")}>← 되돌아가기</button>
+                  {/* 체험 모드에서도 주문은 끝까지 간다 — 계획을 만들어 보관하고 결과 화면에서 그 결말을 보여준다. */}
                   <button type="button" className="btn primary" onClick={() => {
                     if (!fixture || !uiRec) return;
-                    downloadSubmission(buildUiSubmission(uiRec, fixture, true, manual));
+                    setSubmitted(buildUiSubmission(uiRec, fixture, true, manual));
                     setStep("result");
-                  }}>주문 계획(JSON) 내려받기</button>
+                  }}>주문 확정하기</button>
                 </div>
               </>
             )}
@@ -804,7 +804,10 @@ export function App() {
         {step === "result" && (
           <section>
             <div className="card">
-              <h2>실행 결과 {ev ? (String(ev.result) === "PASS" ? <span className="pass">PASS</span> : <span className="fail">{String(ev.result)}</span>) : outcome && !outcome.valid ? <span className="fail">검증 거부</span> : runError ? <span className="fail">오류</span> : null}</h2>
+              {/* 체험 모드에서는 "실행 결과"가 아니라 사용자가 방금 끝낸 일의 이름을 제목으로 쓴다. */}
+              <h2>{!live && !ev && !runError && !(outcome && !outcome.valid)
+                ? "주문이 완성되었습니다"
+                : <>실행 결과 {ev ? (String(ev.result) === "PASS" ? <span className="pass">PASS</span> : <span className="fail">{String(ev.result)}</span>) : outcome && !outcome.valid ? <span className="fail">검증 거부</span> : runError ? <span className="fail">오류</span> : null}</>}</h2>
               {runError && <div className="banner danger" role="alert">{runError}</div>}
               {outcome && !outcome.valid && (
                 <div>
@@ -847,31 +850,55 @@ export function App() {
                 </>
               )}
 
-              {/* 체험 모드(서버 없음) — 지금 결과가 아니라 "지난 실행 기록"임을 못 박고 보여준다 */}
-              {!live && !ev && (
-                <>
-                  <div className="banner warn" role="note">
-                    이 화면에는 시뮬레이션 서버가 없어 <b>방금 만든 계획을 지금 실행할 수는 없습니다.</b>
-                    아래는 같은 서비스가 만든 계획을 <b>공식 시뮬레이터에서 실제로 실행한 지난 기록</b>입니다.
-                  </div>
-                  <div className="evgrid">
-                    <div className="evitem"><b>지난 실행 결과</b>{ARCHIVED_RUN.result} · {STOP_KO[ARCHIVED_RUN.stopType] ?? ARCHIVED_RUN.stopType}</div>
-                    <div className="evitem"><b>장바구니 확인 화면</b>{ARCHIVED_RUN.boundaryReached ? "도달함" : "도달 못 함"}</div>
-                    <div className="evitem"><b>읽기 전용 확인</b>{ARCHIVED_RUN.requiredVerifierExecuted ? "실행함" : "실행 안 됨"}</div>
-                    <div className="evitem"><b>결제 동작</b>{`계획 ${ARCHIVED_RUN.plannedPaymentActionCount}건 · 실행 ${ARCHIVED_RUN.executedPaymentActionCount}건`}</div>
-                    <div className="evitem"><b>실제 기기로 간 명령</b>{ARCHIVED_RUN.actualDeviceCommandSent ? "있음(문제!)" : "없음"}</div>
-                    <div className="evitem"><b>실행 단계 수</b>{ARCHIVED_RUN.actionCount}단계</div>
-                  </div>
-                  <p className="hint">
-                    사전 생성 기록 · 환경 {ARCHIVED_RUN.environmentId} · 세션 <code>{ARCHIVED_RUN.sessionId}</code> ·
-                    {" "}{new Date(ARCHIVED_RUN.createdAt).toLocaleString("ko-KR")} 생성.
-                    <b> 방금 입력하신 내용의 실행 결과가 아닙니다.</b>
-                  </p>
-                  <div className="btnrow">
-                    <button type="button" className="btn primary" onClick={() => setStep("start")}>처음으로</button>
-                  </div>
-                </>
-              )}
+              {/* 체험 모드(서버 없음) — 방금 만든 "이 주문"의 결말을 보여준다.
+                  공식 판정(PASS)은 서버만 낼 수 있으므로 여기에는 쓰지 않는다.
+                  대신 계획에서 직접 읽어낸 사실만 쓴다 — 그것만으로도 결말은 충분히 말할 수 있다. */}
+              {!live && !ev && uiRec && fixture && submitted && (() => {
+                const plan = summarizeOrderPlan(submitted, fixture);
+                const qty = Number(uiRec.engineCtx.preferences.quantity ?? 1);
+                const total = (candidatePrice(fixture, uiRec.rec.recommendedCandidateId) ?? 0) * qty;
+                const excluded = uiRec.rec.excludedCandidates.length;
+                return (
+                  <>
+                    <dl className="summary">
+                      <dt>메뉴</dt><dd>{candidateName(fixture, uiRec.rec.recommendedCandidateId)}</dd>
+                      <dt>수량</dt><dd>{qty}개</dd>
+                      <dt>이용 방식</dt>
+                      <dd>{uiRec.engineCtx.preferences.serviceType === "TAKE_OUT" ? "포장"
+                        : uiRec.engineCtx.preferences.serviceType === "DINE_IN" ? "매장" : "메뉴 기본값"}</dd>
+                    </dl>
+                    <p className="total">합계 {total.toLocaleString()}원</p>
+                    {excluded > 0 && (
+                      <p className="hint">
+                        고르실 수 없던 {excluded}가지는 이유를 알려드리고, 대신 고를 수 있는 것으로 안내했습니다.
+                      </p>
+                    )}
+
+                    <h3 className="selhead">이 주문이 키오스크에서 가는 길</h3>
+                    <div className="evgrid">
+                      <div className="evitem"><b>주문 단계</b>{plan.stepCount}단계</div>
+                      <div className="evitem"><b>마지막 화면</b>{plan.endsAtTitle}</div>
+                      <div className="evitem"><b>결제 동작</b>{plan.paymentActionCount}건</div>
+                      <div className="evitem"><b>실제 기기로 간 명령</b>{plan.deviceCommandSent ? "있음(문제!)" : "없음"}</div>
+                    </div>
+                    <p className="hint">
+                      {plan.stopsAtReviewBoundary ? (
+                        <>이 주문은 <b>결제 직전 장바구니 확인 화면에서 멈춥니다.</b>{" "}
+                          {plan.includesRequiredVerifier && "담긴 내용을 읽어서 확인하는 것까지가 끝이고, "}
+                          결제는 사람이 직접 하도록 남겨 둡니다.</>
+                      ) : (
+                        <>이 주문은 <b>{plan.endsAtTitle}</b>에서 끝납니다.</>
+                      )}
+                    </p>
+                    <div className="btnrow">
+                      <button type="button" className="btn primary" onClick={() => setStep("start")}>처음으로</button>
+                      <button type="button" className="btn ghost" onClick={() => downloadSubmission(submitted)}>
+                        주문 계획(JSON) 내려받기
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {outcome?.valid && submitted && (

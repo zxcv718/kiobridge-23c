@@ -210,43 +210,57 @@ export async function fetchFixture(): Promise<FixtureLoad> {
   }
 }
 
-/* ───────── 사전 생성 Evidence — 체험 모드에서 "결말"을 보여주기 위한 것 ─────────
- * Simulation API 가 없는 배포본에서는 실행이 불가능하다(키트는 로컬 전용).
- * 그렇다고 결과를 안 보여주면 사용자는 "계획까지" 만 보고 끝난다.
- * 그래서 로컬 키트에서 실제로 받은 Evidence 를 그대로 싣되,
- * ★ 절대 지금 입력의 결과인 것처럼 표시하지 않는다 — 생성 시각·세션 ID·"사전 생성"을 반드시 병기한다. */
-import archivedEvidence from "../../../../submission-output/23C/simulation-evidence.json";
-
-export interface ArchivedRun {
-  result: string;
-  stopType: string;
-  boundaryReached: boolean;
-  requiredVerifierExecuted: boolean;
-  plannedPaymentActionCount: number;
-  executedPaymentActionCount: number;
-  actualDeviceCommandSent: boolean;
-  sessionId: string;
-  createdAt: string;
-  environmentId: string;
-  actionCount: number;
+/* ───────── 이 주문의 결말 — 체험 모드에서 사용자에게 보여줄 사실 ─────────
+ * Simulation API 가 없는 배포본에서는 공식 재생을 받을 수 없다(키트는 로컬 전용).
+ * 그렇다고 남의 실행 기록을 가져다 붙이면 "내 주문의 결과"가 아니게 된다.
+ *
+ * 그래서 여기서는 **방금 만든 계획 자체에서 읽어낼 수 있는 것만** 뽑는다.
+ * 아래 값들은 재생해봐야 아는 것이 아니라 계획을 만든 시점에 이미 정해진 성질이다 —
+ *   · 몇 단계인가        = actions.length
+ *   · 어디서 끝나는가    = 마지막 액션의 expectedAfterState
+ *   · 결제를 건드리는가  = manifest.forbiddenActions 와 대조 (plan.ts 가 애초에 안 만든다)
+ *   · 기기로 나가는가    = plan.actualDeviceCommandSent (계약상 항상 false)
+ *
+ * ★ 공식 판정(PASS/stopType)은 여기 없다. 그건 키트가 우리 계획을 재생해야 나오는 값이고,
+ *   우리가 화면에 임의로 쓰면 가짜 판정이 된다. 없는 것은 없다고 두는 편이 낫다. */
+export interface PlanSummary {
+  /** 키오스크에서 밟게 되는 단계 수 */
+  stepCount: number;
+  /** 계획이 끝나는 화면 상태(예: CART_REVIEW) */
+  endsAtState: string;
+  /** 그 화면의 사람이 읽는 이름 */
+  endsAtTitle: string;
+  /** 결제 직전 검토 경계에서 끝나는가 */
+  stopsAtReviewBoundary: boolean;
+  /** 계획에 포함된 결제성 동작 수 — 0이어야 한다 */
+  paymentActionCount: number;
+  /** 읽기 전용 확인(verify_cart)이 계획에 들어 있는가 */
+  includesRequiredVerifier: boolean;
+  /** 실제 기기로 나가는 명령 — 계약상 항상 false */
+  deviceCommandSent: boolean;
 }
 
-export const ARCHIVED_RUN: ArchivedRun = (() => {
-  const e = archivedEvidence as unknown as Record<string, unknown>;
+export function summarizeOrderPlan(
+  submission: ParticipantSubmission, fixture: PublicFixture,
+): PlanSummary {
+  const plan = submission.executionPlan;
+  const actions = plan.actions ?? [];
+  const manifest = fixture.manifest;
+  const endsAtState = actions.length > 0
+    ? actions[actions.length - 1].expectedAfterState
+    : manifest.initialState;
+  const forbidden = new Set(manifest.forbiddenActions);
+
   return {
-    result: String(e.result),
-    stopType: String(e.stopType),
-    boundaryReached: e.boundaryReached === true,
-    requiredVerifierExecuted: e.requiredVerifierExecuted === true,
-    plannedPaymentActionCount: Number(e.plannedPaymentActionCount ?? 0),
-    executedPaymentActionCount: Number(e.executedPaymentActionCount ?? 0),
-    actualDeviceCommandSent: e.actualDeviceCommandSent === true,
-    sessionId: String(e.sessionId),
-    createdAt: String(e.createdAt),
-    environmentId: String(e.environmentId),
-    actionCount: Array.isArray(e.executionPlan) ? e.executionPlan.length : 0,
+    stepCount: actions.length,
+    endsAtState,
+    endsAtTitle: fixture.screens.find((s) => s.state === endsAtState)?.title ?? endsAtState,
+    stopsAtReviewBoundary: endsAtState === manifest.reviewBoundaryState,
+    paymentActionCount: actions.filter((a) => forbidden.has(a.action)).length,
+    includesRequiredVerifier: actions.some((a) => a.action === manifest.requiredVerifierAction),
+    deviceCommandSent: plan.actualDeviceCommandSent,
   };
-})();
+}
 
 /** 체험 모드용 — 제출 JSON을 파일로 내려받는다 (심사·검증은 로컬 키트에서 수행) */
 export function downloadSubmission(submission: ParticipantSubmission) {

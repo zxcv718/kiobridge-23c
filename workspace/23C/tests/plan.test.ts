@@ -1,7 +1,10 @@
 /** STEP 9 실행계획 테스트 — 전이 정합·경계 정지·결제 0건. */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { buildRecommendation, type EngineContext } from "../src/core/engine";
 import { buildExecutionPlanCore , substitutionsFor , explainSelections } from "../src/core/plan";
+import { computeRecommendation, buildUiSubmission, summarizeOrderPlan } from "../ui/src/logic";
 import { loadChickenFixture } from "./helpers";
 
 const fx = loadChickenFixture();
@@ -244,5 +247,48 @@ describe('"상관없어요" 가 필수/선택 그룹에서 어떻게 끝나는�
       const inPlan = plan.actions.find((a) => groupOf(a.target) === sel.groupId)?.target.id;
       expect(inPlan, `${sel.groupId}`).toBe(sel.id);
     }
+  });
+});
+
+/* ───────── 체험 모드 결과 요약 (summarizeOrderPlan) ─────────
+ * 서버 없는 배포본에서 "이 주문의 결말"로 보여주는 값들이다.
+ * 공식 재생 없이도 계획만으로 단언할 수 있어야 한다는 것이 이 함수의 전제이므로,
+ * 그 전제가 깨지면(예: 계획이 결제 화면까지 가면) 여기서 잡힌다. */
+describe("체험 모드 summarizeOrderPlan", () => {
+  const raw = JSON.parse(
+    readFileSync(fileURLToPath(new URL("../input/raw-user-input.json", import.meta.url)), "utf-8"),
+  );
+  const submissionOf = () =>
+    buildUiSubmission(computeRecommendation(raw, fx, new Date("2026-08-06T09:00:00Z")), fx, true, false);
+
+  it("단계 수가 실제 계획 길이와 같다", () => {
+    const sub = submissionOf();
+    expect(summarizeOrderPlan(sub, fx).stepCount).toBe(sub.executionPlan.actions.length);
+  });
+
+  it("결제 직전 검토 경계에서 끝나고, 결제 동작은 0건이다", () => {
+    const s = summarizeOrderPlan(submissionOf(), fx);
+    expect(s.endsAtState).toBe(fx.manifest.reviewBoundaryState);
+    expect(s.stopsAtReviewBoundary).toBe(true);
+    expect(s.paymentActionCount).toBe(0);
+  });
+
+  it("읽기 전용 확인이 계획에 포함되고, 실기기 명령은 나가지 않는다", () => {
+    const s = summarizeOrderPlan(submissionOf(), fx);
+    expect(s.includesRequiredVerifier).toBe(true);
+    expect(s.deviceCommandSent).toBe(false);
+  });
+
+  it("끝나는 화면 이름은 fixture의 screens에서 가져온다 (하드코딩 금지)", () => {
+    const s = summarizeOrderPlan(submissionOf(), fx);
+    const title = fx.screens.find((sc) => sc.state === s.endsAtState)?.title;
+    expect(s.endsAtTitle).toBe(title);
+  });
+
+  it("거절한 주문은 0단계이고 경계에 도달하지 않는다", () => {
+    const u = computeRecommendation(raw, fx, new Date("2026-08-06T09:00:00Z"));
+    const s = summarizeOrderPlan(buildUiSubmission(u, fx, false, false), fx);
+    expect(s.stepCount).toBe(0);
+    expect(s.stopsAtReviewBoundary).toBe(false);
   });
 });
