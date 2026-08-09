@@ -675,8 +675,9 @@ export function App() {
                     : " 저장 범위를 '오래 쓰는 것만'으로 두셔서, 수량·예산 같은 이번 이용 정보만 다시 여쭤봅니다."}
                 </p>
                 <div className="btnrow">
-                  <button type="button" className="btn primary" onClick={startFromSaved} disabled={!fixture}>이 설정으로 시작</button>
-                  <button type="button" className="btn ghost" onClick={startWizard} disabled={!fixture}>새로 입력하기</button>
+                  {/* 화면목록 S01 case2 의 용어를 그대로 쓴다 */}
+                  <button type="button" className="btn primary" onClick={startFromSaved} disabled={!fixture}>프로필 다시 사용</button>
+                  <button type="button" className="btn ghost" onClick={startWizard} disabled={!fixture}>새롭게 만들기</button>
                   <button type="button" className="btn danger" onClick={deleteSaved}>저장된 설정 지우기</button>
                 </div>
               </section>
@@ -910,6 +911,42 @@ export function App() {
           <section className="card" aria-label="조건 수정">
             <h2>바꾸실 것을 눌러 주세요</h2>
             {!simple && <p className="hint">누르면 그 자리에서 선택지가 열립니다. 다 바꾸셨으면 아래에서 추천을 다시 받아 주세요.</p>}
+            {/* 메뉴 행이 붙어 화면이 길어졌다 — 도움을 화면 끝까지 내려가야 닿는 곳에 두지 않는다 */}
+            <div className="btnrow" style={{ marginBottom: 4 }}>{staffBtn()}</div>
+
+            {/* 화면목록 S14 — 메뉴 변경도 여기서 한다. 지금까지는 추천 화면의 대안 카드로만
+                바꿀 수 있어서 "바꾸는 곳"이 두 군데로 갈려 있었다.
+                고를 수 있는 것은 STEP 4 를 통과한 생존 후보뿐이다(scoreBreakdown) —
+                알레르기·품절·예산으로 제외된 후보를 여기서 되살리지 않는다. */}
+            {uiRec && fixture && uiRec.rec.recommendedCandidateId && (
+              <div className="editrow">
+                <button type="button" className="edithead" aria-expanded={editOpen === "__menu"}
+                  onClick={() => setEditOpen(editOpen === "__menu" ? null : "__menu")}>
+                  <span className="editlabel">메뉴</span>
+                  <span className="editvalue">{candidateName(fixture, uiRec.rec.recommendedCandidateId)}</span>
+                  <span aria-hidden="true">{editOpen === "__menu" ? "▲" : "▼"}</span>
+                </button>
+                {editOpen === "__menu" && (
+                  <div className="editbody">
+                    {!simple && <p className="hint">조건에 맞는 메뉴만 보여드립니다. 제외된 메뉴는 여기 없습니다.</p>}
+                    <div className="choices" role="group" aria-label="메뉴 선택">
+                      {Object.keys(uiRec.rec.scoreBreakdown ?? {}).map((id) => (
+                        <button key={id} type="button" className="choice"
+                          aria-pressed={id === uiRec.rec.recommendedCandidateId}
+                          onClick={() => {
+                            setUiRec(withManualSelection(uiRec, fixture, id));
+                            setManual(true); setEditOpen(null); setStep("recommend");
+                          }}>
+                          {candidateName(fixture, id)}
+                          <small>{candidatePrice(fixture, id)?.toLocaleString()}원</small>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {QUESTIONS.map((qq) => {
               const open = editOpen === qq.key;
               return (
