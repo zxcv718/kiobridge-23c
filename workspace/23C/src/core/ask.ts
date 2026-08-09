@@ -1,0 +1,51 @@
+/**
+ * 질문 흐름 제어 — "더 물어봐야 하는가".
+ *
+ * 기획(화면목록 S06~S10 «추천 신뢰도 낮을 경우 다음 질문 진행», S11 «기준보다 높을 경우
+ * 즉시 추천 결과 화면으로»)의 구현이자, 그 기획이 계약을 깨지 않도록 막는 안전장치다.
+ *
+ * 판정을 UI 조건문에 두지 않고 여기 순수 함수로 모은 이유:
+ *   조기 종료가 알레르기 질문을 건너뛰면 `hardConstraints.allergenIds` 가 UNKNOWN 이 아니라
+ *   **미수집(undefined)** 이 된다. 그러면 안전 정지도 안 걸리고 스키마 검증도 통과하면서
+ *   알레르기 후보 제외만 조용히 사라진다 — guide.txt §5 위반이 자동 검출 없이 통과한다.
+ *   그 조건을 테스트가 지킬 수 있는 곳에 둔다. (tests/ask.test.ts)
+ */
+import type { Recommendation } from "@kiobridge/participant-sdk";
+import type { EngineContext } from "./engine";
+
+/**
+ * 조기 종료 기준.
+ *
+ * 0.80 은 추측이 아니라 이 환경의 실측값이다. `computeConfidence` 는 다수 후보일 때
+ * `0.6 + margin*0.35` 이고 chicken-store 후보 8개에서는 **0.82 를 넘지 못한다**
+ * (0.90 은 생존 후보가 1개로 줄었을 때만 나온다). 기준을 그 위로 올리면 조기 종료는
+ * 후보가 이미 하나로 좁혀진 자명한 경우에만 발동해 기능이 죽는다.
+ *
+ * 0.80 은 margin ≥ 0.571 — 1·2위 격차가 후보 간 점수 폭의 57% 이상일 때만 멈춘다는 뜻이다.
+ * 환경이나 가중치(WEIGHTS)를 바꾸면 이 값도 다시 재야 한다. 테스트가 상한을 고정하고 있다.
+ */
+export const EARLY_STOP_CONFIDENCE = 0.8;
+
+/**
+ * 알레르기를 물었는가.
+ *
+ * UI 의 답변 상태가 아니라 **정규화된 하드제약**을 본다. 화면이 "물어봤다"고 잘못
+ * 넘겨도 실제로 값이 안 들어왔으면 false 가 되도록, 판단 근거를 한 겹 아래에 둔다.
+ * "알레르기 없음"(빈 배열)은 답변이고, 미수집(undefined)은 답변이 아니다.
+ */
+export function allergensAnswered(ctx: EngineContext): boolean {
+  return ctx.hardConstraints.allergenIds !== undefined;
+}
+
+/**
+ * 남은 질문을 생략하고 추천으로 넘어가도 되는가.
+ *
+ * 생략된 항목은 실행계획에서 후보가 지원하는 값으로 채워지며, 그 사실은 최종 확인 화면이
+ * `origin=AUTO` 로 밝힌다(plan.ts `explainSelections`). 그래서 «추천 이유와 대안을
+ * 설명해야» 하는 의무는 생략과 무관하게 지켜진다 — 단, 그 고지를 끄면 이 전제가 무너진다.
+ */
+export function canStopAsking(rec: Recommendation, ctx: EngineContext): boolean {
+  if (!allergensAnswered(ctx)) return false;   // 하드제약 미확인 상태로는 절대 확정하지 않는다
+  if (rec.requiresReconfirmation) return false; // 재확인이 걸린 추천으로 흐름을 끝내지 않는다
+  return (rec.confidence ?? 0) >= EARLY_STOP_CONFIDENCE;
+}
