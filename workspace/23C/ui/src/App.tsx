@@ -13,6 +13,10 @@ import {
 import { TIME_SLOT_KO, timeSlotOf } from "../../src/core/context";
 import { buildExecutionPlanCore, explainSelections } from "../../src/core/plan";
 import { canStopAsking, shouldSafetyStop, isUnresolved } from "../../src/core/ask";
+import {
+  migrateSaved, SAVED_VERSION,
+  type SavedSettings as CoreSaved, type SaveScope, type LastOrder,
+} from "../../src/core/saved";
 
 type Step =
   | "start" | "a11y" | "wizard" | "calculating" | "recommend"
@@ -177,16 +181,14 @@ function answerLabel(key: string, v: unknown): string {
  *   ALL     — 이번 답변 전부 (다음에 같은 주문을 빠르게)
  *   LASTING — 오래 쓰는 것만: 알레르기·맛 선호·화면 설정 (공용기기·가끔 이용)
  * 기본값은 "저장 안 함"이며, 켤 때 범위를 함께 고른다. */
-const STORAGE_KEY = "kb23c-saved-settings-v3";
+const STORAGE_KEY = "kb23c-saved-settings-v4";
+/** v3 저장본을 버리지 않는다 — 형식이 바뀌었다고 사용자 설정이 사라지면 안 된다. */
+const LEGACY_KEY = "kb23c-saved-settings-v3";
 const LASTING_KEYS = ["allergies", "spicyLevel", "boneType"] as const;
 
-type SaveScope = "ALL" | "LASTING";
-
-interface SavedSettings {
-  answers: Record<string, unknown>;
+/** 화면에서 쓰는 저장본 — core 형식에 UI 의 A11y 타입을 입힌 것 */
+interface SavedSettings extends Omit<CoreSaved, "a11y"> {
   a11y: A11y;
-  scope: SaveScope;
-  savedAt: string;
 }
 const pickByScope = (answers: Record<string, unknown>, scope: SaveScope): Record<string, unknown> => {
   if (scope === "ALL") return { ...answers };
@@ -194,14 +196,26 @@ const pickByScope = (answers: Record<string, unknown>, scope: SaveScope): Record
   for (const k of LASTING_KEYS) if (answers[k] !== undefined) out[k] = answers[k];
   return out;
 };
-const loadSaved = (): SavedSettings | null => {
+/** 해석은 core/saved.ts 가 한다 — localStorage 는 무엇이든 들어올 수 있는 입구다. */
+const readSaved = (key: string): SavedSettings | null => {
   try {
-    const s = localStorage.getItem(STORAGE_KEY);
+    const s = localStorage.getItem(key);
     if (!s) return null;
-    const p = JSON.parse(s) as SavedSettings;
-    if (!p || typeof p !== "object" || !p.answers) return null;
-    return { ...p, scope: p.scope === "LASTING" ? "LASTING" : "ALL", a11y: { ...A11Y_DEFAULT, ...(p.a11y ?? {}) } };
+    const m = migrateSaved(JSON.parse(s));
+    return m ? { ...m, a11y: { ...A11Y_DEFAULT, ...(m.a11y as Partial<A11y>) } } : null;
   } catch { return null; }
+};
+
+const loadSaved = (): SavedSettings | null => {
+  const cur = readSaved(STORAGE_KEY);
+  if (cur) return cur;
+  const old = readSaved(LEGACY_KEY); // 구버전 저장본을 새 키로 옮기고 계속 쓴다
+  if (!old) return null;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(old));
+    localStorage.removeItem(LEGACY_KEY);
+  } catch { /* 저장 불가 환경이면 이번 세션만 메모리로 쓴다 */ }
+  return old;
 };
 
 function savedSummary(s: SavedSettings): string {
@@ -474,6 +488,26 @@ export function App() {
     setStep("wizard");
   };
 
+  /**
+   * 화면목록 S05 «지난번처럼 준비할까요?» — 한 번 눌러 지난 주문을 되살린다.
+   *
+   * 되살린 뒤에도 **추천 확인 화면부터** 시작한다. 곧바로 실행으로 보내면 사용자의 명시적
+   * 확인 없이 실행계획이 만들어져 ACTIONS_WITHOUT_APPROVAL 이 된다. 빠르게 하는 것이지
+   * 확인을 건너뛰는 것이 아니다.
+   */
+  const repeatLastOrder = () => {
+    if (!fixture || !saved?.lastOrder) return;
+    const next = { ...saved.lastOrder.answers };
+    setAnswers(next); setA11y(saved.a11y); setCarried(Object.keys(next));
+    setFromSaved(true); setStoreToggle(true); setSaveScope(saved.scope);
+    setManual(false); setDemoHour(null); resetRun();
+    goRecommend(
+      computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date()),
+      unansweredIn(next),
+      0,
+    );
+  };
+
   const applyPreset = (p: Preset) => {
     if (!fixture) return;
     const nextA11y = { ...A11Y_DEFAULT, ...(p.a11y ?? {}) };
@@ -507,11 +541,25 @@ export function App() {
     );
   };
 
-  const persist = () => {
+  /** 저장. lastOrder 를 새로 주지 않으면 이미 저장돼 있던 지난 주문을 그대로 둔다. */
+  const persist = (lastOrder?: LastOrder) => {
+    const keep = lastOrder ?? saved?.lastOrder;
     const s: SavedSettings = {
+      v: SAVED_VERSION,
       answers: pickByScope(answers, saveScope), a11y, scope: saveScope, savedAt: new Date().toISOString(),
+      ...(keep ? { lastOrder: keep } : {}),
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); setSaved(s); } catch { /* 저장 불가 환경이면 조용히 건너뜀 */ }
+  };
+
+  /**
+   * 확정한 주문을 «지난번처럼»의 근거로 남긴다 (화면목록 S05).
+   * 저장을 켠 경우에만 기록한다 — 저장 여부는 끝까지 사용자가 정한다.
+   */
+  const rememberOrder = () => {
+    const id = uiRec?.rec.recommendedCandidateId;
+    if (!storeToggle || !id) return;
+    persist({ candidateId: id, answers: { ...answers }, savedAt: new Date().toISOString() });
   };
 
   /** 토글 = 즉시 반영: 켜는 순간 저장되고, 끄면 저장본이 삭제된다 (사용자 기대와 일치). */
@@ -520,7 +568,9 @@ export function App() {
     setSaveScope(next);
     if (!storeToggle) return;
     const rec: SavedSettings = {
+      v: SAVED_VERSION,
       answers: pickByScope(answers, next), a11y, scope: next, savedAt: new Date().toISOString(),
+      ...(saved?.lastOrder ? { lastOrder: saved.lastOrder } : {}),
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rec)); setSaved(rec); } catch { /* 무시 */ }
   };
@@ -535,6 +585,7 @@ export function App() {
 
   const runSimulation = async () => {
     if (!fixture || !uiRec) return;
+    rememberOrder(); // 확정한 주문을 "지난번처럼"의 근거로 남긴다 (저장을 켠 경우만)
     setStep("run"); setRunLog([]); setRunError(null); setSubmitted(null); setErrResults({});
     try {
       const submission = buildUiSubmission(uiRec, fixture, true, manual);
@@ -548,6 +599,7 @@ export function App() {
     }
   };
 
+  const lastOrder = saved?.lastOrder;
   const q = QUESTIONS[qIndex];
   const answered = q ? answers[q.key] !== undefined : false;
   const ev = outcome?.evidence as (Evidence & Record<string, unknown>) | undefined;
@@ -592,6 +644,26 @@ export function App() {
 
         {step === "start" && (
           <>
+            {/* 화면목록 S05 — 지난 주문이 있으면 한 번에 되살릴 수 있게 한다.
+                되살려도 확인 화면부터 시작한다(승인 없는 실행계획 생성 금지). */}
+            {lastOrder && fixture && (
+              <section className="card" style={{ borderColor: "var(--brand)", borderWidth: 2 }} aria-label="지난 주문">
+                <h2>지난번처럼 준비할까요?</h2>
+                <p className="hint" style={{ fontSize: "1em", color: "var(--fg)" }}>
+                  {candidateName(fixture, lastOrder.candidateId)}
+                  {QUESTIONS.filter((qq) => lastOrder.answers[qq.key] !== undefined)
+                    .map((qq) => ` · ${EDIT_LABELS[qq.key] ?? qq.key} ${answerLabel(qq.key, lastOrder.answers[qq.key])}`)
+                    .join("")}
+                </p>
+                <p className="hint">바로 실행하지 않습니다 — 고르시면 <b>확인 화면부터</b> 보여드립니다.</p>
+                <div className="btnrow">
+                  <button type="button" className="btn primary" onClick={repeatLastOrder}>네, 그렇게 해주세요</button>
+                  <button type="button" className="btn ghost" onClick={startWizard}>아니요, 새로 고를래요</button>
+                  {staffBtn()}
+                </div>
+              </section>
+            )}
+
             {saved && (
               <section className="card" style={{ borderColor: "var(--brand)", borderWidth: 2 }} aria-label="저장된 설정">
                 <h2>지난번 설정을 이 기기에서 찾았어요</h2>
@@ -961,6 +1033,7 @@ export function App() {
                   {/* 체험 모드에서도 주문은 끝까지 간다 — 계획을 만들어 보관하고 결과 화면에서 그 결말을 보여준다. */}
                   <button type="button" className="btn primary" onClick={() => {
                     if (!fixture || !uiRec) return;
+                    rememberOrder();
                     setSubmitted(buildUiSubmission(uiRec, fixture, true, manual));
                     setStep("result");
                   }}>주문 확정하기</button>
