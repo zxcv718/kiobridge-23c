@@ -3,7 +3,7 @@
  * 시작 → 접근성 설정 → 질문 마법사 → 추천(이유·제외·대안·거절·직원 도움) → 최종 확인 → 가상 실행 → 결과(+오류 주입).
  * 판단은 전부 core가, 실행·검증·Evidence는 전부 공식 서버가 한다.
  */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Evidence, ParticipantSubmission, PublicFixture } from "@kiobridge/participant-sdk";
 import {
   computeRecommendation, withManualSelection, buildUiSubmission, runOnSimulator, injectError,
@@ -14,7 +14,22 @@ import { TIME_SLOT_KO, timeSlotOf } from "../../src/core/context";
 import { buildExecutionPlanCore, explainSelections } from "../../src/core/plan";
 import { canStopAsking, shouldSafetyStop, isUnresolved } from "../../src/core/ask";
 
-type Step = "start" | "a11y" | "wizard" | "recommend" | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
+type Step =
+  | "start" | "a11y" | "wizard" | "calculating" | "recommend"
+  | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
+
+/** 추천 계산 화면(S11)을 보여주는 시간. 진행 중임을 알리는 최소한이며, 결과를 늦추려는 것이 아니다. */
+const CALC_MS = 600;
+
+/** 움직임을 줄여 달라고 한 사용자에게는 지연을 주지 않는다 — CSS 뿐 아니라 흐름에도 적용한다. */
+const prefersReducedMotion = (): boolean =>
+  typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/** 실행계획의 옵션 그룹 ↔ 마법사 질문 key — "왜 이 값이 됐는지" 문구를 가르는 데 쓴다. */
+const GROUP_TO_KEY: Record<string, string> = {
+  SERVICE_TYPE: "serviceType", SPICY_LEVEL: "spicyLevel", BONE_TYPE: "boneType",
+  CUP: "cupOption", QUANTITY: "quantity",
+};
 
 /** 오류 주입 시연 — 공식 7종 전부(API_CONTRACT). 한국어 제목이 기본, 코드는 참조용 병기. */
 const INJECTIONS: { code: string; label: string; desc: string }[] = [
@@ -317,6 +332,9 @@ export function App() {
   const [skipped, setSkipped] = useState<string[]>([]);
   /** 확정되지 않은 추천을 몇 번 만났는가 — 2회째면 안전 중단(S12) */
   const [reconfirmCount, setReconfirmCount] = useState(0);
+  /** 계산 화면(S11) 타이머 — 화면을 벗어나면 남은 전환이 덮어쓰지 않게 관리한다 */
+  const calcTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (calcTimer.current !== null) window.clearTimeout(calcTimer.current); }, []);
 
   useEffect(() => {
     fetchFixture().then((r) => { setFixture(r.fixture); setLive(r.live); });
@@ -365,7 +383,18 @@ export function App() {
     setSkipped(skippedKeys);
     setUiRec(u);
     setManual(false);
-    setStep(shouldSafetyStop(u.rec, attempts) ? "stopped" : "recommend");
+
+    /* 화면목록 S11 — "고객님께 어울리는 메뉴를 찾고 있어요". 결과는 이미 계산돼 있고
+       화면만 거친다. 계산을 기다리는 척하는 게 아니라, 답이 반영됐다는 것을 알리는 단계다. */
+    const dest: Step = shouldSafetyStop(u.rec, attempts) ? "stopped" : "recommend";
+    if (calcTimer.current !== null) window.clearTimeout(calcTimer.current);
+    if (prefersReducedMotion()) { setStep(dest); return; }
+    setStep("calculating");
+    calcTimer.current = window.setTimeout(() => {
+      calcTimer.current = null;
+      // 그 사이 사용자가 직원 도움 등으로 벗어났으면 덮어쓰지 않는다
+      setStep((s) => (s === "calculating" ? dest : s));
+    }, CALC_MS);
   };
 
   const finishWizard = () => {
@@ -659,6 +688,20 @@ export function App() {
           </section>
         )}
 
+        {/* 화면목록 S11 — 계산 중. 여기서도 직원 도움으로 빠져나갈 수 있어야 한다. */}
+        {step === "calculating" && (
+          <section className="card" aria-labelledby="calchead" aria-busy="true">
+            <h2 id="calchead">{t("어울리는 메뉴를 찾고 있어요", "고객님께 어울리는 메뉴를 찾고 있어요")}</h2>
+            <p className="hint">답해 주신 내용을 기준으로 후보를 좁히는 중입니다.</p>
+            <ul className="reasons" aria-label="지금까지 답해 주신 내용">
+              {QUESTIONS.filter((q) => answers[q.key] !== undefined).map((q) => (
+                <li key={q.key}>{EDIT_LABELS[q.key] ?? q.key} — {answerLabel(q.key, answers[q.key])}</li>
+              ))}
+            </ul>
+            <div className="btnrow">{staffBtn()}</div>
+          </section>
+        )}
+
         {step === "recommend" && uiRec && fixture && (
           <section>
             {uiRec.rec.requiresReconfirmation && (
@@ -791,7 +834,11 @@ export function App() {
                         <span className="sv">{OPTION_KO[x.id] ?? x.id}</span>
                         <span className="so">
                           {x.origin === "USER" && "고르신 대로"}
-                          {x.origin === "AUTO" && "상관없다고 하셔서 이 메뉴의 값으로 정했습니다"}
+                          {/* 같은 AUTO 라도 원인이 다르다 — 조기 종료로 안 물어본 것과
+                              "상관없어요"라고 답하신 것을 뭉뚱그리지 않는다. */}
+                          {x.origin === "AUTO" && (skipped.includes(GROUP_TO_KEY[x.groupId] ?? "")
+                            ? "여쭤보지 않아서 이 메뉴의 값으로 정했습니다"
+                            : "상관없다고 하셔서 이 메뉴의 값으로 정했습니다")}
                           {x.origin === "SUBSTITUTED" &&
                             `원하신 ${OPTION_KO[x.wanted!] ?? x.wanted}는 이 메뉴에 없어 바꿨습니다`}
                         </span>
