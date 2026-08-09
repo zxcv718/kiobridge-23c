@@ -115,7 +115,7 @@ test.describe("B계열 — 신규 동작", () => {
       }));
     });
     await page.reload();
-    await expect(page.getByRole("heading", { name: /지난번 설정을 이 기기에서 찾았어요/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /지난번 기록이 있어요/ })).toBeVisible();
     await expect(page.getByText(/땅콩/)).toBeVisible();
 
     const moved = await page.evaluate(() => ({
@@ -126,23 +126,13 @@ test.describe("B계열 — 신규 동작", () => {
     expect(moved.v3).toBe(true);
   });
 
-  test("B8 링크 인계는 확인 화면부터 시작하고 넘어온 사실을 밝힌다", async ({ page, context }) => {
+  test("B8 기기 간 인계 기능이 없으므로 관련 표현도 없다", async ({ page }) => {
     await start(page);
     await answerEarlyStopPath(page);
     await page.getByRole("button", { name: "네, 좋아요" }).click();
-    await page.getByRole("button", { name: /매장 기기로 넘기기/ }).click();
-
-    const url = await page.locator("input[aria-label='넘기기 주소']").inputValue();
-    expect(url).toContain("?plan=");
-    // 개인정보가 주소에 없다 (담기는 것은 메뉴·옵션·화면 설정뿐)
-    expect(url).not.toMatch(/name|phone|tel|addr/i);
-
-    const p2 = await context.newPage();
-    await p2.goto(url);
-    await expect(p2.getByText(/다른 기기에서 넘어온 주문입니다/)).toBeVisible();
-    await expect(p2.locator("#qtitle")).toHaveCount(0); // 질문부터 다시 묻지 않는다
-    await expect(p2.getByRole("button", { name: "네, 좋아요" })).toBeVisible(); // 확인을 거쳐야 진행
-    await p2.close();
+    await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+    const body = await page.locator("body").innerText();
+    expect(body).not.toMatch(/넘기기|다른 기기/);
   });
 
   test("B3 첫 질문은 항상 알레르기다 (조기 종료가 그 앞에서 발동할 수 없게)", async ({ page }) => {
@@ -170,9 +160,13 @@ test.describe("B계열 — 신규 동작", () => {
     await ((await live.count()) > 0 ? live : page.getByRole("button", { name: /주문 확정하기/ })).click();
 
     await page.getByRole("button", { name: "처음으로" }).click();
-    await expect(page.getByRole("heading", { name: /지난번처럼 준비할까요/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /지난번 기록이 있어요/ })).toBeVisible();
 
-    await page.getByRole("button", { name: /네, 그렇게 해주세요/ }).click();
+    // 저장된 것은 카드 하나에만 모인다 — "새로 시작"이 여러 곳에 흩어지지 않는다
+    await expect(page.locator("section[aria-label='이 기기에 저장된 기록']")).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /시작하기/ })).toHaveCount(1);
+
+    await page.getByRole("button", { name: /지난번과 똑같이 주문하기/ }).click();
     // 실행으로 직행하지 않는다 — 확인을 거쳐야 한다
     await expect(page.getByRole("button", { name: "네, 좋아요" })).toBeVisible();
     await expect(page.getByRole("heading", { name: /실행 결과|주문이 완성되었습니다/ })).toHaveCount(0);

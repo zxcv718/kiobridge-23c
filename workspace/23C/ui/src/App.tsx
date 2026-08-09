@@ -17,7 +17,6 @@ import {
   migrateSaved, SAVED_VERSION,
   type SavedSettings as CoreSaved, type SaveScope, type LastOrder,
 } from "../../src/core/saved";
-import { decodePlanLink, encodePlanLink, type PlanLinkPayload } from "../../src/core/plan-link";
 
 type Step =
   | "start" | "a11y" | "wizard" | "calculating" | "recommend"
@@ -366,12 +365,6 @@ export function App() {
   const [skipped, setSkipped] = useState<string[]>([]);
   /** 확정되지 않은 추천을 몇 번 만났는가 — 2회째면 안전 중단(S12) */
   const [reconfirmCount, setReconfirmCount] = useState(0);
-  /** 링크로 넘어온 주문 계획 — fixture 가 준비되면 이어받는다 */
-  const [incoming, setIncoming] = useState<PlanLinkPayload | null>(null);
-  /** 이번 흐름이 다른 기기에서 넘어온 것인가 — 화면에 밝히고 재확인을 받는다 */
-  const [handedOff, setHandedOff] = useState(false);
-  /** 다른 기기로 넘기기 링크 (확인 화면에서 생성) */
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
   /** S02 화면 맞춤 문답 — null 이면 안 하는 중, 0~2 는 지금 보여주는 크기 단계 */
   const [probeStep, setProbeStep] = useState<number | null>(null);
   /** 문답으로 정해진 단계 — 결과를 화면에 밝혀 준다 */
@@ -383,9 +376,6 @@ export function App() {
   useEffect(() => {
     fetchFixture().then((r) => { setFixture(r.fixture); setLive(r.live); });
     setSaved(loadSaved());
-    // 화면목록 S04 — 다른 기기에서 넘어온 주문 계획. 깨진 링크는 decodePlanLink 가 null 로 흡수한다.
-    const code = new URLSearchParams(window.location.search).get("plan");
-    if (code) setIncoming(decodePlanLink(code));
   }, []);
 
   /** 프리셋이 시각을 지정했으면 그 시각으로, 아니면 지금으로 계산한다. */
@@ -411,7 +401,6 @@ export function App() {
   const startWizard = () => {
     setAnswers({}); setQIndex(0); setManual(false); setFromSaved(false); setCarried([]);
     setStoreToggle(false); setDemoHour(null); setSkipped([]); setReconfirmCount(0);
-    setHandedOff(false); setShareUrl(null);
     resetRun(); setStep("wizard");
   };
 
@@ -423,14 +412,16 @@ export function App() {
    * 추천 화면으로 — 모든 경로(마법사 종료·조기 종료·조건 수정·시연 프리셋)가 여기를 지난다.
    * 미확정 추천이 반복되면 여기서 안전 중단으로 보낸다(화면목록 S12).
    */
-  const goRecommend = (u: UiRecommendation, skippedKeys: string[], priorAttempts = reconfirmCount) => {
+  const goRecommend = (
+    u: UiRecommendation, skippedKeys: string[], priorAttempts = reconfirmCount, manualPick = false,
+  ) => {
     // priorAttempts 를 인자로 받는 이유: 새 흐름을 시작하는 경로(시연 프리셋·저장본 시작)는
     // setReconfirmCount(0) 을 호출해도 이 렌더의 클로저에는 옛 값이 잡혀 있다. 0 을 명시해 넘긴다.
     const attempts = isUnresolved(u.rec) ? priorAttempts + 1 : 0;
     setReconfirmCount(attempts);
     setSkipped(skippedKeys);
     setUiRec(u);
-    setManual(false);
+    setManual(manualPick);
 
     /* 화면목록 S11 — "고객님께 어울리는 메뉴를 찾고 있어요". 결과는 이미 계산돼 있고
        화면만 거친다. 계산을 기다리는 척하는 게 아니라, 답이 반영됐다는 것을 알리는 단계다. */
@@ -512,10 +503,22 @@ export function App() {
     setAnswers(next); setA11y(saved.a11y); setCarried(Object.keys(next));
     setFromSaved(true); setStoreToggle(true); setSaveScope(saved.scope);
     setManual(false); setDemoHour(null); resetRun();
+    const u = computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date());
+
+    /* 지난번에 직접 고른 메뉴를 되살린다.
+     * 답변만 재현하면 엔진이 다시 1위를 뽑으므로, 대안을 직접 골랐던 경우 "지난번처럼"이
+     * 지난번과 다른 메뉴를 준다. 다만 되살리는 대상은 **이번에도 고를 수 있는 후보뿐**이다 —
+     * scoreBreakdown 에는 STEP 4 를 통과한 생존 후보만 들어 있으므로, 그 사이 품절되었거나
+     * 알레르기를 새로 등록해 제외된 메뉴는 여기서 자동으로 되살아나지 않는다. */
+    const wanted = saved.lastOrder.candidateId;
+    const stillSelectable = Object.keys(u.rec.scoreBreakdown ?? {}).includes(wanted);
+    const pinned = stillSelectable && u.rec.recommendedCandidateId !== wanted;
+
     goRecommend(
-      computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date()),
+      pinned ? withManualSelection(u, fixture, wanted) : u,
       unansweredIn(next),
       0,
+      pinned,
     );
   };
 
@@ -610,30 +613,6 @@ export function App() {
     }
   };
 
-  /**
-   * 링크로 넘어온 계획 이어받기 (화면목록 S04).
-   *
-   * 이어받아도 **확인 화면부터** 시작한다 — 링크만으로 실행계획이 만들어지면 사용자의
-   * 명시적 확인 없이 승인된 셈이 된다. 넘어온 값이라는 사실도 화면에 밝히고,
-   * 입력 출처는 IMPORTED 로 기록한다(자동으로 불러온 정보의 재확인).
-   */
-  useEffect(() => {
-    if (!fixture || !incoming) return;
-    const next = { ...incoming.answers };
-    const nextA11y: A11y = { ...A11Y_DEFAULT, ...(incoming.a11y as Partial<A11y>) };
-    setAnswers(next); setA11y(nextA11y); setCarried(Object.keys(next));
-    setFromSaved(true); setHandedOff(true); setManual(false); setStoreToggle(false);
-    goRecommend(
-      computeRecommendation(buildRawInput(next, nextA11y, true, false), fixture, new Date()),
-      unansweredIn(next),
-      0,
-    );
-    setIncoming(null);
-    // 주소창에서 지운다 — 새로고침할 때마다 다시 이어받지 않게
-    window.history.replaceState(null, "", window.location.pathname);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fixture, incoming]);
-
   const lastOrder = saved?.lastOrder;
   const q = QUESTIONS[qIndex];
   const answered = q ? answers[q.key] !== undefined : false;
@@ -681,42 +660,53 @@ export function App() {
           <>
             {/* 화면목록 S05 — 지난 주문이 있으면 한 번에 되살릴 수 있게 한다.
                 되살려도 확인 화면부터 시작한다(승인 없는 실행계획 생성 금지). */}
-            {lastOrder && fixture && (
-              <section className="card" style={{ borderColor: "var(--brand)", borderWidth: 2 }} aria-label="지난 주문">
-                <h2>지난번처럼 준비할까요?</h2>
-                <p className="hint" style={{ fontSize: "1em", color: "var(--fg)" }}>
-                  {candidateName(fixture, lastOrder.candidateId)}
-                  {QUESTIONS.filter((qq) => lastOrder.answers[qq.key] !== undefined)
-                    .map((qq) => ` · ${EDIT_LABELS[qq.key] ?? qq.key} ${answerLabel(qq.key, lastOrder.answers[qq.key])}`)
-                    .join("")}
+            {/* 저장된 것은 한 곳에서만 보여준다 — 지난 주문과 설정을 각각 다른 카드로 띄우면
+                "새로 시작" 버튼이 세 곳에 흩어져 무엇을 고르는 화면인지 알 수 없게 된다. */}
+            {saved && fixture && (
+              <section className="card" style={{ borderColor: "var(--brand)", borderWidth: 2 }} aria-label="이 기기에 저장된 기록">
+                <h2>이 기기에 지난번 기록이 있어요</h2>
+                <p className="hint">
+                  자동으로 적용하지 않습니다 — 무엇이 저장돼 있는지 보시고 골라 주세요.
+                  어느 쪽을 고르셔도 <b>확인 화면을 거쳐야</b> 진행됩니다.
                 </p>
-                <p className="hint">바로 실행하지 않습니다 — 고르시면 <b>확인 화면부터</b> 보여드립니다.</p>
+
+                {lastOrder && (
+                  <p className="hint" style={{ fontSize: "1em", color: "var(--fg)" }}>
+                    <b>지난 주문</b> — {candidateName(fixture, lastOrder.candidateId)}
+                    {QUESTIONS.filter((qq) => lastOrder.answers[qq.key] !== undefined)
+                      .map((qq) => ` · ${EDIT_LABELS[qq.key] ?? qq.key} ${answerLabel(qq.key, lastOrder.answers[qq.key])}`)
+                      .join("")}
+                  </p>
+                )}
+                <p className="hint" style={{ fontSize: "1em", color: "var(--fg)" }}>
+                  <b>저장된 설정</b> — {savedSummary(saved)}
+                </p>
+                {!simple && (
+                  <p className="hint">
+                    {saved.scope === "ALL"
+                      ? "저장해 두신 항목은 다시 여쭤보지 않습니다."
+                      : "저장 범위가 '오래 쓰는 것만'이라, 수량·예산 같은 이번 이용 정보는 다시 여쭤봅니다."}
+                  </p>
+                )}
+
+                {/* 되살리는 범위가 넓은 것부터 — 같은 뜻의 버튼을 여러 카드에 흩어 놓지 않는다.
+                    "새로 시작"은 아래 시작 카드 하나로만 둔다. */}
                 <div className="btnrow">
-                  <button type="button" className="btn primary" onClick={repeatLastOrder}>네, 그렇게 해주세요</button>
-                  <button type="button" className="btn ghost" onClick={startWizard}>아니요, 새로 고를래요</button>
+                  {lastOrder && (
+                    <button type="button" className="btn primary" onClick={repeatLastOrder} disabled={!fixture}>
+                      지난번과 똑같이 주문하기
+                    </button>
+                  )}
+                  <button type="button" className={lastOrder ? "btn ghost" : "btn primary"}
+                    onClick={startFromSaved} disabled={!fixture}>
+                    설정만 가져오기
+                  </button>
+                  <button type="button" className="btn danger" onClick={deleteSaved}>기록 지우기</button>
                   {staffBtn()}
                 </div>
               </section>
             )}
 
-            {saved && (
-              <section className="card" style={{ borderColor: "var(--brand)", borderWidth: 2 }} aria-label="저장된 설정">
-                <h2>지난번 설정을 이 기기에서 찾았어요</h2>
-                <p className="hint" style={{ fontSize: "1em", color: "var(--fg)" }}>{savedSummary(saved)}</p>
-                <p className="hint">
-                  자동으로 적용하지 않습니다 — 내용을 확인하시고 골라 주세요.
-                  {saved.scope === "ALL"
-                    ? " 저장해 두신 항목은 다시 여쭤보지 않고 바로 추천으로 넘어갑니다."
-                    : " 저장 범위를 '오래 쓰는 것만'으로 두셔서, 수량·예산 같은 이번 이용 정보만 다시 여쭤봅니다."}
-                </p>
-                <div className="btnrow">
-                  {/* 화면목록 S01 case2 의 용어를 그대로 쓴다 */}
-                  <button type="button" className="btn primary" onClick={startFromSaved} disabled={!fixture}>프로필 다시 사용</button>
-                  <button type="button" className="btn ghost" onClick={startWizard} disabled={!fixture}>새롭게 만들기</button>
-                  <button type="button" className="btn danger" onClick={deleteSaved}>저장된 설정 지우기</button>
-                </div>
-              </section>
-            )}
             <section className="card">
               <h2>닭강정 가게 주문을 도와드릴게요</h2>
               <p className="hint">
@@ -726,7 +716,9 @@ export function App() {
                 )}
               </p>
               <div className="btnrow">
-                <button type="button" className="btn primary" onClick={startWizard} disabled={!fixture}>{saved ? "새로 입력해 시작하기" : "이번 한 번만 시작하기"}</button>
+                <button type="button" className={saved ? "btn ghost" : "btn primary"} onClick={startWizard} disabled={!fixture}>
+                  {saved ? "처음부터 새로 시작하기" : "이번 한 번만 시작하기"}
+                </button>
                 <button type="button" className="btn ghost" onClick={() => setStep("a11y")}>화면·안내 설정</button>
                 {staffBtn()}
               </div>
@@ -876,12 +868,6 @@ export function App() {
             {uiRec.rec.requiresReconfirmation && (
               <div className="banner warn" role="alert">
                 확실하지 않은 정보가 있어요. 임의로 판단하지 않습니다 — 알레르기 항목을 다시 확인해 주시거나, 직원 도움을 이용해 주세요.
-              </div>
-            )}
-            {handedOff && (
-              <div className="banner ok" role="note">
-                다른 기기에서 넘어온 주문입니다. <b>자동으로 실행하지 않습니다</b> —
-                내용을 확인하시고 진행해 주세요. 바꾸실 것이 있으면 «조건 수정»을 눌러 주세요.
               </div>
             )}
             {/* 생략은 숨기지 않는다 — 무엇을 안 물었는지, 그 값이 어디서 보이는지 함께 밝힌다 */}
@@ -1066,32 +1052,6 @@ export function App() {
               );
             })()}
             <div className="banner ok">가상 키오스크에서 장바구니 확인까지만 진행합니다. <b>실제 결제·주문은 일어나지 않습니다.</b></div>
-
-            {/* 화면목록 S04 — 모바일에서 확정하고 매장에서는 실행만. 뒷사람 눈치(53.6%)를
-                줄이는 구조가 여기서 완성된다. 서버가 없으므로 계획을 주소에 실어 넘긴다. */}
-            <div className="savebox">
-              <button type="button" className="btn ghost" onClick={() => {
-                const code = encodePlanLink({
-                  v: 1, answers, a11y: a11y as unknown as Record<string, boolean | string>,
-                });
-                const url = `${window.location.origin}${window.location.pathname}?plan=${code}`;
-                setShareUrl(url);
-                navigator.clipboard?.writeText(url).catch(() => { /* 복사 실패해도 아래에 그대로 보인다 */ });
-              }}>이 주문을 매장 기기로 넘기기</button>
-              {shareUrl && (
-                <>
-                  <p className="hint" style={{ marginTop: 10 }}>
-                    아래 주소를 매장 기기에서 열면 <b>이 확인 화면부터</b> 이어집니다.
-                    실행은 그 기기에서 다시 확인한 뒤에 일어납니다.
-                  </p>
-                  <input readOnly value={shareUrl} aria-label="넘기기 주소"
-                    onFocus={(e) => e.currentTarget.select()} />
-                  <p className="hint">
-                    이름·전화번호 같은 개인 정보는 이 주소에 담기지 않습니다 — 메뉴·옵션·화면 설정만 들어갑니다.
-                  </p>
-                </>
-              )}
-            </div>
 
             <div className="savebox">
               <button type="button" className="toggle" aria-pressed={storeToggle} onClick={toggleStore}>

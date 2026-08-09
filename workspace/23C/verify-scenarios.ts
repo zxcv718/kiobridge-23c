@@ -18,7 +18,6 @@ import { buildExecutionPlanCore } from "./src/core/plan";
 import { buildContextSignals } from "./src/core/context";
 import { buildAccessibilityEvidence, buildTeamExtensions, buildTeamMetadata } from "./src/core/submission-meta";
 import { canStopAsking, allergensAnswered, preferenceAxisAsked } from "./src/core/ask";
-import { encodePlanLink, decodePlanLink } from "./src/core/plan-link";
 
 const API = "http://localhost:4000";
 const TEAM = "23C";
@@ -178,21 +177,13 @@ async function main() {
     console.log();
   }
 
-  // ── A5 링크로 이어받은 계획
+  // ── A5 저장본으로 시작한 흐름 (출처가 IMPORTED 로 기록되는 경로)
   {
-    const code = encodePlanLink({
-      v: 1, answers: FULL as Record<string, unknown>,
-      a11y: { largeText: true, simpleSteps: true, preferredInput: "TOUCH" },
-    });
-    const back = decodePlanLink(code);
-    console.log(`[A5] 링크 인계 — 인코딩 ${code.length}자 · 디코딩 ${back ? "성공" : "실패"}`);
-    if (back) {
-      const { submission } = buildFor(back.answers, fixture, true, true);
-      console.log(`     collectionChannel=${(submission.profile as { source: { collectionChannel: string } }).source.collectionChannel} (IMPORTED 이어야 함)`);
-      const r = await runOnServer(submission);
-      console.log(`     ${verdict(r.evidence)}`);
-    }
-    console.log();
+    const { submission } = buildFor(FULL, fixture, true, true);
+    const ch = (submission.profile as { source: { collectionChannel: string } }).source.collectionChannel;
+    console.log(`[A5] 저장본 재사용 — collectionChannel=${ch} (IMPORTED 이어야 함)`);
+    const r = await runOnServer(submission);
+    console.log(`     ${verdict(r.evidence)}\n`);
   }
 }
 
