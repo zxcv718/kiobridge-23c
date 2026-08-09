@@ -3,7 +3,7 @@
  * 시작 → 접근성 설정 → 질문 마법사 → 추천(이유·제외·대안·거절·직원 도움) → 최종 확인 → 가상 실행 → 결과(+오류 주입).
  * 판단은 전부 core가, 실행·검증·Evidence는 전부 공식 서버가 한다.
  */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Evidence, ParticipantSubmission, PublicFixture } from "@kiobridge/participant-sdk";
 import {
   computeRecommendation, withManualSelection, buildUiSubmission, runOnSimulator, injectError,
@@ -12,8 +12,48 @@ import {
 } from "./logic";
 import { TIME_SLOT_KO, timeSlotOf } from "../../src/core/context";
 import { buildExecutionPlanCore, explainSelections } from "../../src/core/plan";
+import { canStopAsking, shouldSafetyStop, isUnresolved } from "../../src/core/ask";
+import {
+  migrateSaved, SAVED_VERSION,
+  type SavedSettings as CoreSaved, type SaveScope, type LastOrder,
+} from "../../src/core/saved";
+import { decodePlanLink, encodePlanLink, type PlanLinkPayload } from "../../src/core/plan-link";
 
-type Step = "start" | "a11y" | "wizard" | "recommend" | "confirm" | "run" | "result" | "staff" | "edit";
+type Step =
+  | "start" | "a11y" | "wizard" | "calculating" | "recommend"
+  | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
+
+/** 추천 계산 화면(S11)을 보여주는 시간. 진행 중임을 알리는 최소한이며, 결과를 늦추려는 것이 아니다. */
+const CALC_MS = 600;
+
+/** 움직임을 줄여 달라고 한 사용자에게는 지연을 주지 않는다 — CSS 뿐 아니라 흐름에도 적용한다. */
+const prefersReducedMotion = (): boolean =>
+  typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/* ───────────────────── S02 화면 맞춤 문답 ─────────────────────
+ * 화면목록 S02 «실시간 변동되는 화면을 통해 최적 화면 맞춤».
+ *
+ * 토글 7개를 먼저 보여주면 "무엇을 켜야 나에게 맞는지"를 사용자가 알아야 한다.
+ * 대신 실제 크기로 렌더한 문장을 보여주고 보이는지만 묻는다 — 판단 대상이
+ * 설정 이름이 아니라 **자기 눈에 보이는 화면**이 된다.
+ *
+ * 산출 결과는 곧바로 화면에 반영되고, 아래 토글에서 언제든 바꿀 수 있다.
+ * (자동으로 정해 놓고 못 바꾸게 하면 «자동으로 불러온 정보의 재확인» 원칙에 어긋난다) */
+const PROBE_SIZES = ["1em", "1.4em", "1.9em"];
+const PROBE_SAMPLE = "매운 순살 닭강정 6,000원";
+
+/** 단계별 산출값 — 더 키워야 보인다는 것은 글씨 외의 도움도 필요하다는 신호로 본다. */
+const PROBE_RESULT: Partial<A11y>[] = [
+  { largeText: false },
+  { largeText: true },
+  { largeText: true, highContrast: true, visualGuidance: true },
+];
+
+/** 실행계획의 옵션 그룹 ↔ 마법사 질문 key — "왜 이 값이 됐는지" 문구를 가르는 데 쓴다. */
+const GROUP_TO_KEY: Record<string, string> = {
+  SERVICE_TYPE: "serviceType", SPICY_LEVEL: "spicyLevel", BONE_TYPE: "boneType",
+  CUP: "cupOption", QUANTITY: "quantity",
+};
 
 /** 오류 주입 시연 — 공식 7종 전부(API_CONTRACT). 한국어 제목이 기본, 코드는 참조용 병기. */
 const INJECTIONS: { code: string; label: string; desc: string }[] = [
@@ -142,16 +182,14 @@ function answerLabel(key: string, v: unknown): string {
  *   ALL     — 이번 답변 전부 (다음에 같은 주문을 빠르게)
  *   LASTING — 오래 쓰는 것만: 알레르기·맛 선호·화면 설정 (공용기기·가끔 이용)
  * 기본값은 "저장 안 함"이며, 켤 때 범위를 함께 고른다. */
-const STORAGE_KEY = "kb23c-saved-settings-v3";
+const STORAGE_KEY = "kb23c-saved-settings-v4";
+/** v3 저장본을 버리지 않는다 — 형식이 바뀌었다고 사용자 설정이 사라지면 안 된다. */
+const LEGACY_KEY = "kb23c-saved-settings-v3";
 const LASTING_KEYS = ["allergies", "spicyLevel", "boneType"] as const;
 
-type SaveScope = "ALL" | "LASTING";
-
-interface SavedSettings {
-  answers: Record<string, unknown>;
+/** 화면에서 쓰는 저장본 — core 형식에 UI 의 A11y 타입을 입힌 것 */
+interface SavedSettings extends Omit<CoreSaved, "a11y"> {
   a11y: A11y;
-  scope: SaveScope;
-  savedAt: string;
 }
 const pickByScope = (answers: Record<string, unknown>, scope: SaveScope): Record<string, unknown> => {
   if (scope === "ALL") return { ...answers };
@@ -159,14 +197,26 @@ const pickByScope = (answers: Record<string, unknown>, scope: SaveScope): Record
   for (const k of LASTING_KEYS) if (answers[k] !== undefined) out[k] = answers[k];
   return out;
 };
-const loadSaved = (): SavedSettings | null => {
+/** 해석은 core/saved.ts 가 한다 — localStorage 는 무엇이든 들어올 수 있는 입구다. */
+const readSaved = (key: string): SavedSettings | null => {
   try {
-    const s = localStorage.getItem(STORAGE_KEY);
+    const s = localStorage.getItem(key);
     if (!s) return null;
-    const p = JSON.parse(s) as SavedSettings;
-    if (!p || typeof p !== "object" || !p.answers) return null;
-    return { ...p, scope: p.scope === "LASTING" ? "LASTING" : "ALL", a11y: { ...A11Y_DEFAULT, ...(p.a11y ?? {}) } };
+    const m = migrateSaved(JSON.parse(s));
+    return m ? { ...m, a11y: { ...A11Y_DEFAULT, ...(m.a11y as Partial<A11y>) } } : null;
   } catch { return null; }
+};
+
+const loadSaved = (): SavedSettings | null => {
+  const cur = readSaved(STORAGE_KEY);
+  if (cur) return cur;
+  const old = readSaved(LEGACY_KEY); // 구버전 저장본을 새 키로 옮기고 계속 쓴다
+  if (!old) return null;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(old));
+    localStorage.removeItem(LEGACY_KEY);
+  } catch { /* 저장 불가 환경이면 이번 세션만 메모리로 쓴다 */ }
+  return old;
 };
 
 function savedSummary(s: SavedSettings): string {
@@ -189,10 +239,14 @@ function buildRawInput(
   const a = { ...answers };
   const allergies = (a.allergies as (string | number)[] | undefined)?.filter((x) => x !== "없음") ?? [];
   return {
-    serviceType: a.serviceType === "상관없음" ? undefined : a.serviceType,
-    spicyLevel: a.spicyLevel === "상관없음" ? undefined : a.spicyLevel,
-    boneType: a.boneType === "상관없음" ? undefined : a.boneType,
-    cupOption: a.cupOption === "상관없음" ? undefined : a.cupOption,
+    /* "상관없어요"를 지우지 않고 그대로 넘긴다 — normalize 가 NO_PREFERENCE 로 정규화한다.
+     * 누락(안 물어봄)과 NO_PREFERENCE(물었고 양보 가능)는 서로 다른 상태이고,
+     * 조기 종료 게이트가 그 둘을 구분해야 한다 (core/ask.ts preferenceAxisAsked).
+     * 엔진·실행계획의 definite() 는 둘 다 "선호 없음"으로 보므로 추천 결과는 달라지지 않는다. */
+    serviceType: a.serviceType,
+    spicyLevel: a.spicyLevel,
+    boneType: a.boneType,
+    cupOption: a.cupOption,
     quantity: a.quantity,
     allergies: (a.allergies as unknown[] | undefined) === undefined ? undefined : allergies,
     budgetKrw: a.budgetKrw === "없음" ? undefined : a.budgetKrw,
@@ -220,21 +274,27 @@ interface Question {
   options: { value: string | number; label: string; sub?: string; icon?: string }[];
 }
 
+/* 질문 순서 = 화면목록 S06~S10 (알레르기 → 맵기 → 뼈 → 포장 → 수량), 그 뒤 컵·예산.
+ *
+ * 알레르기가 맨 앞인 것은 편의가 아니라 **안전 요건**이다. 조기 종료(core/ask.ts)가 붙은
+ * 뒤로는, 알레르기를 뒤에 두면 신뢰도가 먼저 차오를 때 그 질문에 도달하기 전에 추천이
+ * 확정될 수 있다. 그러면 allergenIds 가 UNKNOWN 이 아니라 미수집이 되어 안전 정지도 안 걸린 채
+ * 알레르기 제외만 사라진다. ask.ts 의 게이트가 1차 방어선이고, 이 순서가 2차 방어선이다. */
 const QUESTIONS: Question[] = [
-  { key: "serviceType", title: "어떻게 이용하시겠어요?", options: [
-    { value: "포장", label: "포장하기", icon: "🥡" }, { value: "매장", label: "먹고 가기", icon: "🍽️" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
+  { key: "allergies", title: "피해야 하는 알레르기가 있으세요?", hint: "해당하는 것을 모두 눌러 주세요. 알레르기가 있는 메뉴는 점수를 깎는 게 아니라 아예 빼고 추천합니다.", multi: true, options: [
+    { value: "없음", label: "없어요", icon: "✅" }, { value: "땅콩", label: "땅콩", icon: "🥜" }, { value: "콩", label: "콩(대두)", icon: "🫘" }, { value: "우유", label: "우유", icon: "🥛" },
+    { value: "계란", label: "계란", icon: "🥚" }, { value: "밀", label: "밀", icon: "🌾" }, { value: "새우", label: "새우", icon: "🦐" }, { value: "모름", label: "잘 모르겠어요", icon: "❓" } ] },
   { key: "spicyLevel", title: "맵기는 어느 정도가 좋으세요?", options: [
     { value: "순한맛", label: "순한맛", icon: "🥛" }, { value: "보통", label: "보통맛", icon: "🌶️" }, { value: "매운맛", label: "매운맛", icon: "🔥" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
   { key: "boneType", title: "뼈와 순살 중 어떤 것이 편하세요?", options: [
     { value: "순살", label: "순살", icon: "🍗" }, { value: "뼈", label: "뼈", icon: "🦴" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
+  { key: "serviceType", title: "어떻게 이용하시겠어요?", options: [
+    { value: "포장", label: "포장하기", icon: "🥡" }, { value: "매장", label: "먹고 가기", icon: "🍽️" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
   { key: "quantity", title: "몇 개 주문하시겠어요?", options: [
     { value: 1, label: "1개", icon: "1️⃣" }, { value: 2, label: "2개", icon: "2️⃣" }, { value: 3, label: "3개", icon: "3️⃣" } ] },
   { key: "cupOption", title: "컵이 필요하세요?", hint: "메뉴에 따라 선택할 수 있는 컵이 다릅니다.", options: [
     { value: "종이컵", label: "종이컵", icon: "🥤" }, { value: "일반컵", label: "일반컵", icon: "🥛" },
     { value: "없음", label: "필요 없어요", icon: "🚫" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
-  { key: "allergies", title: "피해야 하는 알레르기가 있으세요?", hint: "해당하는 것을 모두 눌러 주세요. 알레르기가 있는 메뉴는 점수를 깎는 게 아니라 아예 빼고 추천합니다.", multi: true, options: [
-    { value: "없음", label: "없어요", icon: "✅" }, { value: "땅콩", label: "땅콩", icon: "🥜" }, { value: "콩", label: "콩(대두)", icon: "🫘" }, { value: "우유", label: "우유", icon: "🥛" },
-    { value: "계란", label: "계란", icon: "🥚" }, { value: "밀", label: "밀", icon: "🌾" }, { value: "새우", label: "새우", icon: "🦐" }, { value: "모름", label: "잘 모르겠어요", icon: "❓" } ] },
   { key: "budgetKrw", title: "예산 상한이 있으세요?", options: [
     { value: "없음", label: "없어요" }, { value: 6000, label: "6,000원" }, { value: 7000, label: "7,000원" }, { value: 10000, label: "10,000원" } ] },
 ];
@@ -302,10 +362,30 @@ export function App() {
   /** 저장본에서 불러온 항목의 key — 마법사에서 건너뛰고, 무엇이 불러와졌는지 화면에 밝힌다 */
   const [carried, setCarried] = useState<string[]>([]);
   const [demoHour, setDemoHour] = useState<number | null>(null); // 프리셋의 시간대 시연용
+  /** 조기 종료로 여쭤보지 않은 질문 key — 추천 화면에서 무엇을 안 물었는지 밝힌다 */
+  const [skipped, setSkipped] = useState<string[]>([]);
+  /** 확정되지 않은 추천을 몇 번 만났는가 — 2회째면 안전 중단(S12) */
+  const [reconfirmCount, setReconfirmCount] = useState(0);
+  /** 링크로 넘어온 주문 계획 — fixture 가 준비되면 이어받는다 */
+  const [incoming, setIncoming] = useState<PlanLinkPayload | null>(null);
+  /** 이번 흐름이 다른 기기에서 넘어온 것인가 — 화면에 밝히고 재확인을 받는다 */
+  const [handedOff, setHandedOff] = useState(false);
+  /** 다른 기기로 넘기기 링크 (확인 화면에서 생성) */
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  /** S02 화면 맞춤 문답 — null 이면 안 하는 중, 0~2 는 지금 보여주는 크기 단계 */
+  const [probeStep, setProbeStep] = useState<number | null>(null);
+  /** 문답으로 정해진 단계 — 결과를 화면에 밝혀 준다 */
+  const [probeResult, setProbeResult] = useState<number | null>(null);
+  /** 계산 화면(S11) 타이머 — 화면을 벗어나면 남은 전환이 덮어쓰지 않게 관리한다 */
+  const calcTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (calcTimer.current !== null) window.clearTimeout(calcTimer.current); }, []);
 
   useEffect(() => {
     fetchFixture().then((r) => { setFixture(r.fixture); setLive(r.live); });
     setSaved(loadSaved());
+    // 화면목록 S04 — 다른 기기에서 넘어온 주문 계획. 깨진 링크는 decodePlanLink 가 null 로 흡수한다.
+    const code = new URLSearchParams(window.location.search).get("plan");
+    if (code) setIncoming(decodePlanLink(code));
   }, []);
 
   /** 프리셋이 시각을 지정했으면 그 시각으로, 아니면 지금으로 계산한다. */
@@ -330,14 +410,44 @@ export function App() {
 
   const startWizard = () => {
     setAnswers({}); setQIndex(0); setManual(false); setFromSaved(false); setCarried([]);
-    setStoreToggle(false); setDemoHour(null); resetRun(); setStep("wizard");
+    setStoreToggle(false); setDemoHour(null); setSkipped([]); setReconfirmCount(0);
+    setHandedOff(false); setShareUrl(null);
+    resetRun(); setStep("wizard");
+  };
+
+  /** 아직 답하지 않은 질문 — 조기 종료 시 "여쭤보지 않은 항목"으로 알린다. */
+  const unansweredIn = (a: Record<string, unknown>): string[] =>
+    QUESTIONS.filter((q) => a[q.key] === undefined).map((q) => q.key);
+
+  /**
+   * 추천 화면으로 — 모든 경로(마법사 종료·조기 종료·조건 수정·시연 프리셋)가 여기를 지난다.
+   * 미확정 추천이 반복되면 여기서 안전 중단으로 보낸다(화면목록 S12).
+   */
+  const goRecommend = (u: UiRecommendation, skippedKeys: string[], priorAttempts = reconfirmCount) => {
+    // priorAttempts 를 인자로 받는 이유: 새 흐름을 시작하는 경로(시연 프리셋·저장본 시작)는
+    // setReconfirmCount(0) 을 호출해도 이 렌더의 클로저에는 옛 값이 잡혀 있다. 0 을 명시해 넘긴다.
+    const attempts = isUnresolved(u.rec) ? priorAttempts + 1 : 0;
+    setReconfirmCount(attempts);
+    setSkipped(skippedKeys);
+    setUiRec(u);
+    setManual(false);
+
+    /* 화면목록 S11 — "고객님께 어울리는 메뉴를 찾고 있어요". 결과는 이미 계산돼 있고
+       화면만 거친다. 계산을 기다리는 척하는 게 아니라, 답이 반영됐다는 것을 알리는 단계다. */
+    const dest: Step = shouldSafetyStop(u.rec, attempts) ? "stopped" : "recommend";
+    if (calcTimer.current !== null) window.clearTimeout(calcTimer.current);
+    if (prefersReducedMotion()) { setStep(dest); return; }
+    setStep("calculating");
+    calcTimer.current = window.setTimeout(() => {
+      calcTimer.current = null;
+      // 그 사이 사용자가 직원 도움 등으로 벗어났으면 덮어쓰지 않는다
+      setStep((s) => (s === "calculating" ? dest : s));
+    }, CALC_MS);
   };
 
   const finishWizard = () => {
     if (!fixture) return;
-    setUiRec(computeRecommendation(rawInput, fixture, now));
-    setManual(false);
-    setStep("recommend");
+    goRecommend(computeRecommendation(rawInput, fixture, now), unansweredIn(answers));
   };
 
   /** 저장본에서 불러온 항목은 마법사에서 건너뛴다 — 저장해 놓고 또 묻지 않는다. */
@@ -349,6 +459,22 @@ export function App() {
   const askTotal = askIdx.length;
   const askPos = Math.max(0, askIdx.indexOf(qIndex));
 
+  /**
+   * 답변 확정 후 다음 단계 — 화면목록 포인트 2 «매 질문에 답변할 때마다 적합도 계산 →
+   * 불필요한 질문에 답변하지 않아도 빠르게 최종 결정 추천».
+   *
+   * 종료 판정은 core/ask.ts 가 한다. 여기서 confidence 를 직접 비교하지 않는 이유는,
+   * 알레르기 선행 같은 계약 조건이 UI 조건문에 묻히면 테스트가 지킬 수 없기 때문이다.
+   */
+  const advance = () => {
+    const n = nextToAsk(qIndex + 1);
+    if (n >= QUESTIONS.length) { finishWizard(); return; }
+    if (!fixture) return;
+    const u = computeRecommendation(rawInput, fixture, now);
+    if (canStopAsking(u.rec, u.engineCtx)) { goRecommend(u, unansweredIn(answers)); return; }
+    setQIndex(n);
+  };
+
   /** 저장된 설정으로 시작 — 배너에서 내용을 보여준 뒤의 클릭이므로 '확인받은 자동 불러오기'다.
    *  지속값은 채워진 채로 건너뛰고, 이번 이용 값(이용방식·수량·예산·컵)만 묻는다. */
   const startFromSaved = () => {
@@ -358,16 +484,39 @@ export function App() {
     setA11y(saved.a11y);
     setCarried(QUESTIONS.map((q) => q.key).filter((k) => next[k] !== undefined));
     setFromSaved(true); setStoreToggle(true); setSaveScope(saved.scope);
-    setManual(false); setDemoHour(null); resetRun();
+    setManual(false); setDemoHour(null); setSkipped([]); resetRun();
     const loaded = QUESTIONS.map((qq) => qq.key).filter((k) => next[k] !== undefined);
     const start = nextToAsk(0, loaded);
     if (start >= QUESTIONS.length) {
-      setUiRec(computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date()));
-      setStep("recommend");
+      goRecommend(
+        computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date()),
+        unansweredIn(next),
+        0, // 저장본으로 시작하는 것도 새 흐름이다
+      );
       return;
     }
     setQIndex(start);
     setStep("wizard");
+  };
+
+  /**
+   * 화면목록 S05 «지난번처럼 준비할까요?» — 한 번 눌러 지난 주문을 되살린다.
+   *
+   * 되살린 뒤에도 **추천 확인 화면부터** 시작한다. 곧바로 실행으로 보내면 사용자의 명시적
+   * 확인 없이 실행계획이 만들어져 ACTIONS_WITHOUT_APPROVAL 이 된다. 빠르게 하는 것이지
+   * 확인을 건너뛰는 것이 아니다.
+   */
+  const repeatLastOrder = () => {
+    if (!fixture || !saved?.lastOrder) return;
+    const next = { ...saved.lastOrder.answers };
+    setAnswers(next); setA11y(saved.a11y); setCarried(Object.keys(next));
+    setFromSaved(true); setStoreToggle(true); setSaveScope(saved.scope);
+    setManual(false); setDemoHour(null); resetRun();
+    goRecommend(
+      computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date()),
+      unansweredIn(next),
+      0,
+    );
   };
 
   const applyPreset = (p: Preset) => {
@@ -378,8 +527,11 @@ export function App() {
     if (nextHour !== null) d.setHours(nextHour, 0, 0, 0);
     setAnswers(p.answers); setA11y(nextA11y); setDemoHour(nextHour);
     setFromSaved(false); setStoreToggle(false); setManual(false); resetRun();
-    setUiRec(computeRecommendation(buildRawInput(p.answers, nextA11y, false, false), fixture, nextHour === null ? new Date() : d));
-    setStep("recommend");
+    goRecommend(
+      computeRecommendation(buildRawInput(p.answers, nextA11y, false, false), fixture, nextHour === null ? new Date() : d),
+      unansweredIn(p.answers),
+      0, // 시연 프리셋은 새 흐름이다 — 이전 시도 횟수를 물려받지 않는다
+    );
   };
 
   const deleteSaved = () => { try { localStorage.removeItem(STORAGE_KEY); } catch { /* 무시 */ } setSaved(null); };
@@ -393,16 +545,32 @@ export function App() {
   const applyEditAndRecommend = () => {
     if (!fixture) return;
     if (storeToggle) persist();
-    setUiRec(computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle), fixture, now));
-    setManual(false);
-    setStep("recommend");
+    // 고쳐서 다시 받는 경로 — 여기서도 미확정이면 시도 횟수가 올라가고, 2회째면 안전 중단이다
+    goRecommend(
+      computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle), fixture, now),
+      unansweredIn(answers),
+    );
   };
 
-  const persist = () => {
+  /** 저장. lastOrder 를 새로 주지 않으면 이미 저장돼 있던 지난 주문을 그대로 둔다. */
+  const persist = (lastOrder?: LastOrder) => {
+    const keep = lastOrder ?? saved?.lastOrder;
     const s: SavedSettings = {
+      v: SAVED_VERSION,
       answers: pickByScope(answers, saveScope), a11y, scope: saveScope, savedAt: new Date().toISOString(),
+      ...(keep ? { lastOrder: keep } : {}),
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); setSaved(s); } catch { /* 저장 불가 환경이면 조용히 건너뜀 */ }
+  };
+
+  /**
+   * 확정한 주문을 «지난번처럼»의 근거로 남긴다 (화면목록 S05).
+   * 저장을 켠 경우에만 기록한다 — 저장 여부는 끝까지 사용자가 정한다.
+   */
+  const rememberOrder = () => {
+    const id = uiRec?.rec.recommendedCandidateId;
+    if (!storeToggle || !id) return;
+    persist({ candidateId: id, answers: { ...answers }, savedAt: new Date().toISOString() });
   };
 
   /** 토글 = 즉시 반영: 켜는 순간 저장되고, 끄면 저장본이 삭제된다 (사용자 기대와 일치). */
@@ -411,7 +579,9 @@ export function App() {
     setSaveScope(next);
     if (!storeToggle) return;
     const rec: SavedSettings = {
+      v: SAVED_VERSION,
       answers: pickByScope(answers, next), a11y, scope: next, savedAt: new Date().toISOString(),
+      ...(saved?.lastOrder ? { lastOrder: saved.lastOrder } : {}),
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rec)); setSaved(rec); } catch { /* 무시 */ }
   };
@@ -426,6 +596,7 @@ export function App() {
 
   const runSimulation = async () => {
     if (!fixture || !uiRec) return;
+    rememberOrder(); // 확정한 주문을 "지난번처럼"의 근거로 남긴다 (저장을 켠 경우만)
     setStep("run"); setRunLog([]); setRunError(null); setSubmitted(null); setErrResults({});
     try {
       const submission = buildUiSubmission(uiRec, fixture, true, manual);
@@ -439,6 +610,31 @@ export function App() {
     }
   };
 
+  /**
+   * 링크로 넘어온 계획 이어받기 (화면목록 S04).
+   *
+   * 이어받아도 **확인 화면부터** 시작한다 — 링크만으로 실행계획이 만들어지면 사용자의
+   * 명시적 확인 없이 승인된 셈이 된다. 넘어온 값이라는 사실도 화면에 밝히고,
+   * 입력 출처는 IMPORTED 로 기록한다(자동으로 불러온 정보의 재확인).
+   */
+  useEffect(() => {
+    if (!fixture || !incoming) return;
+    const next = { ...incoming.answers };
+    const nextA11y: A11y = { ...A11Y_DEFAULT, ...(incoming.a11y as Partial<A11y>) };
+    setAnswers(next); setA11y(nextA11y); setCarried(Object.keys(next));
+    setFromSaved(true); setHandedOff(true); setManual(false); setStoreToggle(false);
+    goRecommend(
+      computeRecommendation(buildRawInput(next, nextA11y, true, false), fixture, new Date()),
+      unansweredIn(next),
+      0,
+    );
+    setIncoming(null);
+    // 주소창에서 지운다 — 새로고침할 때마다 다시 이어받지 않게
+    window.history.replaceState(null, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fixture, incoming]);
+
+  const lastOrder = saved?.lastOrder;
   const q = QUESTIONS[qIndex];
   const answered = q ? answers[q.key] !== undefined : false;
   const ev = outcome?.evidence as (Evidence & Record<string, unknown>) | undefined;
@@ -483,6 +679,26 @@ export function App() {
 
         {step === "start" && (
           <>
+            {/* 화면목록 S05 — 지난 주문이 있으면 한 번에 되살릴 수 있게 한다.
+                되살려도 확인 화면부터 시작한다(승인 없는 실행계획 생성 금지). */}
+            {lastOrder && fixture && (
+              <section className="card" style={{ borderColor: "var(--brand)", borderWidth: 2 }} aria-label="지난 주문">
+                <h2>지난번처럼 준비할까요?</h2>
+                <p className="hint" style={{ fontSize: "1em", color: "var(--fg)" }}>
+                  {candidateName(fixture, lastOrder.candidateId)}
+                  {QUESTIONS.filter((qq) => lastOrder.answers[qq.key] !== undefined)
+                    .map((qq) => ` · ${EDIT_LABELS[qq.key] ?? qq.key} ${answerLabel(qq.key, lastOrder.answers[qq.key])}`)
+                    .join("")}
+                </p>
+                <p className="hint">바로 실행하지 않습니다 — 고르시면 <b>확인 화면부터</b> 보여드립니다.</p>
+                <div className="btnrow">
+                  <button type="button" className="btn primary" onClick={repeatLastOrder}>네, 그렇게 해주세요</button>
+                  <button type="button" className="btn ghost" onClick={startWizard}>아니요, 새로 고를래요</button>
+                  {staffBtn()}
+                </div>
+              </section>
+            )}
+
             {saved && (
               <section className="card" style={{ borderColor: "var(--brand)", borderWidth: 2 }} aria-label="저장된 설정">
                 <h2>지난번 설정을 이 기기에서 찾았어요</h2>
@@ -494,8 +710,9 @@ export function App() {
                     : " 저장 범위를 '오래 쓰는 것만'으로 두셔서, 수량·예산 같은 이번 이용 정보만 다시 여쭤봅니다."}
                 </p>
                 <div className="btnrow">
-                  <button type="button" className="btn primary" onClick={startFromSaved} disabled={!fixture}>이 설정으로 시작</button>
-                  <button type="button" className="btn ghost" onClick={startWizard} disabled={!fixture}>새로 입력하기</button>
+                  {/* 화면목록 S01 case2 의 용어를 그대로 쓴다 */}
+                  <button type="button" className="btn primary" onClick={startFromSaved} disabled={!fixture}>프로필 다시 사용</button>
+                  <button type="button" className="btn ghost" onClick={startWizard} disabled={!fixture}>새롭게 만들기</button>
                   <button type="button" className="btn danger" onClick={deleteSaved}>저장된 설정 지우기</button>
                 </div>
               </section>
@@ -535,6 +752,44 @@ export function App() {
           <section className="card" aria-label="화면과 안내 설정">
             <h2>화면과 안내를 맞춰 드릴게요</h2>
             <p className="hint">켜면 이 화면이 바로 바뀝니다. 언제든 다시 끌 수 있습니다.</p>
+
+            {/* 화면목록 S02 — 설정 이름 대신 실제 크기로 렌더한 문장을 보고 답하게 한다 */}
+            {probeStep === null ? (
+              <div className="btnrow" style={{ marginBottom: 18 }}>
+                <button type="button" className="btn ghost" onClick={() => { setProbeStep(0); setProbeResult(null); }}>
+                  화면 글씨 맞춰보기
+                </button>
+                {probeResult !== null && (
+                  <span className="hint">
+                    {probeResult === 0 && "기본 크기로 두었습니다."}
+                    {probeResult === 1 && "큰 글씨를 켰습니다."}
+                    {probeResult === 2 && "큰 글씨·고대비·그림 안내를 켰습니다."}
+                    {" "}아래에서 언제든 바꾸실 수 있습니다.
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="card" style={{ marginBottom: 18 }} aria-labelledby="probehead">
+                <h2 id="probehead">화면 글씨가 잘 보이시나요?</h2>
+                <p aria-hidden="true" style={{ fontSize: PROBE_SIZES[probeStep], fontWeight: 700, margin: "18px 0" }}>
+                  {PROBE_SAMPLE}
+                </p>
+                <p className="hint">위 문장이 편하게 읽히시면 «잘 보여요»를 눌러 주세요.</p>
+                <div className="choices" role="group" aria-label="글씨 크기 확인">
+                  <button type="button" className="choice" onClick={() => {
+                    setA11y((s) => ({ ...s, ...PROBE_RESULT[probeStep] }));
+                    setProbeResult(probeStep); setProbeStep(null);
+                  }}>잘 보여요</button>
+                  <button type="button" className="choice" onClick={() => {
+                    if (probeStep < PROBE_SIZES.length - 1) { setProbeStep(probeStep + 1); return; }
+                    const last = PROBE_SIZES.length - 1;
+                    setA11y((s) => ({ ...s, ...PROBE_RESULT[last] }));
+                    setProbeResult(last); setProbeStep(null);
+                  }}>조금 작아요</button>
+                </div>
+              </div>
+            )}
+
             <div className="a11ylist">
               {A11Y_ITEMS.map((it) => (
                 <button key={it.key} type="button" className="a11yrow" aria-pressed={a11y[it.key] === true}
@@ -567,7 +822,11 @@ export function App() {
 
         {step === "wizard" && q && (
           <section className="card" aria-labelledby="qtitle">
-            <p className="stepmeta">질문 {askPos + 1} / {askTotal}</p>
+            {/* 분모를 확정으로 쓰지 않는다 — 조기 종료가 있으므로 "최대"가 정직하다 */}
+            <p className="stepmeta">
+              질문 {askPos + 1} / 최대 {askTotal}
+              {!simple && " · 답이 충분해지면 남은 질문은 건너뜁니다"}
+            </p>
             <h2 id="qtitle">{q.title}</h2>
             {q.hint && !simple && <p className="hint">{q.hint}</p>}
             {carried.includes(q.key) && (
@@ -576,8 +835,7 @@ export function App() {
             <ChoiceGrid q={q} answers={answers} setAnswers={setAnswers} showIcons={a11y.visualGuidance} />
             <div className="btnrow">
               <button type="button" className="btn ghost" onClick={() => (qIndex === 0 ? setStep("start") : setQIndex(qIndex - 1))}>← 이전</button>
-              <button type="button" className="btn primary" disabled={!answered}
-                onClick={() => { const n = nextToAsk(qIndex + 1); n < QUESTIONS.length ? setQIndex(n) : finishWizard(); }}>
+              <button type="button" className="btn primary" disabled={!answered} onClick={advance}>
                 {nextToAsk(qIndex + 1) < QUESTIONS.length ? "다음 →" : "추천 보기"}
               </button>
               {staffBtn()}
@@ -599,11 +857,39 @@ export function App() {
           </section>
         )}
 
+        {/* 화면목록 S11 — 계산 중. 여기서도 직원 도움으로 빠져나갈 수 있어야 한다. */}
+        {step === "calculating" && (
+          <section className="card" aria-labelledby="calchead" aria-busy="true">
+            <h2 id="calchead">{t("어울리는 메뉴를 찾고 있어요", "고객님께 어울리는 메뉴를 찾고 있어요")}</h2>
+            <p className="hint">답해 주신 내용을 기준으로 후보를 좁히는 중입니다.</p>
+            <ul className="reasons" aria-label="지금까지 답해 주신 내용">
+              {QUESTIONS.filter((q) => answers[q.key] !== undefined).map((q) => (
+                <li key={q.key}>{EDIT_LABELS[q.key] ?? q.key} — {answerLabel(q.key, answers[q.key])}</li>
+              ))}
+            </ul>
+            <div className="btnrow">{staffBtn()}</div>
+          </section>
+        )}
+
         {step === "recommend" && uiRec && fixture && (
           <section>
             {uiRec.rec.requiresReconfirmation && (
               <div className="banner warn" role="alert">
                 확실하지 않은 정보가 있어요. 임의로 판단하지 않습니다 — 알레르기 항목을 다시 확인해 주시거나, 직원 도움을 이용해 주세요.
+              </div>
+            )}
+            {handedOff && (
+              <div className="banner ok" role="note">
+                다른 기기에서 넘어온 주문입니다. <b>자동으로 실행하지 않습니다</b> —
+                내용을 확인하시고 진행해 주세요. 바꾸실 것이 있으면 «조건 수정»을 눌러 주세요.
+              </div>
+            )}
+            {/* 생략은 숨기지 않는다 — 무엇을 안 물었는지, 그 값이 어디서 보이는지 함께 밝힌다 */}
+            {skipped.length > 0 && (
+              <div className="banner ok" role="note">
+                답해 주신 내용만으로 충분해서 <b>{skipped.length}가지는 여쭤보지 않았습니다</b>
+                {" "}({skipped.map((k) => EDIT_LABELS[k] ?? k).join(" · ")}).
+                {" "}이 항목들이 어떻게 정해졌는지는 다음 확인 화면에서 보실 수 있습니다.
               </div>
             )}
             {uiRec.rec.recommendedCandidateId === null ? (
@@ -666,6 +952,42 @@ export function App() {
           <section className="card" aria-label="조건 수정">
             <h2>바꾸실 것을 눌러 주세요</h2>
             {!simple && <p className="hint">누르면 그 자리에서 선택지가 열립니다. 다 바꾸셨으면 아래에서 추천을 다시 받아 주세요.</p>}
+            {/* 메뉴 행이 붙어 화면이 길어졌다 — 도움을 화면 끝까지 내려가야 닿는 곳에 두지 않는다 */}
+            <div className="btnrow" style={{ marginBottom: 4 }}>{staffBtn()}</div>
+
+            {/* 화면목록 S14 — 메뉴 변경도 여기서 한다. 지금까지는 추천 화면의 대안 카드로만
+                바꿀 수 있어서 "바꾸는 곳"이 두 군데로 갈려 있었다.
+                고를 수 있는 것은 STEP 4 를 통과한 생존 후보뿐이다(scoreBreakdown) —
+                알레르기·품절·예산으로 제외된 후보를 여기서 되살리지 않는다. */}
+            {uiRec && fixture && uiRec.rec.recommendedCandidateId && (
+              <div className="editrow">
+                <button type="button" className="edithead" aria-expanded={editOpen === "__menu"}
+                  onClick={() => setEditOpen(editOpen === "__menu" ? null : "__menu")}>
+                  <span className="editlabel">메뉴</span>
+                  <span className="editvalue">{candidateName(fixture, uiRec.rec.recommendedCandidateId)}</span>
+                  <span aria-hidden="true">{editOpen === "__menu" ? "▲" : "▼"}</span>
+                </button>
+                {editOpen === "__menu" && (
+                  <div className="editbody">
+                    {!simple && <p className="hint">조건에 맞는 메뉴만 보여드립니다. 제외된 메뉴는 여기 없습니다.</p>}
+                    <div className="choices" role="group" aria-label="메뉴 선택">
+                      {Object.keys(uiRec.rec.scoreBreakdown ?? {}).map((id) => (
+                        <button key={id} type="button" className="choice"
+                          aria-pressed={id === uiRec.rec.recommendedCandidateId}
+                          onClick={() => {
+                            setUiRec(withManualSelection(uiRec, fixture, id));
+                            setManual(true); setEditOpen(null); setStep("recommend");
+                          }}>
+                          {candidateName(fixture, id)}
+                          <small>{candidatePrice(fixture, id)?.toLocaleString()}원</small>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {QUESTIONS.map((qq) => {
               const open = editOpen === qq.key;
               return (
@@ -723,7 +1045,11 @@ export function App() {
                         <span className="sv">{OPTION_KO[x.id] ?? x.id}</span>
                         <span className="so">
                           {x.origin === "USER" && "고르신 대로"}
-                          {x.origin === "AUTO" && "상관없다고 하셔서 이 메뉴의 값으로 정했습니다"}
+                          {/* 같은 AUTO 라도 원인이 다르다 — 조기 종료로 안 물어본 것과
+                              "상관없어요"라고 답하신 것을 뭉뚱그리지 않는다. */}
+                          {x.origin === "AUTO" && (skipped.includes(GROUP_TO_KEY[x.groupId] ?? "")
+                            ? "여쭤보지 않아서 이 메뉴의 값으로 정했습니다"
+                            : "상관없다고 하셔서 이 메뉴의 값으로 정했습니다")}
                           {x.origin === "SUBSTITUTED" &&
                             `원하신 ${OPTION_KO[x.wanted!] ?? x.wanted}는 이 메뉴에 없어 바꿨습니다`}
                         </span>
@@ -740,6 +1066,33 @@ export function App() {
               );
             })()}
             <div className="banner ok">가상 키오스크에서 장바구니 확인까지만 진행합니다. <b>실제 결제·주문은 일어나지 않습니다.</b></div>
+
+            {/* 화면목록 S04 — 모바일에서 확정하고 매장에서는 실행만. 뒷사람 눈치(53.6%)를
+                줄이는 구조가 여기서 완성된다. 서버가 없으므로 계획을 주소에 실어 넘긴다. */}
+            <div className="savebox">
+              <button type="button" className="btn ghost" onClick={() => {
+                const code = encodePlanLink({
+                  v: 1, answers, a11y: a11y as unknown as Record<string, boolean | string>,
+                });
+                const url = `${window.location.origin}${window.location.pathname}?plan=${code}`;
+                setShareUrl(url);
+                navigator.clipboard?.writeText(url).catch(() => { /* 복사 실패해도 아래에 그대로 보인다 */ });
+              }}>이 주문을 매장 기기로 넘기기</button>
+              {shareUrl && (
+                <>
+                  <p className="hint" style={{ marginTop: 10 }}>
+                    아래 주소를 매장 기기에서 열면 <b>이 확인 화면부터</b> 이어집니다.
+                    실행은 그 기기에서 다시 확인한 뒤에 일어납니다.
+                  </p>
+                  <input readOnly value={shareUrl} aria-label="넘기기 주소"
+                    onFocus={(e) => e.currentTarget.select()} />
+                  <p className="hint">
+                    이름·전화번호 같은 개인 정보는 이 주소에 담기지 않습니다 — 메뉴·옵션·화면 설정만 들어갑니다.
+                  </p>
+                </>
+              )}
+            </div>
+
             <div className="savebox">
               <button type="button" className="toggle" aria-pressed={storeToggle} onClick={toggleStore}>
                 이 설정을 이 기기에 저장 {storeToggle ? "— 저장됨 ✓" : "— 저장 안 함 (기본)"}
@@ -785,6 +1138,7 @@ export function App() {
                   {/* 체험 모드에서도 주문은 끝까지 간다 — 계획을 만들어 보관하고 결과 화면에서 그 결말을 보여준다. */}
                   <button type="button" className="btn primary" onClick={() => {
                     if (!fixture || !uiRec) return;
+                    rememberOrder();
                     setSubmitted(buildUiSubmission(uiRec, fixture, true, manual));
                     setStep("result");
                   }}>주문 확정하기</button>
@@ -932,6 +1286,33 @@ export function App() {
                 </div>
               </div>
             )}
+          </section>
+        )}
+
+        {/* 화면목록 S12 — 재확인 2회째도 확정되지 않았을 때. 정상 종료가 아니라는 것,
+            그리고 아무 준비도 시작되지 않았다는 것을 분명히 말한다. */}
+        {step === "stopped" && (
+          <section className="card" aria-labelledby="stophead">
+            <div className="banner warn" role="alert">여기서 멈췄습니다 — 정상적으로 끝난 것이 아닙니다.</div>
+            <h2 id="stophead">확인이 어려워 진행을 멈췄어요</h2>
+            <p className="hint" style={{ fontSize: "1em", color: "var(--fg)" }}>
+              {t(
+                "두 번 여쭤봤는데도 확실하지 않았습니다. 어려우시면 직원을 불러주세요.",
+                "두 번 확인을 요청드렸는데도 조건이 확실해지지 않았습니다. 임의로 판단해서 진행하지 않습니다 — 어려우시면 직원을 불러주세요.",
+              )}
+            </p>
+            <p className="hint">
+              <b>주문 준비는 시작되지 않았습니다.</b> 승인 전이므로 실행 계획이 만들어지지 않았고,
+              장바구니에도 아무것도 담기지 않았습니다.
+            </p>
+            <div className="btnrow">
+              {staffBtn("btn primary")}
+              <button type="button" className="btn ghost"
+                onClick={() => { setReconfirmCount(0); setEditOpen("allergies"); setStep("edit"); }}>
+                조건 다시 보기
+              </button>
+              <button type="button" className="btn ghost" onClick={() => setStep("start")}>처음으로</button>
+            </div>
           </section>
         )}
 

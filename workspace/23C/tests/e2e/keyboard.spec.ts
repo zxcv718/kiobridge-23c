@@ -33,13 +33,14 @@ test.describe("접근성 실측", () => {
     await expect(page.getByRole("heading", { name: /닭강정 가게 주문/ })).toBeVisible();
   });
 
-  test("마우스 없이 시작→7문항→추천→최종확인까지 완주한다", async ({ page }) => {
+  test("마우스 없이 시작→질문→추천→최종확인까지 완주한다", async ({ page }) => {
     await page.keyboard.press("Tab"); // 문서 진입
     await pressOn(page, /시작하기/);
 
-    // 7문항 — 매번 첫 선택지를 고르고 다음으로
+    // 질문 수는 답에 따라 달라진다(조기 종료) — 개수나 순서를 고정하지 않고,
+    // 마법사 화면이 남아 있는 동안만 답한다.
     for (let q = 0; q < 7; q++) {
-      await expect(page.locator(".stepmeta")).toContainText(`질문 ${q + 1} / 7`);
+      if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
       const first = page.locator(".choices .choice").first();
       await first.focus();
       await page.keyboard.press("Enter");
@@ -55,6 +56,29 @@ test.describe("접근성 실측", () => {
       await page.keyboard.press("Enter");
       await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
     }
+  });
+
+  /**
+   * 화면목록 포인트 2 — 답이 충분해지면 남은 질문을 건너뛴다.
+   * 단위 테스트(ask.test.ts)는 판정만 검사한다. 실제로 화면이 넘어가고,
+   * 무엇을 안 물었는지 사용자에게 밝히는지는 여기서만 확인된다.
+   */
+  test("답이 충분해지면 남은 질문을 건너뛰고 무엇을 안 물었는지 밝힌다", async ({ page }) => {
+    await page.getByRole("button", { name: /시작하기/ }).click();
+
+    await page.getByRole("button", { name: "땅콩", exact: true }).click();
+    await page.getByRole("button", { name: "콩(대두)" }).click();
+    await page.getByRole("button", { name: /다음/ }).click();
+
+    await page.getByRole("button", { name: "매운맛", exact: true }).click();
+    await page.getByRole("button", { name: /다음/ }).click();
+
+    await page.getByRole("button", { name: "뼈", exact: true }).click();
+    await page.getByRole("button", { name: /다음/ }).click();
+
+    // 이용 방식·수량·컵·예산을 더 묻지 않고 추천으로 넘어간다
+    await expect(page.getByText(/여쭤보지 않았습니다/)).toBeVisible();
+    await expect(page.locator("#qtitle")).toHaveCount(0);
   });
 
   test("포커스가 항상 눈에 보인다 (outline 이 none 이 아니다)", async ({ page }) => {
