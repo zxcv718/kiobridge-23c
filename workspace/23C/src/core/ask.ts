@@ -37,6 +37,32 @@ export function allergensAnswered(ctx: EngineContext): boolean {
   return ctx.hardConstraints.allergenIds !== undefined;
 }
 
+/** 후보를 실제로 갈라내는 선호 축. 수량·컵은 순위를 거의 바꾸지 않아 제외한다. */
+const PREFERENCE_AXES = ["serviceType", "spicyLevel", "boneType"] as const;
+
+/**
+ * 변별력 있는 선호를 하나라도 **물어봤는가**.
+ *
+ * confidence 만으로 종료를 판정하면 안 되는 이유가 여기 있다. `scoreCandidates` 는 선호를
+ * 말하지 않은 축에 `weight * 0.5` 중립점을 **모든 후보에 똑같이** 얹는다. 그러면 변별 축이
+ * 전부 상쇄되고 가격만 남아 1·2위 격차가 점수 폭을 지배해 **confidence 가 오히려 최대(0.95)가
+ * 된다**. 실측(chicken-store):
+ *
+ *   알레르기 땅콩·콩만 (선호 0개)      → 0.95   ← 아무것도 안 물어서 생긴 확신
+ *   알레르기 땅콩·콩 + 맵기            → 0.76   ← 물어보니 오히려 내려간다
+ *   알레르기 땅콩·콩 + 맵기 + 형태      → 0.82
+ *
+ * 즉 confidence 는 "점수 분리도"이지 "선호 파악도"가 아니다. 이 가드가 없으면 알레르기만 답한
+ * 사용자에게 맵기·형태를 한 번도 묻지 않고 "매운 뼈 닭강정"을 확정한다.
+ *
+ * "상관없어요"도 물어본 것으로 친다 — 그건 정보가 없는 게 아니라 «양보 가능»이라는 정보다.
+ * 그래서 UI 는 "상관없어요"를 지우지 않고 NO_PREFERENCE 로 넘긴다(누락 ≠ 선호 없음).
+ */
+export function preferenceAxisAsked(ctx: EngineContext): boolean {
+  const p = ctx.preferences as Record<string, unknown>;
+  return PREFERENCE_AXES.some((k) => p[k] !== undefined);
+}
+
 /**
  * 남은 질문을 생략하고 추천으로 넘어가도 되는가.
  *
@@ -45,7 +71,8 @@ export function allergensAnswered(ctx: EngineContext): boolean {
  * 설명해야» 하는 의무는 생략과 무관하게 지켜진다 — 단, 그 고지를 끄면 이 전제가 무너진다.
  */
 export function canStopAsking(rec: Recommendation, ctx: EngineContext): boolean {
-  if (!allergensAnswered(ctx)) return false;   // 하드제약 미확인 상태로는 절대 확정하지 않는다
+  if (!allergensAnswered(ctx)) return false;    // 하드제약 미확인 상태로는 절대 확정하지 않는다
+  if (!preferenceAxisAsked(ctx)) return false;  // 안 물어봐서 생긴 확신으로 끝내지 않는다
   if (rec.requiresReconfirmation) return false; // 재확인이 걸린 추천으로 흐름을 끝내지 않는다
   return (rec.confidence ?? 0) >= EARLY_STOP_CONFIDENCE;
 }

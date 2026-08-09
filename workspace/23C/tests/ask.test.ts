@@ -13,7 +13,9 @@ import type { Recommendation } from "@kiobridge/participant-sdk";
 import { loadChickenFixture } from "./helpers";
 import { buildChickenContext } from "../src/core/canonical";
 import { buildRecommendation } from "../src/core/engine";
-import { allergensAnswered, canStopAsking, EARLY_STOP_CONFIDENCE } from "../src/core/ask";
+import {
+  allergensAnswered, canStopAsking, preferenceAxisAsked, EARLY_STOP_CONFIDENCE,
+} from "../src/core/ask";
 
 const fixture = loadChickenFixture();
 /** 한산한 시간 — 시간대 보너스를 배제해 점수를 재현 가능하게 고정한다. */
@@ -38,18 +40,19 @@ describe("조기 종료 게이트 — 계약 조건", () => {
   });
 
   it("재확인이 필요한 상태에서는 멈추지 않는다", () => {
-    const { ctx } = recFor({ allergies: [] });
+    // 다른 조건은 전부 충족시켜 재확인 하나만 원인이 되게 한다
+    const { ctx } = recFor({ allergies: [], spicyLevel: "매운맛" });
     expect(canStopAsking(fakeRec(0.99, true), ctx)).toBe(false);
   });
 
-  it("알레르기를 답했고 신뢰도가 기준 이상이면 멈춘다", () => {
-    const { ctx } = recFor({ allergies: [] });
+  it("알레르기를 답했고 선호를 물었고 신뢰도가 기준 이상이면 멈춘다", () => {
+    const { ctx } = recFor({ allergies: [], spicyLevel: "매운맛" });
     expect(allergensAnswered(ctx)).toBe(true);
     expect(canStopAsking(fakeRec(EARLY_STOP_CONFIDENCE), ctx)).toBe(true);
   });
 
   it("기준에 0.01 모자라면 계속 묻는다", () => {
-    const { ctx } = recFor({ allergies: [] });
+    const { ctx } = recFor({ allergies: [], spicyLevel: "매운맛" });
     expect(canStopAsking(fakeRec(EARLY_STOP_CONFIDENCE - 0.01), ctx)).toBe(false);
   });
 
@@ -59,9 +62,37 @@ describe("조기 종료 게이트 — 계약 조건", () => {
   });
 
   it("알레르기를 모른다(UNKNOWN)고 답하면 재확인이 걸려 멈추지 않는다", () => {
-    const { rec, ctx } = recFor({ allergies: ["모름"] });
+    const { rec, ctx } = recFor({ allergies: ["모름"], spicyLevel: "매운맛" });
     expect(rec.requiresReconfirmation).toBe(true);
     expect(canStopAsking(rec, ctx)).toBe(false);
+  });
+});
+
+describe("안 물어봐서 생긴 확신 — confidence 단독 판정의 함정", () => {
+  /* 실측 회귀 고정. scoreCandidates 는 선호를 말하지 않은 축에 중립점을 모든 후보에 똑같이
+     얹으므로, 아무것도 안 물으면 변별 축이 상쇄되고 가격만 남아 confidence 가 최대가 된다.
+     이 테스트가 깨지면 조기 종료가 "맵기·형태를 한 번도 안 묻고 확정"하는 동작으로 퇴행한다. */
+
+  it("알레르기만 답한 상태의 confidence 가 실제로 매우 높다 (함정의 실재 확인)", () => {
+    const { rec } = recFor({ allergies: ["땅콩", "콩"] });
+    expect(rec.confidence).toBeGreaterThanOrEqual(EARLY_STOP_CONFIDENCE);
+  });
+
+  it("그런데도 선호를 하나도 묻지 않았으면 멈추지 않는다", () => {
+    const { rec, ctx } = recFor({ allergies: ["땅콩", "콩"] });
+    expect(preferenceAxisAsked(ctx)).toBe(false);
+    expect(canStopAsking(rec, ctx)).toBe(false);
+  });
+
+  it("'상관없어요'도 물어본 것으로 친다 — 누락과 양보 가능은 다르다", () => {
+    const { ctx } = recFor({ allergies: [], spicyLevel: "상관없음" });
+    expect(ctx.preferences.spicyLevel).toBe("NO_PREFERENCE");
+    expect(preferenceAxisAsked(ctx)).toBe(true);
+  });
+
+  it("수량·컵은 변별 축으로 치지 않는다", () => {
+    const { ctx } = recFor({ allergies: [], quantity: 2, cupOption: "종이컵" });
+    expect(preferenceAxisAsked(ctx)).toBe(false);
   });
 });
 
@@ -104,8 +135,16 @@ describe("임계값 보정 — 조기 종료가 사문이 아님을 실측으로
   });
 
   it("조건이 좁혀져 후보가 하나만 남으면 멈춘다", () => {
-    const { rec, ctx } = recFor({ allergies: [], budgetKrw: 5500 });
+    const { rec, ctx } = recFor({ allergies: [], budgetKrw: 5500, spicyLevel: "매운맛" });
     expect(Object.keys(rec.scoreBreakdown ?? {}).length).toBe(1);
     expect(canStopAsking(rec, ctx)).toBe(true);
+  });
+
+  it("후보가 하나뿐이어도 선호를 안 물었으면 멈추지 않는다 — 옵션 선택이 남아 있다", () => {
+    // 후보가 하나로 좁혀져도 맵기·형태·컵은 실행계획의 옵션으로 여전히 선택된다.
+    // "메뉴가 정해졌으니 그만 물어도 된다"는 성립하지 않는다.
+    const { rec, ctx } = recFor({ allergies: [], budgetKrw: 5500 });
+    expect(Object.keys(rec.scoreBreakdown ?? {}).length).toBe(1);
+    expect(canStopAsking(rec, ctx)).toBe(false);
   });
 });

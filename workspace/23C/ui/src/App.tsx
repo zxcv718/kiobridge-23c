@@ -12,6 +12,7 @@ import {
 } from "./logic";
 import { TIME_SLOT_KO, timeSlotOf } from "../../src/core/context";
 import { buildExecutionPlanCore, explainSelections } from "../../src/core/plan";
+import { canStopAsking } from "../../src/core/ask";
 
 type Step = "start" | "a11y" | "wizard" | "recommend" | "confirm" | "run" | "result" | "staff" | "edit";
 
@@ -189,10 +190,14 @@ function buildRawInput(
   const a = { ...answers };
   const allergies = (a.allergies as (string | number)[] | undefined)?.filter((x) => x !== "없음") ?? [];
   return {
-    serviceType: a.serviceType === "상관없음" ? undefined : a.serviceType,
-    spicyLevel: a.spicyLevel === "상관없음" ? undefined : a.spicyLevel,
-    boneType: a.boneType === "상관없음" ? undefined : a.boneType,
-    cupOption: a.cupOption === "상관없음" ? undefined : a.cupOption,
+    /* "상관없어요"를 지우지 않고 그대로 넘긴다 — normalize 가 NO_PREFERENCE 로 정규화한다.
+     * 누락(안 물어봄)과 NO_PREFERENCE(물었고 양보 가능)는 서로 다른 상태이고,
+     * 조기 종료 게이트가 그 둘을 구분해야 한다 (core/ask.ts preferenceAxisAsked).
+     * 엔진·실행계획의 definite() 는 둘 다 "선호 없음"으로 보므로 추천 결과는 달라지지 않는다. */
+    serviceType: a.serviceType,
+    spicyLevel: a.spicyLevel,
+    boneType: a.boneType,
+    cupOption: a.cupOption,
     quantity: a.quantity,
     allergies: (a.allergies as unknown[] | undefined) === undefined ? undefined : allergies,
     budgetKrw: a.budgetKrw === "없음" ? undefined : a.budgetKrw,
@@ -220,21 +225,27 @@ interface Question {
   options: { value: string | number; label: string; sub?: string; icon?: string }[];
 }
 
+/* 질문 순서 = 화면목록 S06~S10 (알레르기 → 맵기 → 뼈 → 포장 → 수량), 그 뒤 컵·예산.
+ *
+ * 알레르기가 맨 앞인 것은 편의가 아니라 **안전 요건**이다. 조기 종료(core/ask.ts)가 붙은
+ * 뒤로는, 알레르기를 뒤에 두면 신뢰도가 먼저 차오를 때 그 질문에 도달하기 전에 추천이
+ * 확정될 수 있다. 그러면 allergenIds 가 UNKNOWN 이 아니라 미수집이 되어 안전 정지도 안 걸린 채
+ * 알레르기 제외만 사라진다. ask.ts 의 게이트가 1차 방어선이고, 이 순서가 2차 방어선이다. */
 const QUESTIONS: Question[] = [
-  { key: "serviceType", title: "어떻게 이용하시겠어요?", options: [
-    { value: "포장", label: "포장하기", icon: "🥡" }, { value: "매장", label: "먹고 가기", icon: "🍽️" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
+  { key: "allergies", title: "피해야 하는 알레르기가 있으세요?", hint: "해당하는 것을 모두 눌러 주세요. 알레르기가 있는 메뉴는 점수를 깎는 게 아니라 아예 빼고 추천합니다.", multi: true, options: [
+    { value: "없음", label: "없어요", icon: "✅" }, { value: "땅콩", label: "땅콩", icon: "🥜" }, { value: "콩", label: "콩(대두)", icon: "🫘" }, { value: "우유", label: "우유", icon: "🥛" },
+    { value: "계란", label: "계란", icon: "🥚" }, { value: "밀", label: "밀", icon: "🌾" }, { value: "새우", label: "새우", icon: "🦐" }, { value: "모름", label: "잘 모르겠어요", icon: "❓" } ] },
   { key: "spicyLevel", title: "맵기는 어느 정도가 좋으세요?", options: [
     { value: "순한맛", label: "순한맛", icon: "🥛" }, { value: "보통", label: "보통맛", icon: "🌶️" }, { value: "매운맛", label: "매운맛", icon: "🔥" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
   { key: "boneType", title: "뼈와 순살 중 어떤 것이 편하세요?", options: [
     { value: "순살", label: "순살", icon: "🍗" }, { value: "뼈", label: "뼈", icon: "🦴" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
+  { key: "serviceType", title: "어떻게 이용하시겠어요?", options: [
+    { value: "포장", label: "포장하기", icon: "🥡" }, { value: "매장", label: "먹고 가기", icon: "🍽️" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
   { key: "quantity", title: "몇 개 주문하시겠어요?", options: [
     { value: 1, label: "1개", icon: "1️⃣" }, { value: 2, label: "2개", icon: "2️⃣" }, { value: 3, label: "3개", icon: "3️⃣" } ] },
   { key: "cupOption", title: "컵이 필요하세요?", hint: "메뉴에 따라 선택할 수 있는 컵이 다릅니다.", options: [
     { value: "종이컵", label: "종이컵", icon: "🥤" }, { value: "일반컵", label: "일반컵", icon: "🥛" },
     { value: "없음", label: "필요 없어요", icon: "🚫" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
-  { key: "allergies", title: "피해야 하는 알레르기가 있으세요?", hint: "해당하는 것을 모두 눌러 주세요. 알레르기가 있는 메뉴는 점수를 깎는 게 아니라 아예 빼고 추천합니다.", multi: true, options: [
-    { value: "없음", label: "없어요", icon: "✅" }, { value: "땅콩", label: "땅콩", icon: "🥜" }, { value: "콩", label: "콩(대두)", icon: "🫘" }, { value: "우유", label: "우유", icon: "🥛" },
-    { value: "계란", label: "계란", icon: "🥚" }, { value: "밀", label: "밀", icon: "🌾" }, { value: "새우", label: "새우", icon: "🦐" }, { value: "모름", label: "잘 모르겠어요", icon: "❓" } ] },
   { key: "budgetKrw", title: "예산 상한이 있으세요?", options: [
     { value: "없음", label: "없어요" }, { value: 6000, label: "6,000원" }, { value: 7000, label: "7,000원" }, { value: 10000, label: "10,000원" } ] },
 ];
@@ -302,6 +313,8 @@ export function App() {
   /** 저장본에서 불러온 항목의 key — 마법사에서 건너뛰고, 무엇이 불러와졌는지 화면에 밝힌다 */
   const [carried, setCarried] = useState<string[]>([]);
   const [demoHour, setDemoHour] = useState<number | null>(null); // 프리셋의 시간대 시연용
+  /** 조기 종료로 여쭤보지 않은 질문 key — 추천 화면에서 무엇을 안 물었는지 밝힌다 */
+  const [skipped, setSkipped] = useState<string[]>([]);
 
   useEffect(() => {
     fetchFixture().then((r) => { setFixture(r.fixture); setLive(r.live); });
@@ -330,14 +343,23 @@ export function App() {
 
   const startWizard = () => {
     setAnswers({}); setQIndex(0); setManual(false); setFromSaved(false); setCarried([]);
-    setStoreToggle(false); setDemoHour(null); resetRun(); setStep("wizard");
+    setStoreToggle(false); setDemoHour(null); setSkipped([]); resetRun(); setStep("wizard");
+  };
+
+  /** 아직 답하지 않은 질문 — 조기 종료 시 "여쭤보지 않은 항목"으로 알린다. */
+  const unansweredIn = (a: Record<string, unknown>): string[] =>
+    QUESTIONS.filter((q) => a[q.key] === undefined).map((q) => q.key);
+
+  const goRecommend = (u: UiRecommendation, skippedKeys: string[]) => {
+    setSkipped(skippedKeys);
+    setUiRec(u);
+    setManual(false);
+    setStep("recommend");
   };
 
   const finishWizard = () => {
     if (!fixture) return;
-    setUiRec(computeRecommendation(rawInput, fixture, now));
-    setManual(false);
-    setStep("recommend");
+    goRecommend(computeRecommendation(rawInput, fixture, now), unansweredIn(answers));
   };
 
   /** 저장본에서 불러온 항목은 마법사에서 건너뛴다 — 저장해 놓고 또 묻지 않는다. */
@@ -349,6 +371,22 @@ export function App() {
   const askTotal = askIdx.length;
   const askPos = Math.max(0, askIdx.indexOf(qIndex));
 
+  /**
+   * 답변 확정 후 다음 단계 — 화면목록 포인트 2 «매 질문에 답변할 때마다 적합도 계산 →
+   * 불필요한 질문에 답변하지 않아도 빠르게 최종 결정 추천».
+   *
+   * 종료 판정은 core/ask.ts 가 한다. 여기서 confidence 를 직접 비교하지 않는 이유는,
+   * 알레르기 선행 같은 계약 조건이 UI 조건문에 묻히면 테스트가 지킬 수 없기 때문이다.
+   */
+  const advance = () => {
+    const n = nextToAsk(qIndex + 1);
+    if (n >= QUESTIONS.length) { finishWizard(); return; }
+    if (!fixture) return;
+    const u = computeRecommendation(rawInput, fixture, now);
+    if (canStopAsking(u.rec, u.engineCtx)) { goRecommend(u, unansweredIn(answers)); return; }
+    setQIndex(n);
+  };
+
   /** 저장된 설정으로 시작 — 배너에서 내용을 보여준 뒤의 클릭이므로 '확인받은 자동 불러오기'다.
    *  지속값은 채워진 채로 건너뛰고, 이번 이용 값(이용방식·수량·예산·컵)만 묻는다. */
   const startFromSaved = () => {
@@ -358,12 +396,14 @@ export function App() {
     setA11y(saved.a11y);
     setCarried(QUESTIONS.map((q) => q.key).filter((k) => next[k] !== undefined));
     setFromSaved(true); setStoreToggle(true); setSaveScope(saved.scope);
-    setManual(false); setDemoHour(null); resetRun();
+    setManual(false); setDemoHour(null); setSkipped([]); resetRun();
     const loaded = QUESTIONS.map((qq) => qq.key).filter((k) => next[k] !== undefined);
     const start = nextToAsk(0, loaded);
     if (start >= QUESTIONS.length) {
-      setUiRec(computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date()));
-      setStep("recommend");
+      goRecommend(
+        computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date()),
+        unansweredIn(next),
+      );
       return;
     }
     setQIndex(start);
@@ -378,8 +418,10 @@ export function App() {
     if (nextHour !== null) d.setHours(nextHour, 0, 0, 0);
     setAnswers(p.answers); setA11y(nextA11y); setDemoHour(nextHour);
     setFromSaved(false); setStoreToggle(false); setManual(false); resetRun();
-    setUiRec(computeRecommendation(buildRawInput(p.answers, nextA11y, false, false), fixture, nextHour === null ? new Date() : d));
-    setStep("recommend");
+    goRecommend(
+      computeRecommendation(buildRawInput(p.answers, nextA11y, false, false), fixture, nextHour === null ? new Date() : d),
+      unansweredIn(p.answers),
+    );
   };
 
   const deleteSaved = () => { try { localStorage.removeItem(STORAGE_KEY); } catch { /* 무시 */ } setSaved(null); };
@@ -567,7 +609,11 @@ export function App() {
 
         {step === "wizard" && q && (
           <section className="card" aria-labelledby="qtitle">
-            <p className="stepmeta">질문 {askPos + 1} / {askTotal}</p>
+            {/* 분모를 확정으로 쓰지 않는다 — 조기 종료가 있으므로 "최대"가 정직하다 */}
+            <p className="stepmeta">
+              질문 {askPos + 1} / 최대 {askTotal}
+              {!simple && " · 답이 충분해지면 남은 질문은 건너뜁니다"}
+            </p>
             <h2 id="qtitle">{q.title}</h2>
             {q.hint && !simple && <p className="hint">{q.hint}</p>}
             {carried.includes(q.key) && (
@@ -576,8 +622,7 @@ export function App() {
             <ChoiceGrid q={q} answers={answers} setAnswers={setAnswers} showIcons={a11y.visualGuidance} />
             <div className="btnrow">
               <button type="button" className="btn ghost" onClick={() => (qIndex === 0 ? setStep("start") : setQIndex(qIndex - 1))}>← 이전</button>
-              <button type="button" className="btn primary" disabled={!answered}
-                onClick={() => { const n = nextToAsk(qIndex + 1); n < QUESTIONS.length ? setQIndex(n) : finishWizard(); }}>
+              <button type="button" className="btn primary" disabled={!answered} onClick={advance}>
                 {nextToAsk(qIndex + 1) < QUESTIONS.length ? "다음 →" : "추천 보기"}
               </button>
               {staffBtn()}
@@ -604,6 +649,14 @@ export function App() {
             {uiRec.rec.requiresReconfirmation && (
               <div className="banner warn" role="alert">
                 확실하지 않은 정보가 있어요. 임의로 판단하지 않습니다 — 알레르기 항목을 다시 확인해 주시거나, 직원 도움을 이용해 주세요.
+              </div>
+            )}
+            {/* 생략은 숨기지 않는다 — 무엇을 안 물었는지, 그 값이 어디서 보이는지 함께 밝힌다 */}
+            {skipped.length > 0 && (
+              <div className="banner ok" role="note">
+                답해 주신 내용만으로 충분해서 <b>{skipped.length}가지는 여쭤보지 않았습니다</b>
+                {" "}({skipped.map((k) => EDIT_LABELS[k] ?? k).join(" · ")}).
+                {" "}이 항목들이 어떻게 정해졌는지는 다음 확인 화면에서 보실 수 있습니다.
               </div>
             )}
             {uiRec.rec.recommendedCandidateId === null ? (
