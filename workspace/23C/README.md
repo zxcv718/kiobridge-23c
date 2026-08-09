@@ -41,7 +41,7 @@ npx vite --config workspace/23C/ui/vite.config.ts   # ③ 우리 데모 UI :5173
 
 ```bash
 npx tsx tools/participant-cli.mjs progress --team 23C   # 9/9 (v5.1.4 한정 우회 — 아래 주의 참조)
-npx vitest run -c workspace/23C/vitest.config.ts        # 자체 스위트 78개
+npx vitest run -c workspace/23C/vitest.config.ts        # 자체 스위트 124개
 npx tsx workspace/23C/src/run.ts                        # CLI 파이프라인 → output/ 생성
 npm run participant:validate -- --file workspace/23C/output/participant-submission.json --execute
 npm run participant:package  -- --team 23C --file workspace/23C/output/participant-submission.json
