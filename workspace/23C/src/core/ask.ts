@@ -63,6 +63,36 @@ export function preferenceAxisAsked(ctx: EngineContext): boolean {
   return PREFERENCE_AXES.some((k) => p[k] !== undefined);
 }
 
+/** 후보를 실제로 가르지 못하는 답 — 엔진의 definite() 와 같은 기준. */
+const NON_COMMITTAL = new Set(["NO_PREFERENCE", "UNKNOWN", "NOT_APPLICABLE"]);
+
+/**
+ * 후보를 실제로 **가르는** 답을 하나라도 했는가.
+ *
+ * "물어봤다"와 "갈랐다"는 다르다. 맵기를 "상관없어요"로 답하면 물어보긴 했지만 그 축은
+ * 모든 후보에 같은 중립점을 주므로 아무것도 가르지 못한다. 그러면 다시 가격만 남아
+ * confidence 가 0.95 까지 올라간다 — 앞서 막은 "안 물어서 생긴 확신"과 같은 메커니즘이
+ * "상관없다고 해서 생긴 확신"으로 되살아나는 것이다.
+ *
+ * 실측(chicken-store): 알레르기 땅콩·콩 + 맵기 "상관없어요" → 0.95.
+ * 이 상태로 멈추면 형태(뼈/순살)를 한 번도 묻지 않고 "매운 뼈 닭강정"을 확정한다.
+ */
+export function hasDefinitePreference(ctx: EngineContext): boolean {
+  const p = ctx.preferences as Record<string, unknown>;
+  return PREFERENCE_AXES.some((k) => typeof p[k] === "string" && !NON_COMMITTAL.has(p[k] as string));
+}
+
+/**
+ * 변별 축을 전부 물어봤는가.
+ *
+ * 전부 물었는데 답이 모두 "상관없어요"라면 그건 정보가 없는 게 아니라 **양보 가능하다는
+ * 정보**이고, 더 물어봐야 새로 알 것이 없다. 그때는 멈춰도 된다.
+ */
+export function allPreferenceAxesAsked(ctx: EngineContext): boolean {
+  const p = ctx.preferences as Record<string, unknown>;
+  return PREFERENCE_AXES.every((k) => p[k] !== undefined);
+}
+
 /**
  * 남은 질문을 생략하고 추천으로 넘어가도 되는가.
  *
@@ -96,7 +126,9 @@ export function shouldSafetyStop(rec: Recommendation, attempts: number): boolean
 
 export function canStopAsking(rec: Recommendation, ctx: EngineContext): boolean {
   if (!allergensAnswered(ctx)) return false;    // 하드제약 미확인 상태로는 절대 확정하지 않는다
-  if (!preferenceAxisAsked(ctx)) return false;  // 안 물어봐서 생긴 확신으로 끝내지 않는다
+  // 후보를 가르는 답이 하나도 없으면, 남은 축을 전부 물어보기 전에는 끝내지 않는다.
+  // (안 물어서 생긴 확신 · 상관없다고 해서 생긴 확신 — 둘 다 여기서 막힌다)
+  if (!hasDefinitePreference(ctx) && !allPreferenceAxesAsked(ctx)) return false;
   if (rec.requiresReconfirmation) return false; // 재확인이 걸린 추천으로 흐름을 끝내지 않는다
   return (rec.confidence ?? 0) >= EARLY_STOP_CONFIDENCE;
 }

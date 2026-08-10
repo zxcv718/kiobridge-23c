@@ -14,7 +14,8 @@ import { loadChickenFixture } from "./helpers";
 import { buildChickenContext } from "../src/core/canonical";
 import { buildRecommendation } from "../src/core/engine";
 import {
-  allergensAnswered, canStopAsking, preferenceAxisAsked, shouldSafetyStop, isUnresolved,
+  allergensAnswered, canStopAsking, preferenceAxisAsked, hasDefinitePreference,
+  allPreferenceAxesAsked, shouldSafetyStop, isUnresolved,
   EARLY_STOP_CONFIDENCE, MAX_RECONFIRM_ATTEMPTS,
 } from "../src/core/ask";
 
@@ -123,6 +124,39 @@ describe("안 물어봐서 생긴 확신 — confidence 단독 판정의 함정"
   it("수량·컵은 변별 축으로 치지 않는다", () => {
     const { ctx } = recFor({ allergies: [], quantity: 2, cupOption: "종이컵" });
     expect(preferenceAxisAsked(ctx)).toBe(false);
+  });
+
+  /* '상관없어요'로 생긴 확신도 같은 함정이다.
+     NO_PREFERENCE 는 definite() 가 false 라 그 축이 모든 후보에 같은 중립점을 주고,
+     결국 가격만 남아 confidence 가 최대가 된다 — 물어보긴 했지만 후보를 가르지는 못했다. */
+
+  it("맵기를 '상관없어요'로 답하면 confidence 가 치솟는다 (함정의 실재)", () => {
+    const { rec } = recFor({ allergies: ["땅콩", "콩"], spicyLevel: "상관없음" });
+    expect(rec.confidence).toBeGreaterThanOrEqual(EARLY_STOP_CONFIDENCE);
+  });
+
+  it("그런데도 후보를 가르는 답이 하나도 없으면 멈추지 않는다", () => {
+    // 형태·이용방식을 한 번도 묻지 않은 채 '매운 뼈'를 확정해서는 안 된다
+    const { rec, ctx } = recFor({ allergies: ["땅콩", "콩"], spicyLevel: "상관없음" });
+    expect(hasDefinitePreference(ctx)).toBe(false);
+    expect(canStopAsking(rec, ctx)).toBe(false);
+  });
+
+  it("변별 축을 전부 물었으면 답이 모두 '상관없어요'여도 멈출 수 있다", () => {
+    // 더 물어봐야 새로 알 것이 없다 — 사용자가 세 축 모두 양보 가능하다고 말했다
+    const { ctx } = recFor({
+      allergies: [], spicyLevel: "상관없음", boneType: "상관없음", serviceType: "상관없음",
+    });
+    expect(hasDefinitePreference(ctx)).toBe(false);
+    expect(allPreferenceAxesAsked(ctx)).toBe(true);
+    expect(canStopAsking(fakeRec(0.95), ctx)).toBe(true);
+  });
+
+  it("확실한 선호가 하나라도 있으면 나머지 축을 안 물었어도 멈출 수 있다", () => {
+    const { ctx } = recFor({ allergies: [], spicyLevel: "매운맛" });
+    expect(hasDefinitePreference(ctx)).toBe(true);
+    expect(allPreferenceAxesAsked(ctx)).toBe(false);
+    expect(canStopAsking(fakeRec(0.9), ctx)).toBe(true);
   });
 });
 
