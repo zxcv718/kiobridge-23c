@@ -2,7 +2,7 @@ import React from "react";
 import { useFlow } from "../flow";
 import { GROUP_KO, OPTION_KO } from "../model";
 import { buildExecutionPlanCore, explainSelections } from "../../../src/core/plan";
-import { buildUiSubmission, candidateName, candidatePrice } from "../logic";
+import { candidateName, candidatePrice } from "../logic";
 
 /**
  * 화면목록 S13 — 장바구니(최종) 확인.
@@ -17,7 +17,7 @@ import { buildUiSubmission, candidateName, candidatePrice } from "../logic";
 export function CartReview() {
   const {
     uiRec, fixture, live, sessionInput, setSessionInput, runSimulation,
-    setStep, openEdit, setSubmitted, manual, staffBtn,
+    setStep, openEdit, confirmOffline, staffBtn,
   } = useFlow();
   if (!uiRec || !fixture) return null;
 
@@ -82,10 +82,7 @@ export function CartReview() {
         <div className="btnrow">
           <button type="button" className="btn ghost" onClick={() => setStep("recommend")}>← 되돌아가기</button>
           {/* 체험 모드에서도 주문은 끝까지 간다 — 계획을 만들어 보관하고 결과 화면에서 그 결말을 보여준다. */}
-          <button type="button" className="btn primary" onClick={() => {
-            setSubmitted(buildUiSubmission(uiRec, fixture, true, manual));
-            setStep("result");
-          }}>주문 확정하기</button>
+          <button type="button" className="btn primary" onClick={confirmOffline}>주문 확정하기</button>
           {staffBtn()}
         </div>
       )}

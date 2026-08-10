@@ -212,13 +212,38 @@ export function useFlowState() {
     goRecommend(computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle), fixture, now));
   };
 
-  /** 토글 = 즉시 반영: 켜는 순간 저장되고, 끄면 저장본이 삭제된다 (사용자 기대와 일치). */
-  const toggleStore = () => {
-    const next = !storeToggle;
+  /**
+   * 저장 «의사»를 정한다. 켜면 그 자리에서 남길 수 있는 만큼 남기고, 끄면 즉시 지운다.
+   *
+   * 묻는 자리가 주문 전(S03)으로 옮겨지면서 «묻는 시점»과 «남길 것이 갖춰지는 시점»이
+   * 갈렸다. 프로필 단계에서는 아직 고른 메뉴가 없으므로, 그때 저장하면 답변과 화면
+   * 설정만 남고 `lastCandidateId` 가 비어 «지난번과 똑같이 주문하기» 가 성립하지 않는다.
+   * 그래서 의사만 여기서 받고, 주문이 확정되는 순간 finishOrder 가 다시 남긴다.
+   */
+  const setStoreIntent = (next: boolean) => {
     setStoreToggle(next);
     if (next) persist();
     else { try { localStorage.removeItem(STORAGE_KEY); } catch { /* 무시 */ } setSaved(null); }
     if (uiRec) setUiRec({ ...uiRec, raw: { ...uiRec.raw, storeProfile: next } }); // retentionPolicy에 반영
+  };
+  /** 토글 버튼용 — 지금 값의 반대로 뒤집는다. */
+  const toggleStore = () => setStoreIntent(!storeToggle);
+
+  /**
+   * 주문이 확정됐다. 저장하기로 해 두었으면 **이 시점에** 다시 남긴다 —
+   * 이제 확정된 메뉴가 있으므로 다음 방문에 그대로 되살릴 수 있다.
+   */
+  const finishOrder = () => { if (storeToggle) persist(); };
+
+  /**
+   * 서버가 없는 환경(외부 배포본)의 «주문 확정하기».
+   * 실행 대신 계획을 만들어 보관하고 결과 화면으로 간다 — 지나는 자리는 실행 경로와 같다.
+   */
+  const confirmOffline = () => {
+    if (!fixture || !uiRec) return;
+    setSubmitted(buildUiSubmission(uiRec, fixture, true, manual));
+    finishOrder();
+    setStep("result");
   };
 
   const runSimulation = async () => {
@@ -229,6 +254,7 @@ export function useFlowState() {
       const r = await runOnSimulator(submission, sessionInput || undefined, (label) => setRunLog((l) => [...l, label]));
       setSubmitted(submission);
       setOutcome(r);
+      finishOrder();
       setStep("result");
     } catch (e) {
       setRunError(String((e as Error)?.message ?? e));
@@ -264,7 +290,8 @@ export function useFlowState() {
     setSubmitted, setErrResults, setStoreToggle, setEditOpen, setReconfirmCount,
     setProbeStep, setProbeResult,
     t, staffBtn, nextToAsk, advance, startWizard, startFromSaved, applyPreset, deleteSaved,
-    openEdit, applyEditAndRecommend, toggleStore, runSimulation, goRecommend,
+    openEdit, applyEditAndRecommend, toggleStore, setStoreIntent, finishOrder,
+    confirmOffline, runSimulation, goRecommend,
   };
 }
 
