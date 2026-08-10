@@ -155,18 +155,24 @@ test.describe("A계열 — 프로필 흐름", () => {
     await expect(page.getByRole("button", { name: /음성/ })).toHaveCount(0);
   });
 
-  test("A5 「화면 글씨 맞춰보기」 문답이 1단계에 남아 있고 결과가 반영된다", async ({ page }) => {
+  test("A5 「화면 글씨 맞춰보기」 문답은 글씨 크기만 정한다", async ({ page }) => {
     await toProfile(page);
     await page.getByRole("button", { name: "화면 글씨 맞춰보기" }).click();
     await page.getByRole("button", { name: "조금 작아요" }).click();
     await page.getByRole("button", { name: "조금 작아요" }).click();
     await page.getByRole("button", { name: "잘 보여요" }).click();
 
-    await expect(page.getByText(/큰 글씨·고대비·그림 안내를 켰습니다/)).toBeVisible();
     const app = page.locator(".app");
     await expect(app).toHaveClass(/large/);
-    await expect(app).toHaveClass(/contrast/);
-    await expect(app).toHaveClass(/icons/);
+
+    /* 한때 마지막 단계에서 고대비·그림 안내까지 함께 켰다. 고대비는 **바로 다음 걸음의
+       질문**이고 화면 안내는 그 다음 걸음의 질문인데, 1단계 문답이 손을 뻗어 대신 답해
+       버리면 글씨 크기를 고르던 사람 눈앞에서 화면이 통째로 반전된다. 실제로 그렇게
+       보고됐다. 신호는 «권유 문장»으로 넘기고, 켜는 것은 사용자가 한다. */
+    await expect(app, "묻지도 않고 고대비를 켰습니다").not.toHaveClass(/contrast/);
+    await expect(app, "묻지도 않고 그림 안내를 켰습니다").not.toHaveClass(/icons/);
+    await expect(page.getByText(/다음 단계에서 고대비 화면/)).toBeVisible();
+
     // 문답 결과가 1단계 라디오에도 그대로 비친다 (두 곳이 같은 값을 본다)
     await expect(radio(page, "큰 글씨")).toContainText("선택됨");
   });

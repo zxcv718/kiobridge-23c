@@ -117,9 +117,13 @@ export function ProfileSetup() {
           {probeResult !== null && (
             <span className="hint">
               {probeResult === 0 && "기본 크기로 두었습니다."}
-              {probeResult === 1 && "큰 글씨를 켰습니다."}
-              {probeResult === 2 && "큰 글씨·고대비·그림 안내를 켰습니다."}
+              {probeResult !== 0 && "큰 글씨를 켰습니다."}
               {" "}위에서 언제든 바꾸실 수 있습니다.
+              {/* 가장 크게 해도 부족했다면 글씨 외의 도움이 필요할 수 있다. 다만 그것을
+                  여기서 대신 켜지는 않는다 — 바로 다음 걸음에서 여쭤볼 질문이다. */}
+              {probeResult === 2 && (
+                <> 글씨를 가장 크게 해도 불편하시면, <b>다음 단계에서 고대비 화면</b>도 함께 보시겠어요?</>
+              )}
             </span>
           )}
         </div>

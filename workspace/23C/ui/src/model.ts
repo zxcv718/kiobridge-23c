@@ -76,11 +76,23 @@ export const A11Y_ITEMS: { key: keyof A11y; label: string; effect: string }[] = 
 export const PROBE_SIZES = ["1em", "1.4em", "1.9em"];
 export const PROBE_SAMPLE = "매운 순살 닭강정 6,000원";
 
-/** 단계별 산출값 — 더 키워야 보인다는 것은 글씨 외의 도움도 필요하다는 신호로 본다. */
+/**
+ * 단계별 산출값 — **글씨 크기만** 정한다.
+ *
+ * 한때 마지막 단계에서 고대비·그림 안내까지 함께 켰다. «가장 크게 해도 안 보이면 글씨
+ * 외의 도움도 필요하다»는 추론이었고, 설정이 한 화면에 토글로 몰려 있던 때는 그럭저럭
+ * 통했다. 프로필을 세 걸음으로 나눈 뒤로는 아니다 — 고대비는 2단계, 화면 안내는 3단계에서
+ * **곧 물어볼 질문**인데, 1단계의 문답이 손을 뻗어 대신 답해 버리는 꼴이 된다.
+ * 글씨 크기를 고르던 사람 눈앞에서 화면이 통째로 반전되니 놀랄 수밖에 없다.
+ *
+ * 「가장 크게 해도 부족하다」는 신호 자체는 버리지 않는다. 켜 주는 대신 **다음 단계에서
+ * 고대비를 권하는 문장**으로 넘긴다(ProfileSetup 의 probeResult === 2 안내).
+ * 무엇을 주문할지도, 화면을 어떻게 볼지도 사용자가 정한다.
+ */
 export const PROBE_RESULT: Partial<A11y>[] = [
   { largeText: false },
   { largeText: true },
-  { largeText: true, highContrast: true, visualGuidance: true },
+  { largeText: true },
 ];
 
 /** 오류 주입 시연 — 공식 7종 전부(API_CONTRACT). 한국어 제목이 기본, 코드는 참조용 병기. */

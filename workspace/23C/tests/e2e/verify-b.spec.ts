@@ -101,7 +101,7 @@ test.describe("B계열 — 신규 동작", () => {
       .toContainText("실행 계획이 만들어지지 않았고, 장바구니에도 아무것도 담기지 않았습니다");
   });
 
-  test("B5 화면 글씨 문답이 접근성 설정을 산출한다", async ({ page }) => {
+  test("B5 화면 글씨 문답은 글씨 크기만 정하고, 나머지는 권유에 그친다", async ({ page }) => {
     await start(page);
     await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
     await page.getByRole("button", { name: "화면 글씨 맞춰보기" }).click();
@@ -109,11 +109,17 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: "조금 작아요" }).click();
     await page.getByRole("button", { name: "잘 보여요" }).click();
 
-    await expect(page.getByText(/큰 글씨·고대비·그림 안내를 켰습니다/)).toBeVisible();
-    // 실제로 반영됐는지 — 루트 클래스로 확인
-    await expect(page.locator(".app")).toHaveClass(/large/);
-    await expect(page.locator(".app")).toHaveClass(/contrast/);
-    await expect(page.locator(".app")).toHaveClass(/icons/);
+    const app = page.locator(".app");
+    await expect(app).toHaveClass(/large/);
+    // 아직 묻지 않은 것(고대비·화면 안내)을 대신 답해 버리지 않는다
+    await expect(app, "묻지도 않고 고대비를 켰습니다").not.toHaveClass(/contrast/);
+    await expect(app, "묻지도 않고 그림 안내를 켰습니다").not.toHaveClass(/icons/);
+    await expect(page.getByText(/다음 단계에서 고대비 화면/)).toBeVisible();
+
+    // 다음 걸음에서 사용자가 직접 켜면 그때 적용된다
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await page.getByRole("button", { name: /고대비 화면/ }).click();
+    await expect(app).toHaveClass(/contrast/);
   });
 
   test("B6 v3 저장본이 살아남고 v4 키로 옮겨진다", async ({ page }) => {
