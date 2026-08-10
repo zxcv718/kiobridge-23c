@@ -1,12 +1,12 @@
 {
   "evidenceVersion": "1.2",
-  "runId": "RUN-chicken-store-20260810172711-13a4tn",
-  "sessionId": "SIM-20260810-446",
+  "runId": "RUN-chicken-store-20260810185808-zbo6c0",
+  "sessionId": "SIM-20260810-689",
   "teamId": "23C",
   "environmentId": "chicken-store",
   "fixtureVersion": "chicken-store@0.2.0",
-  "submissionHash": "sha-fnv1a-acda90dd",
-  "createdAt": "2026-08-10T17:27:11.342Z",
+  "submissionHash": "sha-fnv1a-22329703",
+  "createdAt": "2026-08-10T18:58:08.474Z",
   "driverId": "SIMULATION",
   "driverStatus": "READY",
   "dataClassification": {
@@ -89,7 +89,7 @@
   "userDecision": {
     "approved": true,
     "decision": "APPROVE",
-    "confirmedAt": "2026-08-10T17:26:49.004Z"
+    "confirmedAt": "2026-08-10T18:58:07.719Z"
   },
   "executionPlan": [
     {
