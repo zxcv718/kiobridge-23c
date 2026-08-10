@@ -92,10 +92,20 @@ test.describe("레인 C — 질문 화면", () => {
   test("C-L2 그림이 붙은 선택지에도 글자가 반드시 남는다", async ({ page }) => {
     await openWizard(page, { visualGuidance: true });
 
-    // 「없어요」에는 디자인 아이콘(safe)이 깔린다
-    expect(await iconOf(page, 1)).toMatch(/safe[-.\w]*\.svg/);
-    // 그림만 두지 않는다 — 글자가 함께 있어야 한다
-    await expect(page.locator(".choices .choice").nth(0)).toHaveText(/없어요/);
+    /* 알레르기는 이모지로 통일했다 — 항목마다 다른 음식이라 이모지가 실제로 구별을 돕고,
+       여기에 Figma 방패(safe)를 하나만 섞으면 «없어요»가 다른 종류처럼 보인다. */
+    expect(await iconOf(page, 1)).not.toBe("");
+
+    // 그림만 두지 않는다 — 그림이 붙은 **모든** 선택지에 글자가 함께 있어야 한다
+    const rows = await page.locator(".choices .choice").evaluateAll((els) =>
+      els.map((e) => ({
+        hasMark: !!e.querySelector(".ico") || !!e.querySelector(".kb-marks"),
+        text: (e as HTMLElement).innerText.replace(/\s+/g, " ").trim(),
+      })));
+    expect(rows.length).toBeGreaterThan(3);
+    for (const r of rows) {
+      if (r.hasMark) expect(r.text, "그림만 있고 글자가 없는 선택지가 있습니다").not.toBe("");
+    }
   });
 
   test("C-L3 매핑에 없는 선택지는 이모지를 그대로 쓴다", async ({ page }) => {
@@ -110,16 +120,29 @@ test.describe("레인 C — 질문 화면", () => {
     await expect(page.locator(".choices .choice").nth(1).locator(".ico")).toHaveText("🥜");
   });
 
-  test("C-L4 뼈·순살·포장·매장·매운맛에 디자인 아이콘이 붙는다", async ({ page }) => {
+  test("C-L4 종류에는 그림, 정도에는 같은 표식의 개수", async ({ page }) => {
     await openWizard(page, { visualGuidance: true });
-
     await pick(page, 1); // 알레르기 없어요
-    // 맵기 — 매운맛(3번째)
+
+    /* 맵기는 «정도»다. 서로 다른 그림을 쓰면 «더 매운 것»이 아니라 «다른 종류»로 읽힌다 —
+       실제로 그렇게 보였다(보통맛에 빨간 고추, 매운맛에 불꽃). 디자인대로 **같은 불꽃을
+       개수로** 쓴다: 순한맛 0 · 보통맛 1 · 매운맛 3 (Figma 99:1264). */
     await expect(page.locator("#qtitle")).toHaveText(/맵기/);
-    expect(await iconOf(page, 3)).toMatch(/hot[-.\w]*\.svg/);
+    const flames = await page.locator(".choices .choice").evaluateAll((els) =>
+      els.map((e) => ({
+        label: (e as HTMLElement).innerText.replace(/\s+/g, "").trim(),
+        n: e.querySelectorAll(".kb-marks img").length,
+        srcs: [...e.querySelectorAll(".kb-marks img")].map((i) => (i as HTMLImageElement).src),
+      })));
+    expect(flames.map((f) => f.n)).toEqual([0, 1, 3, 0]);
+    // 개수가 뜻을 만들려면 표식이 같아야 한다
+    expect(new Set(flames.flatMap((f) => f.srcs)).size,
+      "표식이 서로 다르면 개수가 정도를 뜻하지 못합니다").toBe(1);
+    // 그림은 거드는 신호일 뿐 — 순서는 글자가 말한다
+    expect(flames.map((f) => f.label)).toEqual(["순한맛", "보통맛", "매운맛", "상관없어요"]);
     await pick(page, 3);
 
-    // 형태 — 순살(1번째) · 뼈(2번째)
+    /* 형태·이용 방식은 «종류»다 — 서로 다른 그림이 맞다. */
     await expect(page.locator("#qtitle")).toHaveText(/뼈와 순살/);
     expect(await iconOf(page, 1)).toMatch(/boneless[-.\w]*\.svg/);
     const bone = await iconOf(page, 2);
@@ -127,7 +150,6 @@ test.describe("레인 C — 질문 화면", () => {
     expect(bone).not.toMatch(/boneless/); // 뼈와 순살이 같은 그림을 쓰면 구분이 사라진다
     await pick(page, 1);
 
-    // 이용 방식 — 포장하기(1번째) · 먹고 가기(2번째)
     await expect(page.locator("#qtitle")).toHaveText(/어떻게/);
     expect(await iconOf(page, 1)).toMatch(/takeout[-.\w]*\.svg/);
     expect(await iconOf(page, 2)).toMatch(/here[-.\w]*\.svg/);

@@ -5,10 +5,14 @@
  * 이 파일이 하는 일은 셋뿐이다 — 모든 화면에 공통인 껍데기, **화면 하나를 고르는 표**,
  * 그리고 그 둘을 잇는 것.
  *
- * 껍데기가 얇아졌다. 예전에는 위쪽에 «큰 글씨 · 고대비 · 설정 더보기» 세 버튼이 늘
- * 떠 있었는데, 디자인에는 그런 바가 없고 실제로도 세 번째 자리였다 — 화면 설정은
- * 프로필 단계(S02)에서 정하고, 중간에 바꾸려면 «조건 수정»(S14)에서 바꾼다.
- * 첫 화면에 버튼 세 개를 미리 얹는 것은 이 서비스가 없애려는 부담 그 자체였다.
+ * 껍데기가 얇아졌다. 위쪽의 «큰 글씨 · 고대비 · 설정 더보기» 세 버튼도, 아래쪽의
+ * «시뮬레이션 — 실제 주문·결제 없음 · 지금은 늦은 시간» 도 없앴다. 디자인에 없고,
+ * 둘 다 화면마다 자리를 차지하면서 정작 필요한 순간에는 아무 일도 하지 않았다.
+ *
+ * 없앤 것이 사실을 숨기는 것은 아니다 — 시뮬레이션이라는 사실은 **주문을 확정하기
+ * 직전**(장바구니 확인)에 «실제 결제·주문은 일어나지 않습니다» 로 말한다. 그게 그 말이
+ * 필요한 자리다. 시간대(상황신호)도 화면에 띄우든 말든 sessionContext.extensions 에
+ * 출처(DEVICE_CLOCK)·관측시각과 함께 그대로 기록된다.
  *
  * 표를 `Record<Step, …>` 으로 둔 것은 실수를 타입이 잡게 하려는 것이다 —
  * Step 을 하나 늘리면 표에 넣기 전까지 컴파일이 되지 않는다.
@@ -16,7 +20,6 @@
  * 판단은 전부 core 가, 실행·검증·Evidence 는 전부 공식 서버가 한다.
  */
 import React from "react";
-import { TIME_SLOT_KO, timeSlotOf } from "../../src/core/context";
 import { FlowProvider, useFlowState } from "./flow";
 import type { Step } from "./model";
 
@@ -57,7 +60,7 @@ const SCREENS: Record<Step, React.ComponentType> = {
 
 export function App() {
   const flow = useFlowState();
-  const { step, a11y, runLog, now, demoHour, staffBtn } = flow;
+  const { step, a11y, runLog, staffBtn } = flow;
   const Screen = SCREENS[step];
 
   return (
@@ -89,13 +92,6 @@ export function App() {
 
           <Screen />
 
-          {/* 이것이 시뮬레이션이라는 사실은 숨기지 않는다. 다만 첫 화면 맨 위를
-              차지할 만큼 사용자에게 중요한 정보는 아니라 바닥에 둔다. */}
-          <footer className="foot">
-            <span>시뮬레이션 — 실제 주문·결제 없음</span>
-            <span aria-hidden="true"> · </span>
-            <span>지금은 {TIME_SLOT_KO[timeSlotOf(now)]}{demoHour !== null ? " (시연용 고정)" : ""}</span>
-          </footer>
         </div>
       </div>
     </FlowProvider>

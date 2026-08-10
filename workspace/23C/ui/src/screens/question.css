@@ -123,3 +123,8 @@ img.ico {
 @media (prefers-reduced-motion: reduce) {
   .calcspin { animation: none; }
 }
+
+/* 정도를 나타내는 표식 — 글자 **뒤에** 나란히 (Figma S07 «매운맛 🔥🔥🔥»).
+   글자 높이에 맞춰 커지므로 «큰 글씨»를 켜면 함께 커진다. */
+.kb-marks { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; vertical-align: middle; }
+.kb-marks img { height: 1.15em; width: auto; display: block; }

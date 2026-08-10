@@ -126,20 +126,30 @@ export interface Question {
  * 아니라 미수집이라 안전 정지도 안 걸린 채 알레르기 제외만 조용히 사라진다.
  * core/ask.ts 의 allergensAnswered 가 1차 방어선이고, 이 순서가 2차 방어선이다. */
 export const QUESTIONS: Question[] = [
+  /* 그림 규칙 — 두 가지를 지킨다.
+   *
+   * ① **정도가 아니라 종류에만 그림을 붙인다.** 맵기(순한→보통→매운)는 글자가 이미
+   *    순서로 말한다. 거기에 고추 그림을 얹으면 «보통맛»에 매운 신호가 붙어 훑어보는
+   *    사람에게 순서가 흐트러진다. 실제로 그렇게 보였다.
+   * ② **한 질문 안에서는 한 가지 언어만 쓴다.** 어떤 선택지만 Figma 도안이고 나머지가
+   *    이모지면, 그 하나가 «더 강한 것»이 아니라 «다른 종류»처럼 보인다.
+   *
+   * 「상관없어요」에는 그림을 두지 않는다 — 고르는 «것»이 아니라 고르지 않겠다는 답이다. */
   { key: "allergies", title: "피해야 하는 알레르기가 있으세요?", hint: "해당하는 것을 모두 눌러 주세요. 알레르기가 있는 메뉴는 점수를 깎는 게 아니라 아예 빼고 추천합니다.", multi: true, options: [
     { value: "없음", label: "없어요", icon: "✅" }, { value: "땅콩", label: "땅콩", icon: "🥜" }, { value: "콩", label: "콩(대두)", icon: "🫘" }, { value: "우유", label: "우유", icon: "🥛" },
     { value: "계란", label: "계란", icon: "🥚" }, { value: "밀", label: "밀", icon: "🌾" }, { value: "새우", label: "새우", icon: "🦐" }, { value: "모름", label: "잘 모르겠어요", icon: "❓" } ] },
+  // 정도(degree)라 그림을 두지 않는다 — 순한→보통→매운은 글자가 이미 순서로 말한다
   { key: "spicyLevel", title: "맵기는 어느 정도가 좋으세요?", options: [
-    { value: "순한맛", label: "순한맛", icon: "🥛" }, { value: "보통", label: "보통맛", icon: "🌶️" }, { value: "매운맛", label: "매운맛", icon: "🔥" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
+    { value: "순한맛", label: "순한맛" }, { value: "보통", label: "보통맛" }, { value: "매운맛", label: "매운맛" }, { value: "상관없음", label: "상관없어요" } ] },
   { key: "boneType", title: "뼈와 순살 중 어떤 것이 편하세요?", options: [
-    { value: "순살", label: "순살", icon: "🍗" }, { value: "뼈", label: "뼈", icon: "🦴" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
+    { value: "순살", label: "순살" }, { value: "뼈", label: "뼈" }, { value: "상관없음", label: "상관없어요" } ] },
   { key: "serviceType", title: "어떻게 이용하시겠어요?", options: [
-    { value: "포장", label: "포장하기", icon: "🥡" }, { value: "매장", label: "먹고 가기", icon: "🍽️" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
+    { value: "포장", label: "포장하기" }, { value: "매장", label: "먹고 가기" }, { value: "상관없음", label: "상관없어요" } ] },
   { key: "quantity", title: "몇 개 주문하시겠어요?", options: [
     { value: 1, label: "1개", icon: "1️⃣" }, { value: 2, label: "2개", icon: "2️⃣" }, { value: 3, label: "3개", icon: "3️⃣" } ] },
   { key: "cupOption", title: "컵이 필요하세요?", hint: "메뉴에 따라 선택할 수 있는 컵이 다릅니다.", options: [
     { value: "종이컵", label: "종이컵", icon: "🥤" }, { value: "일반컵", label: "일반컵", icon: "🥛" },
-    { value: "없음", label: "필요 없어요", icon: "🚫" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
+    { value: "없음", label: "필요 없어요", icon: "🚫" }, { value: "상관없음", label: "상관없어요" } ] },
   /* 5,000원이 있어야 하는 이유: 이 가게의 최저가가 5,500원(매운 뼈 닭강정)이다.
    * 선택지가 6,000원부터 시작하면 «조건에 맞는 메뉴가 없습니다»가 **어떤 답변으로도
    * 일어나지 않는다.** 그 화면과 엔진 경로는 이미 다 만들어 두었는데 사용자만 못 갔다.

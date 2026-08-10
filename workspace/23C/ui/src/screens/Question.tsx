@@ -2,10 +2,9 @@ import React from "react";
 import { useFlow } from "../flow";
 import { ChoiceGrid, Cta, Emphasize, Screen } from "../components";
 import { EDIT_LABELS, QUESTIONS, answerLabel } from "../model";
+import hotIcon from "../assets/icons/hot.svg";
 import "./question.css";
 
-import safeIcon from "../assets/icons/safe.svg";
-import hotIcon from "../assets/icons/hot.svg";
 import boneIcon from "../assets/icons/bone.svg";
 import bonelessIcon from "../assets/icons/boneless.svg";
 import takeoutIcon from "../assets/icons/takeout.svg";
@@ -28,9 +27,23 @@ import hereIcon from "../assets/icons/here.svg";
  *    붙이면 두 선택지가 똑같아 보여, 구분이 되던 것이 오히려 없어진다.
  *  · 수량·컵·예산은 디자인에 그림이 없다.
  */
+/**
+ * 정도를 «같은 표식의 개수»로 나타내는 자리 (Figma S07 99:1264).
+ * 순한맛 0 · 보통맛 1 · 매운맛 3 — 디자인 그대로다.
+ * 「상관없어요」는 디자인에 없는 우리 선택지이고, 고르는 «것»이 아니라 고르지 않겠다는
+ * 답이므로 표식을 두지 않는다.
+ */
+const DESIGN_MARK: Record<string, Record<string, { src: string; count: number }>> = {
+  spicyLevel: {
+    순한맛: { src: hotIcon, count: 0 },
+    보통: { src: hotIcon, count: 1 },
+    매운맛: { src: hotIcon, count: 3 },
+  },
+};
+
 const DESIGN_ICON: Record<string, Record<string, string>> = {
-  allergies: { 없음: safeIcon },
-  spicyLevel: { 매운맛: hotIcon },
+  /* 알레르기는 이모지로 둔다. 항목 하나하나가 서로 다른 음식이라 이모지가 실제로 구별을
+     돕는데, 여기에 Figma 방패(safe)를 하나만 섞으면 «없어요»가 다른 종류처럼 보인다. */
   boneType: { 뼈: boneIcon, 순살: bonelessIcon },
   serviceType: { 포장: takeoutIcon, 매장: hereIcon },
 };
@@ -118,7 +131,7 @@ export function QuestionScreen() {
 
       <div className={`q-choices q-${shape}`}>
         <ChoiceGrid q={q} answers={answers} setAnswers={setAnswers}
-          showIcons={a11y.visualGuidance} icons={DESIGN_ICON[q.key]} />
+          showIcons={a11y.visualGuidance} icons={DESIGN_ICON[q.key]} marks={DESIGN_MARK[q.key]} />
       </div>
 
       {carried.length > 0 && (
