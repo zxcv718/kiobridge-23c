@@ -8,41 +8,39 @@
  * 판정이 아니라 «판정을 낼 수 없다는 사실»이 화면에 남아 있는지가 검사 대상이다.
  */
 import { expect, test, type Page } from "@playwright/test";
+import { answerWizard, approveToCartReview, enterWizard, finishOrder as goFinish, openHome } from "./nav";
 
-const start = async (page: Page) => {
-  await page.goto("http://localhost:5173/");
-  await page.evaluate(() => localStorage.clear());
-  await page.reload();
-  await expect(page.getByRole("heading", { name: /닭강정 가게 주문/ })).toBeVisible();
-};
+const start = openHome;
 
 /**
- * 시연 프리셋으로 추천 화면까지 간다.
+ * 질문 7개를 답해 추천 화면까지 간다.
  *
- * 마법사를 한 문항씩 누르지 않는 이유는 «빠르니까»가 아니다. 이 레인이 검사하는 것은
- * 추천 **이후**의 네 화면인데, 앞단(홈·프로필·질문)은 다른 레인이 동시에 고치고 있어
- * 거기서 나는 실패가 이 화면들의 실패로 보이게 된다. 프리셋은 입력만 채우고 추천은
- * 같은 엔진이 그 자리에서 계산하므로, 여기 도달한 뒤의 화면은 마법사 경로와 같다.
+ * 예전에는 시연 프리셋 버튼 하나로 갔지만 그 카드를 없앴다. 이제는 사용자와 **같은 길**을
+ * 걷는다 — 느리지만, 앞단이 깨지면 여기서도 깨지는 편이 낫다. 프리셋으로 건너뛰면
+ * 「추천 이후는 멀쩡한데 거기 갈 수가 없는」 상태를 못 잡는다.
  */
-async function toRecommend(page: Page, preset: RegExp) {
-  await page.getByRole("button", { name: preset }).click();
+const CASE = {
+  /** 땅콩 알레르기 · 매운맛 · 순살 · 포장 · 1개 · 종이컵 · 7,000원 — 정상 경로 */
+  normal: ["땅콩", "매운맛", "순살", "포장하기", "1개", "종이컵", "7,000원"],
+  /** 알레르기 없음 · 순한맛 · 순살 · 먹고 가기 · 2개 · 일반컵 · 예산 없음 — 수량 2개 */
+  twoQty: ["없어요", "순한맛", "순살", "먹고 가기", "2개", "일반컵", "없어요"],
+  /** 예산 5,000원 — 이 가게 최저가(5,500원)보다 낮아 조건에 맞는 메뉴가 없다 */
+  noMatch: ["없어요", "매운맛", "순살", "포장하기", "1개", "상관없어요", "5,000원"],
+  /** 알레르기를 «잘 모르겠어요» — 임의로 판단하지 않고 재확인을 요구한다 */
+  unknown: ["잘 모르겠어요", "매운맛", "순살", "포장하기", "1개", "상관없어요", "없어요"],
+} as const;
+
+async function toRecommend(page: Page, picks: readonly string[]) {
+  await enterWizard(page);
+  await answerWizard(page, [...picks]);
 }
 
-/** 추천 → 장바구니 확인(S13). 프리셋 «박순자»는 조건을 전부 말한 정상 경로다. */
 async function toCartReview(page: Page) {
-  await toRecommend(page, /박순자/);
-  // 추천 → 메뉴 확인 → 장바구니 확인 (통합에서 앞으로 가는 길이 이어졌다)
-  await page.getByRole("button", { name: "네, 좋아요" }).click();
-  await page.getByRole("button", { name: "이대로 담기" }).click();
-  await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+  await toRecommend(page, CASE.normal);
+  await approveToCartReview(page);
 }
 
-/** 주문을 확정해 결과 화면까지 간다 (라이브면 실행, 아니면 체험 모드 확정). */
-async function finishOrder(page: Page) {
-  const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });
-  await ((await live.count()) > 0 ? live : page.getByRole("button", { name: /주문 확정하기/ })).click();
-  await expect(page.getByRole("heading", { name: /실행 결과|주문이 완성되었습니다/ })).toBeVisible({ timeout: 20_000 });
-}
+const finishOrder = goFinish;
 
 test.describe("D계열 — 확인·수정·결과", () => {
   /* ───────── 메뉴 확인 (신규 · Figma 99:1762) ───────── */
@@ -97,7 +95,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D4 장바구니 확인의 값이 실행계획과 어긋나지 않는다 (총 가격 = 단가 × 수량)", async ({ page }) => {
     await start(page);
     // 수량 2개인 프리셋 — 곱셈이 실제로 일어나는 경우로 잰다
-    await toRecommend(page, /김영호/);
+    await toRecommend(page, CASE.twoQty);
     await page.getByRole("button", { name: "네, 좋아요" }).click();
     await page.getByRole("button", { name: "이대로 담기" }).click();
     await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
@@ -113,7 +111,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
   test("D4b 원한 값을 못 맞춘 옵션은 대체했다고 밝힌다", async ({ page }) => {
     await start(page);
-    await toRecommend(page, /박순자/);
+    await toRecommend(page, CASE.normal);
     await page.getByRole("button", { name: "조건 수정" }).click();
 
     // 매운맛 + 뼈 로 바꾸면 «매운 뼈 닭강정»이 뽑히는데, 그 메뉴에는 일반컵이 없다
@@ -144,7 +142,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
   test("D6 수정 화면에서 글씨 크기·고대비·화면 안내를 바로 바꿀 수 있다", async ({ page }) => {
     await start(page);
-    await toRecommend(page, /박순자/);
+    await toRecommend(page, CASE.normal);
     await page.getByRole("button", { name: "조건 수정" }).click();
 
     const app = page.locator(".app");
@@ -163,9 +161,9 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D7 수정 화면에는 조건을 고쳐 다시 추천받는 길이 남아 있다", async ({ page }) => {
     await start(page);
     // 조건에 맞는 메뉴가 없는 경우 — 여기서 빠져나갈 길이 사라지면 막다른 길이 된다
-    await toRecommend(page, /예산 5,000원/);
-    await expect(page.getByRole("heading", { name: /조건에 맞는 메뉴가 없습니다/ })).toBeVisible();
-    await page.getByRole("button", { name: "조건 수정하기" }).click();
+    await toRecommend(page, CASE.noMatch);
+    await expect(page.getByRole("heading", { name: /조건에 맞는 메뉴가 없어요/ })).toBeVisible();
+    await page.getByRole("button", { name: /조건 수정/ }).click();
 
     await page.getByRole("button", { name: /^예산/ }).click();
     await page.getByRole("button", { name: "없어요", exact: true }).click();
@@ -199,7 +197,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await finishOrder(page);
     await page.getByRole("button", { name: /이 기기에 저장/ }).click();
 
-    const box = page.locator("section.savebox");
+    const box = page;
     await expect(box.getByText("메뉴명")).toBeVisible();
     await expect(box.getByText("알레르기")).toBeVisible();
     await expect(box.getByText("맵기 선호")).toBeVisible();
@@ -211,14 +209,26 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await toCartReview(page);
     await finishOrder(page);
 
+    /* 예전에는 «저장 안내 카드(section.savebox)보다 위인가»로 쟀다. 결과 화면이 카드를
+       쌓지 않게 되면서 그 기준점 자체가 없어졌다 — 저장 결과는 이제 본문에 한 줄로
+       녹아 있다. 지키려던 것은 «어느 카드보다 위»가 아니라 **끝까지 내려가지 않아도
+       닿는다**였으므로, 이제 그것을 직접 잰다. 직원 도움은 화면 아래에 붙는 CTA
+       (.kb-actions, position:sticky)에 있어 내용이 아무리 길어도 첫 화면 안에 남는다. */
+    const view = page.viewportSize()!;
+    const scroll = await page.evaluate(() => ({
+      over: document.documentElement.scrollHeight - window.innerHeight,
+      y: window.scrollY,
+    }));
+    expect(scroll.y, "이 검사는 스크롤하지 않은 상태에서 재야 합니다").toBe(0);
+    expect(scroll.over, "결과 화면이 한 화면에 들어와 이 검사가 무의미합니다").toBeGreaterThan(0);
+
     const staff = page.getByRole("button", { name: "직원 도움" }).first();
     await expect(staff).toBeVisible();
     const s = await staff.boundingBox();
-    const save = await page.locator("section.savebox").boundingBox();
     expect(s).not.toBeNull();
-    expect(save).not.toBeNull();
-    // 저장 안내 카드보다 위에 있어야 한다 — 예전에 화면 맨 아래로 밀려난 회귀가 있었다
-    expect(s!.y).toBeLessThan(save!.y);
+    expect(s!.y, "직원 도움이 첫 화면 위로 넘어갔습니다").toBeGreaterThanOrEqual(0);
+    expect(s!.y + s!.height, `직원 도움이 첫 화면(${view.height}px) 밖으로 밀렸습니다 — 끝까지 내려가야 닿습니다`)
+      .toBeLessThanOrEqual(view.height);
   });
 
   test("D11 내려받기 두 파일의 방향 안내와 오류 주입 7종이 그대로 있다", async ({ page }) => {
@@ -234,23 +244,39 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
     await finishOrder(page);
     await expect(page.locator(".dlnote")).toContainText("서로 다른 파일입니다");
-    await expect(page.locator(".errpanel .choice")).toHaveCount(7);
+
+    /* 오류 주입 7종은 «정상 결과»를 먼저 읽은 사람이 스스로 여는 자리로 내려갔다
+       (.errpanel → details.resmore). **없앤 것이 아니라 접은 것**이므로, 접혀 있다는
+       이유로 세지 않고 끝내면 정말 사라진 날에도 통과한다. 열어서 일곱 개가
+       실제로 눌리는 자리에 있는지까지 본다. */
+    const inject = page.locator("details.resmore", {
+      has: page.locator("summary", { hasText: "일부러 틀려 보기" }),
+    });
+    await expect(inject).toHaveCount(1);
+    await inject.locator("summary").click();
+    await expect(inject.locator(".choices .choice")).toHaveCount(7);
+    await expect(inject.locator(".choices .choice").first()).toBeVisible();
   });
 
   /* ───────── S12 안전 중단 (Figma 99:1337) ───────── */
 
   test("D12 안전 중단 화면은 직원 도움이 첫 번째 버튼이다", async ({ page }) => {
     await start(page);
-    await toRecommend(page, /알레르기를 모르는 경우/);
+    await toRecommend(page, CASE.unknown);
     await expect(page.getByText(/확실하지 않은 정보가 있어요/)).toBeVisible();
 
     await page.getByRole("button", { name: "조건 수정" }).click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
 
     await expect(page.getByRole("heading", { name: /확인이 어려워/ })).toBeVisible();
-    await expect(page.getByText(/주문 준비는 시작되지 않았습니다/)).toBeVisible();
+    /* «아무 준비도 시작되지 않았다»를 두 군데서 두 번 하던 말이 한 덩어리(.stopalert)로
+       합쳐졌다. 문구가 옮겨 간 자리에서 같은 사실을 잰다. */
+    await expect(page.locator(".stopalert"))
+      .toContainText("실행 계획이 만들어지지 않았고, 장바구니에도 아무것도 담기지 않았습니다");
 
-    const first = page.locator(".btnrow button").first();
+    /* 버튼은 .btnrow 가 아니라 화면 아래 붙는 CTA(.kb-actions)에 있다 — 자리만 옮겼을 뿐
+       «직원 도움이 첫 번째»라는 이 화면의 존재 이유는 그대로 검사한다. */
+    const first = page.locator(".kb-actions button").first();
     await expect(first).toHaveText("직원 도움");
   });
 });

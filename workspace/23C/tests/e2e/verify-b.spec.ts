@@ -93,12 +93,17 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: "조건 수정" }).click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
     await expect(page.getByRole("heading", { name: /확인이 어려워/ })).toBeVisible();
-    await expect(page.getByText(/주문 준비는 시작되지 않았습니다/)).toBeVisible();
+    /* «아무 준비도 시작되지 않았다»는 안심은 그대로 있다 — 다만 배너 하나와 문단 하나로
+       두 번 하던 말을 한 덩어리(.stopalert)로 합쳤다. 문구가 바뀐 자리에서 같은 사실을
+       잰다: 승인 전이므로 실행 계획도, 장바구니도 없다. */
+    await expect(page.locator(".stopalert")).toContainText("정상적으로 끝난 것이 아닙니다");
+    await expect(page.locator(".stopalert"))
+      .toContainText("실행 계획이 만들어지지 않았고, 장바구니에도 아무것도 담기지 않았습니다");
   });
 
   test("B5 화면 글씨 문답이 접근성 설정을 산출한다", async ({ page }) => {
     await start(page);
-    await page.getByRole("button", { name: "화면·안내 설정" }).click();
+    await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
     await page.getByRole("button", { name: "화면 글씨 맞춰보기" }).click();
     await page.getByRole("button", { name: "조금 작아요" }).click();
     await page.getByRole("button", { name: "조금 작아요" }).click();
@@ -122,7 +127,7 @@ test.describe("B계열 — 신규 동작", () => {
       }));
     });
     await page.reload();
-    await expect(page.getByRole("heading", { name: /지난번 기록이 있어요/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
     await expect(page.getByText(/땅콩/)).toBeVisible();
 
     const moved = await page.evaluate(() => ({
@@ -182,7 +187,7 @@ test.describe("B계열 — 신규 동작", () => {
     await expect(page.getByRole("heading", { name: "이 기기에 저장했습니다" })).toBeVisible();
 
     await page.getByRole("button", { name: "처음으로" }).first().click();
-    await expect(page.getByRole("heading", { name: /지난번 기록이 있어요/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
 
     // 저장된 것은 카드 하나에만 모인다 — "새로 시작"이 여러 곳에 흩어지지 않는다
     await expect(page.locator("section[aria-label='이 기기에 저장된 기록']")).toHaveCount(1);
@@ -198,9 +203,13 @@ test.describe("B계열 — 신규 동작", () => {
      수기 검토(MANUAL_REVIEW) 대상이라 선언과 화면이 어긋나면 그 자체가 감점이다. */
   test("C1 선언한 접근성 채널이 전부 화면을 실제로 바꾼다", async ({ page }) => {
     await start(page);
-    await page.getByRole("button", { name: "화면·안내 설정" }).click();
+    await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
+    /* 설정 목록은 프로필 3/3 의 «자세한 설정» 안에 있다 — 상단바 토글이 없어지면서
+       여기가 8종에 닿는 유일한 자리가 됐다. 선언한 채널이 화면에서 닿지 않으면
+       «없는 기능을 있다고 말한 것»이 되므로, 이 검사는 그 자리까지 걸어가서 잰다. */
+    for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "필요한 안내 방식을 선택해주세요" })).toBeVisible();
 
-    // 상단바 토글과 이름이 겹치므로 설정 목록(.a11ylist) 안으로 범위를 좁힌다
     const app = page.locator(".app");
     const row = (name: string) => page.locator(".a11ylist .a11yrow", { hasText: name });
 
@@ -223,7 +232,11 @@ test.describe("B계열 — 신규 동작", () => {
     await expect(page.locator(".staffbar")).toBeVisible(); // STAFF_HELP
 
     await row("소리 없이 보기").click();
-    await page.getByRole("button", { name: "설정 마치기" }).click();
+    /* «설정 마치기»는 없어졌다 — 프로필은 이제 세 걸음짜리 흐름이라 나가는 문이
+       «다음»(앞으로)과 «뒤로»뿐이다. 소리 안내 고지는 홈에 붙으므로 왔던 길을 되짚는다
+       (3/3 → 2/3 → 1/3 → 홈). 켠 설정은 화면 상태에 남아 홈까지 따라온다. */
+    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "뒤로", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요|다시 오셨네요/ })).toBeVisible();
     await expect(page.getByText(/소리 안내를 사용하지 않습니다/)).toBeVisible(); // HEARING_SUPPORT
   });
 
@@ -243,7 +256,8 @@ test.describe("B계열 — 신규 동작", () => {
     await start(page);
     await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
     for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
-    await page.getByRole("button", { name: "다음", exact: true }).click(); // S03 → QR
+    // S03 은 라디오+«다음»이 아니라 저장 방식 CTA 를 고르는 순간 QR 로 간다
+    await page.getByRole("button", { name: "이번만 사용하기" }).click();
 
     await expect(page.getByRole("heading", { name: /매장 QR|QR을 읽을 수 없습니다/ })).toBeVisible();
 

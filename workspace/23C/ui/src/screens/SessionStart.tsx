@@ -1,8 +1,8 @@
 import React from "react";
 import { useFlow } from "../flow";
-import { FLOW_STEPS, QUESTIONS, answerLabel} from "../model";
+import { FLOW_STEPS, QUESTIONS, answerLabel } from "../model";
 import { candidateName } from "../logic";
-import { Card, Cta, Header, StepIndicator } from "../components";
+import { Card, Cta, Emphasize, Screen } from "../components";
 import "./profile.css";
 
 /**
@@ -15,6 +15,10 @@ import "./profile.css";
  * 디자인은 지난 주문이 있는 경우(네/아니오)만 그렸다. 프로필만 새로 만들고 온 사람에게는
  * 되살릴 주문이 없으므로, 그때는 방금 정한 화면 설정을 확인시키고 한 갈래로만 보낸다.
  * 없는 «지난 주문» 카드를 빈 채로 그리지 않는다.
+ *
+ * **카드는 한 장이다.** 지난 주문이 있을 때 화면 설정까지 카드로 또 세우면 디자인의
+ * 넓은 여백이 사라지고, 정작 확인받아야 할 «지난 주문»이 둘 중 하나로 묻힌다. 화면
+ * 설정은 바로 앞 화면(S03)에서 이미 카드로 확인했으므로 여기서는 한 줄로만 되짚는다.
  */
 export function SessionStart() {
   const {
@@ -24,6 +28,7 @@ export function SessionStart() {
   /* 저장 «의사»만 있고 답변이 없는 저장본이 있을 수 있다 — S03 에서 저장하기를 고르면
      그 자리에서 화면 설정만 먼저 남기기 때문이다. 그건 «지난 주문»이 아니다. */
   const prev = saved && QUESTIONS.some((q) => saved.answers[q.key] !== undefined) ? saved : null;
+  const storeName = fixture?.manifest.displayName ?? fixture?.manifest.name ?? "";
 
   /**
    * 처음부터 새로 고르기.
@@ -39,58 +44,66 @@ export function SessionStart() {
     if (keep) setStoreToggle(true);
   };
 
+  /** 이번에 적용된 화면 설정 한 줄 — 카드를 한 장 더 세우지 않고 되짚기만 한다. */
+  const settingLine = [
+    a11y.largeText ? "큰 글씨" : "기본 크기",
+    a11y.highContrast ? "고대비 화면" : "기본 화면",
+    a11y.visualGuidance ? "그림 안내 켬" : "그림 안내 끔",
+    a11y.preferredInput === "ASSISTED" ? "옆에서 도와주기" : "직접 누르기",
+    storeToggle ? "이 기기에 저장" : "이번만 사용",
+  ].join(" · ");
+
   return (
-    <>
-      <StepIndicator labels={FLOW_STEPS} current={5} />
-      <section className="card" aria-label="세션 시작">
-        <Header onBack={() => setStep("saveChoice")} />
-
-        <h2>{prev ? "이전 주문과 동일하게 준비해드릴까요?" : "이제 주문을 시작할게요"}</h2>
-        <p className="hint">
-          {prev
-            ? "지난번에 주문하신 내용이에요. 그대로 하실지, 새로 고르실지 정해 주세요."
-            : "방금 맞추신 화면 설정으로 진행합니다. 메뉴는 몇 가지 여쭤보고 함께 골라 드릴게요."}
-        </p>
-
-        {prev && fixture && (
-          <>
-            <p className="p-cap">지난 주문</p>
-            <Card
-              label="지난 주문 내용"
-              rows={[
-                ...(prev.lastCandidateId ? [{ label: "메뉴명", value: candidateName(fixture, prev.lastCandidateId) }] : []),
-                { label: "알레르기", value: answerLabel("allergies", prev.answers.allergies) },
-                { label: "맵기 선호", value: answerLabel("spicyLevel", prev.answers.spicyLevel) },
-                { label: "뼈/순살 선택", value: answerLabel("boneType", prev.answers.boneType) },
-                { label: "수량", value: answerLabel("quantity", prev.answers.quantity) },
-              ]}
-            />
+    <Screen
+      onBack={() => setStep("saveChoice")}
+      steps={{ labels: FLOW_STEPS, current: 5 }}
+      label="세션 시작"
+      title={prev
+        ? <Emphasize text="이전 주문과 동일하게 준비해드릴까요?" word="동일하게" />
+        : <Emphasize text="이제 주문을 시작할게요" word="주문" />}
+      subtitle={prev
+        ? "지난번에 주문하신 내용이에요. 그대로 하실지, 새로 고르실지 정해 주세요."
+        : "방금 맞추신 화면 설정으로 진행합니다. 메뉴는 몇 가지 여쭤보고 함께 골라 드릴게요."}
+      actions={<>
+        {prev
+          ? <>
+            <Cta tone="primary" label="네, 지난번과 같게" onClick={startFromSaved} disabled={!fixture} />
+            <Cta label="아니오, 새로 고를게요" onClick={beginFresh} disabled={!fixture} />
           </>
-        )}
-
-        <p className="p-cap">이번 화면 설정</p>
-        <Card
-          label="이번에 적용된 화면 설정"
-          rows={[
-            { label: "글씨 크기", value: a11y.largeText ? "큰 글씨" : "기본 크기" },
-            { label: "고대비", value: a11y.highContrast ? "고대비 화면" : "기본 화면" },
-            { label: "화면 안내", value: a11y.visualGuidance ? "안내 켜짐" : "기본" },
-            { label: "입력 방식", value: a11y.preferredInput === "ASSISTED" ? "옆에서 도와주기" : "직접 누르기" },
-            { label: "저장 방식", value: storeToggle ? "이 기기에 저장" : "이번만 사용" },
-          ]}
-        />
-
-        <div className="btnrow">
-          {prev
-            ? <>
-              <Cta tone="primary" label="네, 지난번과 같게" onClick={startFromSaved} disabled={!fixture} />
-              <Cta label="아니오, 새로 고를게요" onClick={beginFresh} disabled={!fixture} />
-            </>
-            : <Cta tone="primary" label="주문 시작하기" onClick={beginFresh} disabled={!fixture} />}
-          <Cta label="처음으로" onClick={() => setStep("start")} />
-          {staffBtn()}
-        </div>
-      </section>
-    </>
+          : <Cta tone="primary" label="주문 시작하기" onClick={beginFresh} disabled={!fixture} />}
+        {staffBtn()}
+      </>}
+    >
+      {prev && fixture ? (
+        <>
+          <p className="p-cap">지난 주문{storeName ? ` · ${storeName}` : ""}</p>
+          <Card
+            label="지난 주문 내용"
+            rows={[
+              ...(prev.lastCandidateId ? [{ label: "메뉴명", value: candidateName(fixture, prev.lastCandidateId) }] : []),
+              { label: "알레르기", value: answerLabel("allergies", prev.answers.allergies) },
+              { label: "맵기 선호", value: answerLabel("spicyLevel", prev.answers.spicyLevel) },
+              { label: "뼈/순살 선택", value: answerLabel("boneType", prev.answers.boneType) },
+              { label: "수량", value: answerLabel("quantity", prev.answers.quantity) },
+            ]}
+          />
+          <p className="p-note">이번 화면 설정 — {settingLine}</p>
+        </>
+      ) : (
+        <>
+          <p className="p-cap">이번 화면 설정</p>
+          <Card
+            label="이번에 적용된 화면 설정"
+            rows={[
+              { label: "글씨 크기", value: a11y.largeText ? "큰 글씨" : "기본 크기" },
+              { label: "고대비", value: a11y.highContrast ? "고대비 화면" : "기본 화면" },
+              { label: "화면 안내", value: a11y.visualGuidance ? "안내 켜짐" : "기본" },
+              { label: "입력 방식", value: a11y.preferredInput === "ASSISTED" ? "옆에서 도와주기" : "직접 누르기" },
+              { label: "저장 방식", value: storeToggle ? "이 기기에 저장" : "이번만 사용" },
+            ]}
+          />
+        </>
+      )}
+    </Screen>
   );
 }

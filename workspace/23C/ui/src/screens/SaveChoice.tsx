@@ -1,7 +1,7 @@
 import React from "react";
 import { useFlow } from "../flow";
 import { FLOW_STEPS } from "../model";
-import { Card, Cta, Header, RadioCard, StepIndicator } from "../components";
+import { Card, Cta, Emphasize, Screen } from "../components";
 import "./profile.css";
 
 /**
@@ -16,13 +16,14 @@ import "./profile.css";
  * 남긴다. 프로필 단계에는 아직 고른 메뉴가 없어서 여기서만 저장하면
  * «지난번과 똑같이 주문하기»가 성립하지 않는다(flow.tsx 의 setStoreIntent 참고).
  *
- * 디자인은 «저장하기 / 이번만 사용» 두 개의 CTA 다. 우리는 그것을 라디오 두 장으로
- * 바꾸고 이동은 «다음»이 맡는다. 매장 QR 이 없을 때 건너뛰는 길이 반드시 필요해서
- * 버튼이 셋이 되는데, 그러면 «저장을 정하는 일»과 «어디로 가는 일»이 한 줄에 섞여
- * 무엇을 고른 상태인지 화면에 남지 않는다. 라디오는 고른 것이 계속 보인다.
+ * 디자인대로 **결정이 곧 버튼이다** — «저장하기»·«이번만 사용» 두 개가 저장 방식을 정하고
+ * 그대로 다음 화면으로 보낸다. 한때 이것을 라디오 두 장 + «다음»으로 바꿔 두었는데, 그건
+ * 매장 QR 을 건너뛰는 세 번째 버튼이 이 화면에 필요하다고 봤기 때문이다. 건너뛰기는 QR
+ * 화면(S04) 안에 이미 있으므로 여기 둘 이유가 없었다. 버튼이 둘이면 «무엇을 고른
+ * 상태인지»를 화면에 남길 필요도 없다 — 누르는 순간 정해지고 화면을 떠난다.
  */
 export function SaveChoice() {
-  const { a11y, storeToggle, setStoreIntent, setProfileStep, setStep, staffBtn } = useFlow();
+  const { a11y, setStoreIntent, setProfileStep, setStep, staffBtn } = useFlow();
 
   /** 요약 한 줄 — 값과 «수정»(진짜 버튼)을 함께 준다 (Figma SummaryCard 185:209). */
   const row = (label: string, value: string, to: 1 | 2 | 3) => ({
@@ -36,51 +37,36 @@ export function SaveChoice() {
     ),
   });
 
+  /** 저장 방식을 정하고 그대로 다음 화면으로 — 결정과 이동이 같은 버튼이다. */
+  const choose = (store: boolean) => { setStoreIntent(store); setStep("qr"); };
+
   return (
-    <>
-      <StepIndicator labels={FLOW_STEPS} current={3} />
-      <section className="card" aria-label="저장 방식">
-        <Header onBack={() => setStep("profile")} />
+    <Screen
+      onBack={() => setStep("profile")}
+      steps={{ labels: FLOW_STEPS, current: 3 }}
+      label="저장 방식"
+      title={<Emphasize text="선택하신 내용을 확인해주세요" word="확인" />}
+      subtitle="고치실 것이 있으면 «수정»을 눌러 그 단계로 돌아가실 수 있습니다."
+      actions={<>
+        <Cta tone="primary" label="이 기기에 저장하기" onClick={() => choose(true)} />
+        <Cta label="이번만 사용하기" onClick={() => choose(false)} />
+        {staffBtn()}
+      </>}
+    >
+      <Card
+        label="지금 화면 설정"
+        rows={[
+          row("글씨 크기", a11y.largeText ? "큰 글씨" : "기본 크기", 1),
+          row("고대비", a11y.highContrast ? "고대비 화면" : "기본 화면", 2),
+          row("화면 안내", a11y.visualGuidance ? "안내 켜짐" : "기본", 3),
+        ]}
+      />
 
-        <h2>선택하신 내용을 확인해주세요</h2>
-        <p className="hint">고치실 것이 있으면 «수정»을 눌러 그 단계로 돌아가실 수 있습니다.</p>
-
-        <Card
-          label="지금 화면 설정"
-          rows={[
-            row("글씨 크기", a11y.largeText ? "큰 글씨" : "기본 크기", 1),
-            row("고대비", a11y.highContrast ? "고대비 화면" : "기본 화면", 2),
-            row("화면 안내", a11y.visualGuidance ? "안내 켜짐" : "기본", 3),
-          ]}
-        />
-
-        <h3 className="p-subhead">저장 방식을 선택해주세요</h3>
-        <div className="kb-radios" role="group" aria-label="저장 방식">
-          <RadioCard
-            label="이 기기에 저장하기"
-            desc="다음에 오시면 이 설정과 주문 내용을 그대로 되살려 드립니다"
-            selected={storeToggle}
-            onPick={() => setStoreIntent(true)}
-          />
-          <RadioCard
-            label="이번만 사용"
-            desc="이용이 끝나면 이 기기에 아무것도 남기지 않습니다"
-            selected={!storeToggle}
-            onPick={() => setStoreIntent(false)}
-          />
-        </div>
-        <p className="p-note">
-          여러 사람이 쓰는 기기라면 <b>이번만 사용</b>을 권합니다. 저장하시더라도 홈 화면에서 언제든 내용을 확인하고
-          지우실 수 있고, 저장 여부는 이 화면에서만 여쭤봅니다.
-        </p>
-
-        <div className="btnrow">
-          <Cta tone="primary" label="다음" onClick={() => setStep("qr")} />
-          <Cta label="매장 QR 없이 계속하기" onClick={() => setStep("sessionStart")} />
-          <Cta label="처음으로" onClick={() => setStep("start")} />
-          {staffBtn()}
-        </div>
-      </section>
-    </>
+      <p className="p-cap">저장 방식을 선택해주세요</p>
+      <p className="p-note">
+        저장하시면 다음에 오셨을 때 그대로 되살려 드리고, 홈 화면에서 언제든 지우실 수 있습니다.
+        {" "}여러 사람이 쓰는 기기라면 <b>이번만 사용하기</b>를 권합니다.
+      </p>
+    </Screen>
   );
 }

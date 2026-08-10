@@ -1,11 +1,15 @@
 /* 확인·수정·결과 화면 전용 스타일 — Figma S12(99:1337) · 메뉴확인(99:1762) ·
  * S13(99:1798) · S14(114:2008) · S15(99:1830) 에서 옮긴 것.
  *
+ * 화면의 바깥 틀은 여기 없다. 뒤로가기 → 인사말 → 큰 제목 → 부제 → 넓은 여백 →
+ * 아래 붙는 CTA 는 전부 `Screen` 부품과 components.css 의 `.kb-screen` 것이다.
+ * 이 파일은 **그 안에 들어가는 덩어리**만 그린다.
+ *
  * 색은 **의미 이름만** 쓴다(--fg --card --line --line-soft --brand-strong --warn …).
  * 원시 토큰(--kb-…)을 여기서 직접 쓰면 고대비 모드가 그것만 못 갈아끼워
  * 검은 배경에 밝은 배경용 색이 남는다 — styles.css 의 배선을 반드시 거친다.
  *
- * 그대로 옮기지 않은 것 셋:
+ * 그대로 옮기지 않은 것 넷:
  *
  * ① **글자를 얹는 강조색은 --brand 가 아니라 --brand-strong 이다.**
  *    디자인의 강조 글씨는 #fa520f 인데 흰 배경에서 3.3:1 로 본문 기준(4.5)에 못 미친다.
@@ -18,16 +22,23 @@
  * ③ **체크 동그라미는 장식이다.**
  *    ✓ 만으로 «누가 정했는지»를 말하지 않는다. 그 뜻은 옆 문장이 전한다
  *    (.sellist .so) — 동그라미에는 aria-hidden 을 건다.
+ *
+ * ④ **디자인에 없는 상태를 하나 더 그린다.**
+ *    디자인의 «✓ 포장해 갈게요» 줄은 전부 같은 모양이다. 우리는 사용자가 고른 줄만
+ *    그렇게 두고, **우리가 정했거나 바꾼 줄**은 상자로 띄운다. 그 줄들이 이 화면이
+ *    존재하는 이유라서, 다른 줄과 똑같이 흐르면 화면의 요점이 사라진다.
  */
 
 /* ───────── 공통: 구분선·캡션·카드 안 카드 ───────── */
 .cart-div { border: 0; border-top: 1px solid var(--line-soft); margin: 18px 0; }
 .cart-cap { color: var(--muted); font-size: 0.78em; font-weight: 700; margin: 0 0 8px; }
+/* 같은 캡션이 절 제목으로 쓰일 때 — 앞 덩어리와 사이를 벌린다 (Figma 의 33px gap) */
+h3.cart-cap { margin: 22px 0 8px; font-size: 0.78em; }
 
-/* 추천카드 (Figma 114:1976 / 114:2129) — 카드 안에 한 겹 더 들어가는 상자 */
+/* 추천카드 (Figma 114:1976 / 114:2129) — 화면 안에 들어가는 상자 한 겹 */
 .cart-box {
   border: 1.5px solid var(--line-soft); border-radius: 12px; background: var(--card); color: var(--fg);
-  padding: 18px; margin: 6px 0 0;
+  padding: 18px; margin: 6px 0 0; box-shadow: var(--kb-shadow-card);
 }
 .cart-menuline { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .cart-name { font-size: 1.2em; font-weight: 800; word-break: keep-all; }
@@ -41,18 +52,38 @@
 .cart-total span { color: var(--muted); font-size: 0.82em; font-weight: 700; }
 .cart-total b { font-size: 1.5em; font-weight: 800; }
 
-/* ───────── S13 선택 목록 — 디자인의 ✓ 행을 우리 .sellist 에 얹는다 ─────────
- * 값과 출처(USER·AUTO·SUBSTITUTED)를 지우지 않고 앞에 표식 한 칸을 더한다. */
-.sellist.cart-sel li { grid-template-columns: 22px 5.5em auto 1fr; }
+/* 본문 안의 보조 버튼 — 화면 아래 CTA 와 섞이지 않게 한 줄을 다 쓰지 않는다 */
+.cart-alt { margin-top: 10px; }
+.cart-foot { margin: 18px 0 0; }
+/* 선택 목록의 읽는 법 — 줄마다 반복하는 대신 여기서 한 번만 말한다 */
+.cart-legend { color: var(--muted); font-size: 0.82em; margin: 0 0 4px; word-break: keep-all; }
+
+/* ───────── S13 선택 목록 (Figma 114:2116 «order option») ─────────
+ * 디자인의 «✓ + 한 문장» 줄에 출처 한 줄을 더한 것. 고른 대로인 줄은 테두리 없이
+ * 흐르고(디자인 그대로), 우리가 정했거나 바꾼 줄만 상자가 된다 — ④. */
+.sellist.cart-sel { margin: 0; }
+.sellist.cart-sel li {
+  grid-template-columns: 20px 1fr;
+  align-items: center;
+  gap: 2px 10px;
+  border: 0; background: none; border-radius: 0;
+  padding: 6px 0; margin: 0;
+}
+.sellist.cart-sel li[data-origin="AUTO"],
+.sellist.cart-sel li[data-origin="SUBSTITUTED"] {
+  border: 1.5px solid var(--warn); background: var(--warn-weak);
+  border-radius: var(--kb-radius-sm); padding: 12px 14px; margin: 8px 0;
+}
+/* 값과 사유는 표식 오른쪽 한 칸에 모인다 — 좁은 화면에서 값이 동그라미 밑으로 내려가지 않게 */
+.cart-selmain { grid-column: 2; margin: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sellist.cart-sel .so { grid-column: 2; margin: 0; }
+.sellist.cart-sel .sg { font-size: 0.86em; }
 .cart-chk {
+  grid-column: 1; align-self: center;
   display: flex; align-items: center; justify-content: center;
   width: 20px; height: 20px; border-radius: 999px;
   background: var(--fg); color: var(--card);
   font-size: 0.62em; font-weight: 800; line-height: 1;
-}
-@media (max-width: 560px) {
-  .sellist.cart-sel li { grid-template-columns: 22px 1fr; }
-  .sellist.cart-sel .so { grid-column: 1 / -1; }
 }
 
 /* ───────── 메뉴 확인 (신규 · Figma 99:1762) ───────── */
@@ -73,13 +104,49 @@
 /* ───────── S15 안내 (Figma 99:1830) ─────────
  * 저장 여부는 프로필 단계에서 이미 물었다. 여기는 «묻는 곳»이 아니라 «알리는 곳»이라
  * 강조 테두리를 주지 않는다 — 새 질문처럼 보이면 안 된다. */
+.resfact { font-size: 1.02em; font-weight: 800; margin: 26px 0 6px; }
 .savenote { color: var(--muted); font-size: 0.82em; margin: 12px 0 0; }
 .savenote b { color: var(--fg); }
 
+/* 접어 두는 절 — 실행 증거·내려받기와 오류 주입 7종.
+ * 없애지 않고 접는다. 결과 화면이 카드 세 장으로 늘어나던 원인이 이 둘이었고,
+ * 둘 다 «먼저 읽을 것»이 아니라 «확인하러 오는 것»이다.
+ * 여는 자리(summary)에 cursor:pointer 가 붙으므로 48px 보증을 함께 건다. */
+.resmore {
+  border: 1.5px solid var(--line-soft); border-radius: var(--kb-radius-md);
+  background: var(--card); margin: 14px 0 0;
+}
+.resmore > summary {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 56px; padding: 12px 16px; cursor: pointer;
+  font-size: 0.92em; font-weight: 800; color: var(--fg);
+  list-style: none; word-break: keep-all;
+}
+.resmore > summary::-webkit-details-marker { display: none; }
+/* 접힘/펼침을 삼각형 하나로만 말하지 않는다 — 글자도 함께 바뀐다 */
+.resmore > summary::after { content: "▼ 열기"; margin-left: auto; font-size: 0.8em; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.resmore[open] > summary::after { content: "▲ 닫기"; }
+.resmore[open] > summary { border-bottom: 1.5px solid var(--line-soft); }
+.resbody { padding: 4px 16px 16px; }
+.resbody .btnrow { margin-top: 14px; }
+/* 오류 주입 7종은 이름·설명·판정이 한 칸에 다 들어가야 뜻이 선다 — 폰 폭에서 2열로
+   쪼개지 않는다(예전 .errpanel .choices 가 하던 일을 접힌 절 안에서 이어받는다). */
+.resmore .choices { grid-template-columns: 1fr; }
+
 /* ───────── S12 안전 중단 (Figma 99:1337) ─────────
  * 디자인은 가운데 정렬 + 일러스트다. 일러스트는 assets/icons/ 에 없어 그리지 않았다
- * (없는 그림을 손으로 만들면 디자인과 다른 것이 된다). 정렬과 순서만 옮긴다. */
-.stopwrap { text-align: center; }
-.stopwrap .btnrow { justify-content: center; }
-.stoplabel { color: var(--brand-strong); font-weight: 800; letter-spacing: 0.08em; font-size: 0.82em; margin: 6px 0 2px; }
-.stopsub { font-size: 0.94em; }
+ * (없는 그림을 손으로 만들면 디자인과 다른 것이 된다). 정렬과 순서만 옮긴다.
+ *
+ * 가운데 정렬을 `Screen` 에 옵션으로 넣지 않고 여기서 건다. Screen 은 열여섯 화면이
+ * 함께 쓰는 부품이라, 화면 하나가 필요로 하는 변형 때문에 손잡이를 늘리면
+ * 다음 사람이 «어떤 화면이 어떤 조합을 쓰는지»를 다시 세어야 한다. */
+.kb-screen:has(.stopwrap) .kb-screen-body {
+  display: flex; flex-direction: column; justify-content: center;
+  text-align: center;
+}
+.stoplabel { color: var(--brand-strong); font-weight: 800; letter-spacing: 0.08em; font-size: 1.05em; }
+.stopalert {
+  border: 1.5px solid var(--warn); background: var(--warn-weak); color: var(--fg);
+  border-radius: 12px; padding: 14px 18px; margin: 0;
+  font-size: 0.88em; line-height: 1.6; text-align: left; word-break: keep-all;
+}

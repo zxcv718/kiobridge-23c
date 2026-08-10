@@ -1,7 +1,7 @@
 import React from "react";
 import type { Candidate } from "@kiobridge/participant-sdk";
 import { useFlow } from "../flow";
-import { Header } from "../components";
+import { Cta, Emphasize, Screen } from "../components";
 import { GROUP_KO, OPTION_KO } from "../model";
 import { buildExecutionPlanCore, explainSelections, type PlanSelection } from "../../../src/core/plan";
 import { candidateName, candidatePrice } from "../logic";
@@ -10,12 +10,20 @@ import "./cart.css";
 /**
  * 화면목록 S13 — 장바구니(최종) 확인 (Figma 99:1798).
  *
+ * 레이아웃은 디자인 그대로다 — 매장 이름(캡션) → 메뉴 카드 → 구분선 → 주문 방식 →
+ * 구분선 → 총 가격 → 넓은 여백 → 화면 아래 CTA. 그 뼈대는 `Screen` 이 들고 있으므로
+ * 이 파일은 **무엇을 담을지만** 정한다.
+ *
  * 실제로 만들어질 실행계획을 그대로 읽어 보여준다 — 화면과 계획이 어긋날 수 없다.
  * 필수 옵션은 "상관없어요"여도 하나가 정해지므로 그 사실을 숨기지 않고,
  * 각 값이 어떻게 정해졌는지(USER·AUTO·SUBSTITUTED)를 구분해 밝힌다.
  *
  * 디자인의 값(매운맛 닭강정 · 17,800원 · "옵션: 매운맛, 뼈")은 목업이라 쓰지 않는다.
  * 메뉴·가격은 fixture 에서, 옵션 목록은 **실행계획에서** 읽는다.
+ *
+ * 디자인은 메뉴 카드 안에 "옵션: 매운맛, 뼈" 한 줄을 넣었지만 우리는 넣지 않는다.
+ * 그 한 줄로는 «누가 정했는가»를 말할 수 없고, 아래 목록과 값이 두 벌이 되어
+ * 어느 쪽이 진짜인지 모르게 된다. 카드는 메뉴와 성분만 말하고, 옵션은 목록이 맡는다.
  *
  * 이 화면에서는 주문만 확인한다. 저장 얘기는 여기 없다 — 뒷사람 눈치가 최고조인
  * 순간에 다음 방문에 관한 판단을 시키지 않는다(저장 여부는 프로필 단계에서 물었고,
@@ -50,26 +58,39 @@ export function josa(word: string, withJong: string, withoutJong: string): strin
 /** 디자인의 «주문 방식» 절에 들어가는 그룹. 나머지는 «메뉴 옵션»이다. */
 const WAY_GROUPS = new Set(["SERVICE_TYPE", "CUP"]);
 
+/**
+ * 선택 한 절 — 디자인의 «✓ 포장해 갈게요» 줄(114:2117)에 출처 한 줄을 더한 것.
+ *
+ * 고른 대로인 줄은 디자인처럼 테두리 없이 흐른다. 우리가 정했거나 바꾼 줄만
+ * 상자가 되어 눈에 걸린다 — 이 화면이 존재하는 이유가 그 줄들이기 때문이다.
+ */
 function SelList({ title, items }: { title: string; items: PlanSelection[] }) {
   if (items.length === 0) return null;
   return (
     <>
-      <h3 className="selhead">{title}</h3>
+      <h3 className="cart-cap">{title}</h3>
       <ul className="sellist cart-sel">
         {items.map((x) => (
           <li key={x.groupId} data-origin={x.origin}>
             {/* 표식은 장식이다 — 누가 정했는지는 아래 문장이 말한다 */}
             <span className="cart-chk" aria-hidden="true">{x.origin === "USER" ? "✓" : "!"}</span>
-            <span className="sg">{GROUP_KO[x.groupId] ?? x.groupId}</span>
-            <span className="sv">{OPTION_KO[x.id] ?? x.id}</span>
-            <span className="so">
-              {x.origin === "USER" && "고르신 대로"}
-              {x.origin === "AUTO" && "상관없다고 하셔서 이 메뉴의 값으로 정했습니다"}
-              {x.origin === "SUBSTITUTED" && (() => {
-                const want = OPTION_KO[x.wanted!] ?? x.wanted ?? "";
-                return `원하신 ${want}${josa(want, "은", "는")} 이 메뉴에 없어 바꿨습니다`;
-              })()}
-            </span>
+            <p className="cart-selmain">
+              <span className="sg">{GROUP_KO[x.groupId] ?? x.groupId}</span>
+              <b className="sv">{OPTION_KO[x.id] ?? x.id}</b>
+              {/* 고른 대로인 줄은 «고르신 대로»를 눈에 보이게 반복하지 않는다 — 다섯 줄이
+                  같은 말을 하면 정작 다른 줄(우리가 정한 것)이 묻힌다. 눈으로는 상자가
+                  없다는 것이 신호이고, 화면 낭독기에는 줄마다 이 문장이 그대로 나간다. */}
+              {x.origin === "USER" && <span className="srline">고르신 대로</span>}
+            </p>
+            {x.origin !== "USER" && (
+              <p className="so">
+                {x.origin === "AUTO" && "상관없다고 하셔서 이 메뉴의 값으로 정했습니다"}
+                {x.origin === "SUBSTITUTED" && (() => {
+                  const want = OPTION_KO[x.wanted!] ?? x.wanted ?? "";
+                  return `원하신 ${want}${josa(want, "은", "는")} 이 메뉴에 없어 바꿨습니다`;
+                })()}
+              </p>
+            )}
           </li>
         ))}
       </ul>
@@ -124,11 +145,38 @@ export function CartReview() {
   const inMenu = candidate?.attributes?.allergenIds ?? [];
   const free = declared.filter((a) => ALLERGEN_KO[a] && !inMenu.includes(a)).map((a) => ALLERGEN_KO[a]);
 
+  const store = (fixture.manifest as { displayName?: string }).displayName ?? fixture.manifest.environmentId;
+  /* 확실하지 않은 정보가 남아 있으면 여기서도 확정할 수 없다 — 메뉴 확인 화면과 같은 계약이다.
+     이 화면만 빠져나가는 길이 되면 «임의로 판단하지 않는다»는 선언이 거짓이 된다. */
+  const blocked = uiRec.rec.requiresReconfirmation;
+
   return (
-    <section className="card">
-      {/* 뒤로가기는 «메뉴 확인»으로 간다 — 추천 → 메뉴 확인 → 장바구니 확인 순서의 한 칸 앞이다 */}
-      <Header title="마지막으로 확인해 주세요" onBack={() => setStep("menuConfirm")} backLabel="뒤로" />
-      <p className="cart-cap">{(fixture.manifest as { displayName?: string }).displayName ?? fixture.manifest.environmentId}</p>
+    <Screen
+      label="장바구니 확인"
+      /* 뒤로가기는 «메뉴 확인»으로 간다 — 추천 → 메뉴 확인 → 장바구니 확인 순서의 한 칸 앞이다 */
+      onBack={() => setStep("menuConfirm")}
+      eyebrow={store}
+      title={<Emphasize text="마지막으로 확인해 주세요" word="확인" />}
+      /* 디자인에는 부제가 없다. 대신 우리는 예전에 카드 하나를 통째로 쓰던 «결제는
+         일어나지 않습니다» 안내를 여기에 녹였다 — 화면 한 장이 한 가지를 말하려면
+         같은 뜻의 덩어리를 여러 개 쌓지 않아야 한다. */
+      subtitle="장바구니 확인까지만 진행합니다 — 실제 결제·주문은 일어나지 않습니다."
+      actions={(
+        <>
+          {/* 체험 모드에서도 주문은 끝까지 간다 — 계획을 만들어 보관하고 결과 화면에서 그 결말을 보여준다. */}
+          <Cta tone="primary" disabled={blocked}
+            label={live ? "가상 키오스크에서 실행" : "주문 확정하기"}
+            onClick={live ? runSimulation : confirmOffline} />
+          <Cta label="수정하기" onClick={openEdit} />
+          {staffBtn()}
+        </>
+      )}
+    >
+      {blocked && (
+        <p className="banner warn" role="alert">
+          확실하지 않은 정보가 있어요. 임의로 판단하지 않습니다 — «수정하기»에서 조건을 확인해 주시거나, 직원 도움을 이용해 주세요.
+        </p>
+      )}
 
       <div className="cart-box">
         <p className="cart-cap">메뉴</p>
@@ -146,12 +194,19 @@ export function CartReview() {
       </div>
 
       <hr className="cart-div" />
+      {/* 줄마다 «고르신 대로»를 반복하는 대신, 한 번만 말한다. 상자로 띄운 줄이
+          무엇인지 여기서 밝히므로 «강조된 것이 왜 강조됐는지»가 색에만 기대지 않는다. */}
+      <p className="cart-legend">
+        {need.length === 0
+          ? "모두 고르신 그대로입니다."
+          : "아래 강조된 항목은 저희가 정했거나 바꾼 것입니다 — 항목마다 이유를 적었습니다."}
+      </p>
       <SelList title="주문 방식" items={way} />
       <SelList title="메뉴 옵션" items={opt} />
       {need.length > 0 && (
-        <div className="btnrow" style={{ marginTop: 4 }}>
-          <button type="button" className="btn ghost" onClick={() => setStep("recommend")}>다른 메뉴 보기</button>
-        </div>
+        <button type="button" className="btn ghost cart-alt" onClick={() => setStep("recommend")}>
+          다른 메뉴 보기
+        </button>
       )}
 
       <hr className="cart-div" />
@@ -160,23 +215,14 @@ export function CartReview() {
         <b>{(unit * qty).toLocaleString()}원</b>
       </div>
 
-      <div className="banner ok">가상 키오스크에서 장바구니 확인까지만 진행합니다. <b>실제 결제·주문은 일어나지 않습니다.</b></div>
       {live && (
         <label className="field">공식 시뮬레이터 세션에 제출하기 (선택 — 시뮬레이터 화면의 세션 ID 입력)
           <input value={sessionInput} onChange={(e) => setSessionInput(e.target.value)} placeholder="예: SIM-20260806-003 (비우면 새 세션)" />
         </label>
       )}
       {!simple && !live && (
-        <p className="hint">주문을 확정하면 키오스크에서 밟게 될 단계를 계획으로 만들어 보여드립니다.</p>
+        <p className="hint cart-foot">주문을 확정하면 키오스크에서 밟게 될 단계를 계획으로 만들어 보여드립니다.</p>
       )}
-      <div className="btnrow">
-        <button type="button" className="btn ghost" onClick={openEdit}>수정하기</button>
-        {/* 체험 모드에서도 주문은 끝까지 간다 — 계획을 만들어 보관하고 결과 화면에서 그 결말을 보여준다. */}
-        <button type="button" className="btn primary" onClick={live ? runSimulation : confirmOffline}>
-          {live ? "가상 키오스크에서 실행" : "주문 확정하기"}
-        </button>
-        {staffBtn()}
-      </div>
-    </section>
+    </Screen>
   );
 }

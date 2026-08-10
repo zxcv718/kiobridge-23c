@@ -3,23 +3,31 @@
  * Figma: 99:1228 · 99:1246 (S06 알레르기) · 99:1264 (S07 맵기) · 99:1270 (S08 뼈/순살)
  *        99:1281 (S09 포장/매장) · 99:1292 (S10 수량) · 99:1239 (S11 로딩)
  *
+ * 화면의 뼈대(뒤로가기 → 진행 표시 → 인사말 → 제목 → 여백 → 아래 붙는 CTA)는
+ * `Screen` 부품과 components.css 가 쥔다. 여기 있는 것은 **이 화면들에만** 필요한
+ * 나머지뿐이다.
+ *
  * 색은 여기서 정하지 않는다 — styles.css 가 배선해 둔 의미 이름(--fg/--card/--muted/
  * --brand/--brand-weak/--line …)만 쓴다. 원시 토큰은 색이 아닌 것(간격·모서리·그림자)에만
  * 쓰는데, 그것들은 고대비 모드가 갈아끼우는 대상이 아니라서 의미 층이 없기 때문이다
  * (components.css 도 같은 규칙을 따른다).
  */
 
-/* ───────── 안내 문구 (Figma 99:1680 «안내텍스트») ─────────
- * 디자인은 «고객님,» 한 줄을 두고 그 아래 질문을 큰 글씨로 둔다. */
-.qgreet { color: var(--muted); font-size: 0.9em; margin: 4px 0 2px; }
-
-/* 질문 제목 — 디자인은 한 문장 안에서 **핵심 어절만 28px**, 나머지를 22px 로 둔다.
- * model.ts 의 title 문자열은 이 레인이 고칠 수 없으므로, 문장을 쪼개지 않고
- * 핵심 어절의 위치만 찾아 <span> 으로 감싼다. 문장 자체는 그대로 남아야 한다 —
- * 조각 사이에 공백이 끼면 낭독기에서 «알레르기 가 있으세요»로 끊겨 읽힌다
- * (tests/e2e/lane-c.spec.ts C-L1 이 문장 전체를 통째로 비교한다). */
-.qhead { word-break: keep-all; line-height: var(--kb-line-height-tight); }
-.qhead .qkey { font-size: 1.24em; }
+/* ───────── 제목 위의 넓은 여백 (Figma 콘텐츠 프레임 pt-120) ─────────
+ *
+ * 시안은 헤더 아래를 120px 비우고 질문을 화면 중턱에서 시작한다. 그 여백은 원래
+ * `Screen` 의 몫이지만 components.css 는 이 레인이 고칠 수 없어서, «선택지가 있는
+ * 화면»만 :has() 로 골라 여기서 준다 (다른 레인 화면에는 닿지 않는다).
+ *
+ * 120px 을 그대로 박지 않고 뷰포트에 비례시킨다 — 알레르기처럼 선택지가 여덟 개인
+ * 질문에서 고정 여백은 화면 밖으로 밀어내기만 한다. 세로 스크롤은 생겨도 CTA 는
+ * 화면 아래에 붙어 있으므로(.kb-actions 의 sticky) «다음»을 찾아 내릴 일은 없다.
+ *
+ * :has() 를 모르는 브라우저에서는 이 줄만 무시되고 여백이 없어질 뿐, 깨지지 않는다. */
+.kb-screen:has(.q-choices) .kb-screen-body { padding-top: clamp(4px, 7vh, 60px); }
+/* 다만 선택지가 일곱 개를 넘으면(알레르기 여덟 개) 그 여백을 접는다. 목록이 길수록
+   위를 비워 두는 값이 커지는데, 그러면 첫 화면에서 보이는 선택지 수만 줄어든다. */
+.kb-screen:has(.q-choices .choice:nth-child(7)) .kb-screen-body { padding-top: 0; }
 
 /* ───────── 선택지 (Figma 38:1936 «아이콘 버튼» · 66:1774 «선택된 긴 버튼») ─────────
  *
@@ -27,7 +35,36 @@
  * 그 경계가 컨트롤을 알아보는 유일한 수단이라 WCAG 1.4.11 의 3:1 이 필요한데
  * #e5e5e5 는 흰 바탕에서 1.26:1 이다. styles.css 의 .choice 가 쓰는 --line 을 그대로 둔다
  * (tokens.css ③). 대신 디자인의 그림자는 그대로 가져온다. */
-.qchoices .choice { box-shadow: var(--kb-shadow-button); }
+.q-choices .choice { box-shadow: var(--kb-shadow-button); }
+.q-choices .choices { margin: 0; gap: 12px; }
+
+/* ── 목록형: 한 줄에 하나, 글자 가운데 (Figma 99:1246 · 99:1264) ──
+ * ChoiceGrid 는 클래스를 받지 않으므로 감싼 쪽에서 모양을 정한다. 이렇게 두면
+ * 부품은 «무엇을 고르는가»만 알고, «어떻게 생겼는가»는 화면이 안다. */
+.q-rows .choices { grid-template-columns: 1fr; }
+.q-rows .choice {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  min-height: 64px; padding: 14px 18px;
+}
+/* 디자인은 «보통맛 🔥» 처럼 그림을 글자 옆에 둔다 — 목록형에서는 위가 아니라 옆이다 */
+.q-rows .choice .ico { margin: 0; }
+.q-rows .choice img.ico { height: calc(var(--fs) * 1.7); }
+
+/* ── 타일형: 2열, 그림 위 · 글자 아래 (Figma 99:1270 · 99:1281) ── */
+.q-tiles .choices { grid-template-columns: 1fr 1fr; }
+.q-tiles .choice {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 150px; padding: 20px 12px; text-align: center;
+}
+.q-tiles .choice img.ico { height: calc(var(--fs) * 3); }
+/* 선택지가 홀수면 마지막 하나가 한 줄을 다 쓴다 — 「상관없어요」가 반 칸으로 남아
+   빈자리와 나란히 서면 무언가 빠진 화면처럼 보인다. */
+.q-tiles .choice:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  min-height: 72px;
+  flex-direction: row; gap: 12px;
+}
 
 /* 고른 것은 색 말고 기호로도 읽혀야 한다.
  * 디자인도 선택된 버튼에 «대두 ✓» 처럼 체크를 함께 넣는다 — 주황 테두리와 연노랑 바탕만으로는
@@ -35,65 +72,37 @@
  * 두 번째 content 는 «눈에는 ✓, 낭독기에는 아무것도» 라는 뜻이다(대체 텍스트 빈 문자열).
  * 상태는 aria-pressed 가 이미 말하고 있어서 이름에 ✓ 를 덧붙이면 두 번 읽힌다.
  * 이 문법을 모르는 브라우저는 앞 줄을 써서 ✓ 가 이름에 섞이는 정도로 끝난다. */
-.qchoices .choice[aria-pressed="true"]::after {
+.q-choices .choice[aria-pressed="true"]::after {
   content: "✓";
   content: "✓" / "";
   margin-left: 6px;
   font-weight: 800;
 }
-
-/* ───────── 그림 아이콘 자리 ─────────
- *
- * QUESTIONS 의 이모지를 Figma 아이콘으로 바꾼다. model.ts 는 이 레인이 고칠 수 없고
- * ChoiceGrid 도 공용이라 손대지 않으므로, **CSS 는 «몇 번째 선택지인가»만 알고**
- * 어떤 그림인지는 Question.tsx 가 --qico-N 으로 내려준다. 매핑에 없는 선택지에는
- * qico-N 클래스가 붙지 않아 이모지가 그대로 남는다.
- *
- * font-size 를 0 으로 눕혀 이모지 글자만 감춘다 — 라벨은 .ico 의 형제라 그대로 남는다
- * («아이콘 단독 금지» 보증). 높이를 em 으로 잡으면 자기 font-size(=0) 기준이라
- * 0 이 되므로, 본문 크기 --fs 로 잰다. 그래야 «큰 글씨»에서 그림도 같이 커진다. */
-.qchoices.qico-1 .choice:nth-child(1) .ico,
-.qchoices.qico-2 .choice:nth-child(2) .ico,
-.qchoices.qico-3 .choice:nth-child(3) .ico,
-.qchoices.qico-4 .choice:nth-child(4) .ico,
-.qchoices.qico-5 .choice:nth-child(5) .ico,
-.qchoices.qico-6 .choice:nth-child(6) .ico,
-.qchoices.qico-7 .choice:nth-child(7) .ico,
-.qchoices.qico-8 .choice:nth-child(8) .ico {
-  font-size: 0;
-  height: calc(var(--fs) * 2.4);
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
+/* 타일에서는 글자 아래로 한 줄 더 내려가지 않게 모서리로 보낸다 */
+.q-tiles .choice[aria-pressed="true"]::after {
+  position: absolute; top: 10px; right: 12px; margin: 0;
 }
-.qchoices.qico-1 .choice:nth-child(1) .ico { background-image: var(--qico-1); }
-.qchoices.qico-2 .choice:nth-child(2) .ico { background-image: var(--qico-2); }
-.qchoices.qico-3 .choice:nth-child(3) .ico { background-image: var(--qico-3); }
-.qchoices.qico-4 .choice:nth-child(4) .ico { background-image: var(--qico-4); }
-.qchoices.qico-5 .choice:nth-child(5) .ico { background-image: var(--qico-5); }
-.qchoices.qico-6 .choice:nth-child(6) .ico { background-image: var(--qico-6); }
-.qchoices.qico-7 .choice:nth-child(7) .ico { background-image: var(--qico-7); }
-.qchoices.qico-8 .choice:nth-child(8) .ico { background-image: var(--qico-8); }
 
-/* 운영체제 고대비(강제 색)에서는 배경 그림이 통째로 지워진다. 그러면 그림 자리가
-   빈 칸으로 남으므로 이모지를 도로 살린다 — .ico 의 기본값(styles.css)으로 되돌린다. */
-@media (forced-colors: active) {
-  .qchoices .choice .ico {
-    font-size: 1.7em;
-    height: auto;
-    background-image: none;
-  }
+/* 선택지 그림 — 이모지든 Figma SVG 든 같은 자리·같은 크기로 그린다.
+ * 높이를 본문 크기(--fs)로 재는 이유는 «큰 글씨»를 켰을 때 그림도 함께 커져야 하기 때문이다.
+ * 글자는 언제나 그림 옆에 남는다(«아이콘 단독 금지» 보증 — 부품이 구조로 보장한다). */
+img.ico {
+  height: calc(var(--fs) * 2.4);
+  width: auto;
+  margin: 0 auto 4px;
+  object-fit: contain;
 }
 
 /* ───────── S11 계산 중 (Figma 99:1239) ─────────
- * 디자인은 가운데 정렬된 문구 두 줄과 도는 고리뿐이다. 우리는 여기에
- * «지금까지 답해 주신 내용»과 직원 도움을 남긴다 — 화면이 잠깐 지나가더라도
- * 막다른 길이면 안 되고(tests/a11y.test.ts), 무엇을 근거로 계산하는지는 밝혀야 한다. */
-.calcwrap { text-align: center; }
-.calcwrap h2 { font-size: 1.55em; margin: 0 0 var(--kb-spacing-sm); word-break: keep-all; }
-.calcsub { color: var(--muted); margin: 0 0 var(--kb-spacing-lg); }
-.calcwrap .reasons { list-style: none; padding: 0; margin: 0; color: var(--muted); font-size: 0.86em; }
-.calcwrap .btnrow { justify-content: center; }
+ * 디자인은 뒤로가기도 진행 표시도 없이 화면 한가운데에 문구 두 줄과 도는 고리만 둔다.
+ * 그 «가운데»를 Screen 본문에 준다 — 우리는 여기에 «지금까지 답해 주신 내용»과
+ * 직원 도움을 더한다(화면이 잠깐 지나가더라도 막다른 길이면 안 된다, tests/a11y.test.ts). */
+.kb-screen:has(.calcspin) .kb-screen-body {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center;
+}
+.calc-answers { list-style: none; padding: 0; margin: 0; color: var(--muted); font-size: 0.86em; }
 
 /* 도는 고리. Figma 의 line-md:loading-twotone-loop 는 에셋으로 받아 두지 않았고,
    아이콘을 손으로 그리지 않기로 했으므로 테두리로 만든 고리로 대신한다.

@@ -1,6 +1,6 @@
 import React from "react";
 import { useFlow } from "../flow";
-import { Card, Header, type CardRow } from "../components";
+import { Card, Cta, Emphasize, Screen, type CardRow } from "../components";
 import { ChoiceGrid } from "../components/ChoiceGrid";
 import { EDIT_LABELS, QUESTIONS, answerLabel } from "../model";
 import { candidateName, candidatePrice, withManualSelection } from "../logic";
@@ -18,7 +18,11 @@ import "./cart.css";
  *  - 화면 설정 수정을 없애면, 글씨가 안 보여서 멈춘 사람이 «설정 더보기»를 찾아
  *    상단바까지 올라가야 한다. 안 보이는 사람에게 더 찾게 하는 셈이다.
  *
- * 그래서 위에는 화면 보기 방식(디자인), 아래에는 조건 수정(문서)을 둔다.
+ * 그래서 위에는 화면 보기 방식(디자인의 SummaryCard 185:209), 아래에는 조건 수정(문서)을 둔다.
+ *
+ * 예전에는 이 둘을 «카드 두 장»으로 나눠 쌓았다. 지금은 화면 자체가 틀(`Screen`)이고,
+ * 카드 모양은 디자인이 카드로 그린 것 하나 — 화면 보기 방식 — 에만 남긴다.
+ * 조건 수정은 원래도 카드가 아니라 목록이었다.
  *
  * 고를 수 있는 메뉴는 STEP 4 를 통과한 **생존 후보뿐**이다(scoreBreakdown).
  * 알레르기·품절·예산으로 제외된 후보를 여기서 되살리지 않는다 — 되살릴 수 있으면
@@ -55,76 +59,76 @@ export function CartEdit() {
   }));
 
   return (
-    <section aria-label="주문 조건과 화면 보기 방식 수정">
-      <section className="card">
-        <Header onBack={() => setStep("recommend")} backLabel="뒤로" />
-        <p className="stepmeta">고객님,</p>
-        <h2>어떤 항목을 수정하고 싶으신가요?</h2>
-        {/* 화면이 길다 — 도움을 끝까지 내려가야 닿는 곳에 두지 않는다 */}
-        <div className="btnrow" style={{ marginTop: 10, marginBottom: 4 }}>{staffBtn()}</div>
+    <Screen
+      label="주문 조건과 화면 보기 방식 수정"
+      onBack={() => setStep("recommend")}
+      eyebrow="고객님,"
+      title={<Emphasize text="어떤 항목을 수정하고 싶으신가요?" word="수정" />}
+      actions={(
+        <>
+          {/* 디자인의 «수정 완료»는 화면을 닫기만 한다. 우리 것은 고친 조건으로 추천을
+              다시 계산하므로, 버튼 이름이 하는 일과 같아야 한다. */}
+          <Cta tone="primary" label="이 조건으로 추천 다시 받기" onClick={applyEditAndRecommend} />
+          {staffBtn()}
+        </>
+      )}
+    >
+      <h3 className="cart-cap">화면 보기 방식</h3>
+      <Card rows={viewRows}
+        hint={simple ? undefined : "누르면 이 화면이 그 자리에서 바뀝니다."} />
 
-        <Card title="화면 보기 방식" rows={viewRows}
-          hint={simple ? undefined : "누르면 이 화면이 그 자리에서 바뀝니다. 상단 «설정 더보기»에서도 바꾸실 수 있습니다."} />
-      </section>
+      <h3 className="cart-cap">주문 조건</h3>
+      {!simple && <p className="hint">누르면 그 자리에서 선택지가 열립니다. 다 바꾸셨으면 아래에서 추천을 다시 받아 주세요.</p>}
 
-      <section className="card">
-        <h2>주문 조건</h2>
-        {!simple && <p className="hint">누르면 그 자리에서 선택지가 열립니다. 다 바꾸셨으면 아래에서 추천을 다시 받아 주세요.</p>}
+      {uiRec && fixture && uiRec.rec.recommendedCandidateId && (
+        <div className="editrow">
+          <button type="button" className="edithead" aria-expanded={editOpen === "__menu"}
+            onClick={() => setEditOpen(editOpen === "__menu" ? null : "__menu")}>
+            <span className="editlabel">메뉴</span>
+            <span className="editvalue">{candidateName(fixture, uiRec.rec.recommendedCandidateId)}</span>
+            <span aria-hidden="true">{editOpen === "__menu" ? "▲" : "▼"}</span>
+          </button>
+          {editOpen === "__menu" && (
+            <div className="editbody">
+              {!simple && <p className="hint">조건에 맞는 메뉴만 보여드립니다. 제외된 메뉴는 여기 없습니다.</p>}
+              <div className="choices" role="group" aria-label="메뉴 선택">
+                {Object.keys(uiRec.rec.scoreBreakdown ?? {}).map((id) => (
+                  <button key={id} type="button" className="choice"
+                    aria-pressed={id === uiRec.rec.recommendedCandidateId}
+                    onClick={() => {
+                      setUiRec(withManualSelection(uiRec, fixture, id));
+                      setManual(true); setEditOpen(null); setStep("recommend");
+                    }}>
+                    {candidateName(fixture, id)}
+                    <small>{candidatePrice(fixture, id)?.toLocaleString()}원</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
-        {uiRec && fixture && uiRec.rec.recommendedCandidateId && (
-          <div className="editrow">
-            <button type="button" className="edithead" aria-expanded={editOpen === "__menu"}
-              onClick={() => setEditOpen(editOpen === "__menu" ? null : "__menu")}>
-              <span className="editlabel">메뉴</span>
-              <span className="editvalue">{candidateName(fixture, uiRec.rec.recommendedCandidateId)}</span>
-              <span aria-hidden="true">{editOpen === "__menu" ? "▲" : "▼"}</span>
+      {QUESTIONS.map((qq) => {
+        const open = editOpen === qq.key;
+        return (
+          <div className="editrow" key={qq.key}>
+            <button type="button" className="edithead" aria-expanded={open}
+              onClick={() => setEditOpen(open ? null : qq.key)}>
+              <span className="editlabel">{EDIT_LABELS[qq.key] ?? qq.title}</span>
+              <span className="editvalue">{answerLabel(qq.key, answers[qq.key])}</span>
+              <span aria-hidden="true">{open ? "▲" : "▼"}</span>
             </button>
-            {editOpen === "__menu" && (
+            {open && (
               <div className="editbody">
-                {!simple && <p className="hint">조건에 맞는 메뉴만 보여드립니다. 제외된 메뉴는 여기 없습니다.</p>}
-                <div className="choices" role="group" aria-label="메뉴 선택">
-                  {Object.keys(uiRec.rec.scoreBreakdown ?? {}).map((id) => (
-                    <button key={id} type="button" className="choice"
-                      aria-pressed={id === uiRec.rec.recommendedCandidateId}
-                      onClick={() => {
-                        setUiRec(withManualSelection(uiRec, fixture, id));
-                        setManual(true); setEditOpen(null); setStep("recommend");
-                      }}>
-                      {candidateName(fixture, id)}
-                      <small>{candidatePrice(fixture, id)?.toLocaleString()}원</small>
-                    </button>
-                  ))}
-                </div>
+                {qq.hint && !simple && <p className="hint">{qq.hint}</p>}
+                <ChoiceGrid q={qq} answers={answers} setAnswers={setAnswers}
+                  onPicked={() => setEditOpen(null)} showIcons={a11y.visualGuidance} />
               </div>
             )}
           </div>
-        )}
-
-        {QUESTIONS.map((qq) => {
-          const open = editOpen === qq.key;
-          return (
-            <div className="editrow" key={qq.key}>
-              <button type="button" className="edithead" aria-expanded={open}
-                onClick={() => setEditOpen(open ? null : qq.key)}>
-                <span className="editlabel">{EDIT_LABELS[qq.key] ?? qq.title}</span>
-                <span className="editvalue">{answerLabel(qq.key, answers[qq.key])}</span>
-                <span aria-hidden="true">{open ? "▲" : "▼"}</span>
-              </button>
-              {open && (
-                <div className="editbody">
-                  {qq.hint && !simple && <p className="hint">{qq.hint}</p>}
-                  <ChoiceGrid q={qq} answers={answers} setAnswers={setAnswers}
-                    onPicked={() => setEditOpen(null)} showIcons={a11y.visualGuidance} />
-                </div>
-              )}
-            </div>
-          );
-        })}
-        <div className="btnrow">
-          <button type="button" className="btn primary" onClick={applyEditAndRecommend}>이 조건으로 추천 다시 받기</button>
-          {staffBtn()}
-        </div>
-      </section>
-    </section>
+        );
+      })}
+    </Screen>
   );
 }

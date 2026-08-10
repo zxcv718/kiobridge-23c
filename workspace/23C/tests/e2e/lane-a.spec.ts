@@ -19,7 +19,7 @@ async function home(page: Page) {
   await page.goto("http://localhost:5173/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await expect(page.getByRole("heading", { name: /닭강정 가게 주문/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요|다시 오셨네요/ })).toBeVisible();
 }
 
 /** 홈 → 프로필 1/3. */
@@ -36,6 +36,12 @@ async function toSaveChoice(page: Page) {
   await expect(page.getByRole("heading", { name: "선택하신 내용을 확인해주세요" })).toBeVisible();
 }
 
+/** S03 에서 저장 방식을 고르고 QR 을 건너뛰어 세션 시작까지. */
+async function chooseAndSkipQr(page: Page, store = false) {
+  await page.getByRole("button", { name: store ? "이 기기에 저장하기" : "이번만 사용하기" }).click();
+  await page.getByRole("button", { name: "QR 없이 계속하기" }).click();
+}
+
 /** 지금 단계 이름 (5단계 인디케이터의 현재 라벨). */
 const nowStep = (page: Page) => page.locator(".kb-steps:not(.mini) .kb-step.now .kb-steplabel");
 
@@ -43,7 +49,7 @@ const nowStep = (page: Page) => page.locator(".kb-steps:not(.mini) .kb-step.now 
 const radio = (page: Page, name: string) => page.locator(".kb-radio", { hasText: name });
 
 test.describe("A계열 — 프로필 흐름", () => {
-  test("A1 홈에 5단계 인디케이터가 있고, 시연 사례·저장본 카드는 그대로다", async ({ page }) => {
+  test("A1 홈은 한 화면이다 — 5단계 인디케이터가 있고 시연 사례 카드는 없다", async ({ page }) => {
     await home(page);
 
     const steps = page.locator(".kb-steps:not(.mini)").first();
@@ -55,27 +61,42 @@ test.describe("A계열 — 프로필 흐름", () => {
     // 색만으로 현재 위치를 말하지 않는다 — 낭독기용 문장이 함께 있다
     await expect(steps.locator(".srline")).toContainText("5단계 중 1단계");
 
-    // 심사 시연에 쓰는 카드 — 없애지 않는다
-    await expect(page.locator("section[aria-label='시연 사례']")).toBeVisible();
-    await expect(page.locator(".presetrow")).toHaveCount(5);
+    /* 단정이 뒤집혔다 — 예전에는 «시연 사례 카드가 5줄 그대로 있는가»를 지켰다.
+       그 카드는 없앴다. 첫 화면에서 «주문»과 «시연»이 나란히 서면 처음 온 사람이
+       무엇을 눌러야 하는지부터 골라야 하고, 디자인에도 그 카드가 없다.
+       그래서 «있는가» 대신 «정말로 없는가»를 지킨다 — 되살아나면 여기서 걸린다.
+       (시연 경로가 없어진 것이 아니라, 이제 사용자와 같은 길을 걸어 만든다 —
+       lane-d.spec.ts 의 CASE 표가 그 길이다.) */
+    await expect(page.locator("section[aria-label='시연 사례']")).toHaveCount(0);
+    await expect(page.locator(".presetrow")).toHaveCount(0);
+    // 홈의 조작 요소는 [시작하기]·[직원 도움] 둘뿐이다 — 시작 결정이 두 곳으로 갈리지 않는다
+    await expect(page.getByRole("button", { name: /시작/ })).toHaveCount(1);
   });
 
   test("A2 홈 → 프로필 1/3 → 2/3 → 3/3 → 저장 방식으로 이어진다", async ({ page }) => {
     await toProfile(page);
     await expect(nowStep(page)).toHaveText("프로필 생성");
-    // 작은 3단계 표시도 함께 (디자인 MiniStepIndicator)
-    await expect(page.locator(".kb-steps.mini .kb-step.now .kb-dot")).toHaveText("1");
+    /* 작은 3단계 표시(디자인 MiniStepIndicator)는 제목 위 한 줄로 들어가면서 공용
+       StepIndicator 가 아니라 프로필 화면 전용 마크업(.p-mini)이 됐다 — `Screen` 의
+       eyebrow 는 <p> 안이라 블록을 넣을 수 없기 때문이다. 점(.p-minidot.on)이 걸음
+       수만큼 차오르고, 색만으로 말하지 않도록 글자(.p-minitext)가 함께 붙는다.
+       세는 자리가 옮겨졌을 뿐 재는 것은 같다 — «지금 3걸음 중 몇 번째인가». */
+    const mini = (n: number, group: string) => Promise.all([
+      expect(page.locator(".p-mini .p-minidot.on")).toHaveCount(n),
+      expect(page.locator(".p-minitext")).toHaveText(`3단계 중 ${n}단계 — ${group}`),
+    ]);
+    await mini(1, "글씨 크기");
 
     await page.getByRole("button", { name: "다음", exact: true }).click();
     await expect(page.getByRole("heading", { name: "더 또렷하게 보이는 화면을 선택해주세요" })).toBeVisible();
-    await expect(page.locator(".kb-steps.mini .kb-step.now .kb-dot")).toHaveText("2");
+    await mini(2, "고대비");
 
     await page.getByRole("button", { name: "다음", exact: true }).click();
     await expect(page.getByRole("heading", { name: "필요한 안내 방식을 선택해주세요" })).toBeVisible();
-    await expect(page.locator(".kb-steps.mini .kb-step.now .kb-dot")).toHaveText("3");
+    await mini(3, "화면 안내");
 
-    // 되돌아갈 수 있다
-    await page.getByRole("button", { name: "이전", exact: true }).click();
+    // 되돌아갈 수 있다 (되돌아가는 버튼은 모든 화면에서 «뒤로» 하나로 통일됐다)
+    await page.getByRole("button", { name: "뒤로", exact: true }).click();
     await expect(page.getByRole("heading", { name: "더 또렷하게 보이는 화면을 선택해주세요" })).toBeVisible();
     await page.getByRole("button", { name: "다음", exact: true }).click();
 
@@ -109,7 +130,16 @@ test.describe("A계열 — 프로필 흐름", () => {
   test("A4 접근성 7종과 입력 방식이 프로필 화면에 그대로 남아 있다", async ({ page }) => {
     await toProfile(page);
 
+    /* «자세한 설정»은 마지막 걸음(3/3)에 있다. 세 걸음 모두에 붙여 두었더니 걸음마다
+       같은 목록이 따라붙어 «제목 → 선택지 두 장 → 넓은 여백 → 아래 버튼»이 세 화면 다
+       무너졌기 때문이다. 한 걸음 뒤로 옮겨졌을 뿐 7종은 그대로 다 닿는다 —
+       이 검사가 지키는 것은 «어느 걸음에 있는가»가 아니라 «닿는가»다. */
+    for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "필요한 안내 방식을 선택해주세요" })).toBeVisible();
+
     // 3단계 라디오 뒤에 «자세한 설정»으로 남긴다 — 채널을 선언만 하고 숨기지 않는다
+    // (접어 두지도 않는다 — 열린 채로 나온다)
+    await expect(page.locator("details.p-more")).toHaveAttribute("open", "");
     await expect(page.locator(".a11ylist .a11yrow")).toHaveCount(7);
     const input = page.getByRole("group", { name: "입력 방식" });
     await expect(input.locator("button")).toHaveCount(2);
@@ -150,24 +180,37 @@ test.describe("A계열 — 프로필 흐름", () => {
     await expect(summary).toContainText("고대비");
     await expect(summary).toContainText("화면 안내");
 
-    // 기본은 «이번만 사용» — 공용 기기에서 조용히 저장하지 않는다
-    await expect(radio(page, "이번만 사용")).toContainText("선택됨");
-    expect(await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)).toBeNull();
+    /* 저장 방식은 라디오 두 장 + «다음» 이 아니라 **CTA 두 장**이다 — 누르는 순간
+       정해지고 화면을 떠난다. 그래서 «지금 무엇이 선택돼 있는가»를 화면에서 읽을 자리가
+       없어졌고, 대신 저장본 자체를 본다. 지키는 것은 그대로다:
+       ① 고르기 전에는 아무것도 저장되지 않는다(공용 기기에서 조용히 저장하지 않는다)
+       ② 고른 대로 실제로 저장되고, 되돌리면 실제로 지워진다 — 화면 표시가 아니라 사실로. */
+    const stored = () => page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
+    expect(await stored(), "고르기도 전에 저장돼 있습니다").toBeNull();
 
-    await radio(page, "이 기기에 저장하기").click();
-    expect(await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)).not.toBeNull();
-    await radio(page, "이번만 사용").click();
-    expect(await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)).toBeNull();
+    await page.getByRole("button", { name: "이 기기에 저장하기" }).click();
+    expect(await stored(), "«저장하기»를 골랐는데 저장본이 없습니다").not.toBeNull();
+
+    // 뒤로 돌아와 마음을 바꾸면 그 자리에서 지워진다 (S03 은 QR 화면의 «뒤로»로 다시 온다)
+    await page.getByRole("button", { name: "뒤로" }).click();
+    await expect(page.getByRole("heading", { name: "선택하신 내용을 확인해주세요" })).toBeVisible();
+    await page.getByRole("button", { name: "이번만 사용하기" }).click();
+    expect(await stored(), "«이번만 사용»으로 바꿨는데 저장본이 남아 있습니다").toBeNull();
   });
 
-  test("A7 S03 의 «다음»은 QR 로, «건너뛰기»는 세션 시작으로 간다", async ({ page }) => {
+  test("A7 S03 에서 무엇을 고르든 QR 로 가고, 건너뛰기는 QR 화면이 맡는다", async ({ page }) => {
+    // 저장 여부와 이동을 한 버튼에 합쳤다 — 라디오로 고르고 «다음»을 또 누르면
+    // «무엇을 골랐는지»와 «어디로 가는지»가 한 줄에 섞여 두 번 판단하게 된다.
     await toSaveChoice(page);
-    await page.getByRole("button", { name: "다음", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "선택하신 내용을 확인해주세요" })).toHaveCount(0);
+    await page.getByRole("button", { name: "이번만 사용하기" }).click();
+    await expect(nowStep(page)).toHaveText("QR 연동");
 
-    // 매장 QR 이 없는 경우 — QR 을 건너뛰고 바로 세션 시작으로
     await toSaveChoice(page);
-    await page.getByRole("button", { name: /매장 QR 없이 계속하기/ }).click();
+    await page.getByRole("button", { name: "이 기기에 저장하기" }).click();
+    await expect(nowStep(page)).toHaveText("QR 연동");
+
+    // 매장 QR 이 없는 경우 — 여기서 건너뛰면 세션 시작으로
+    await page.getByRole("button", { name: "QR 없이 계속하기" }).click();
     await expect(nowStep(page)).toHaveText("세션 시작");
   });
 
@@ -179,7 +222,7 @@ test.describe("A계열 — 프로필 흐름", () => {
 
   test("A9 S05 에서 시작하면 마법사 첫 질문(알레르기)으로 간다", async ({ page }) => {
     await toSaveChoice(page);
-    await page.getByRole("button", { name: /매장 QR 없이 계속하기/ }).click();
+    await chooseAndSkipQr(page);
     await expect(nowStep(page)).toHaveText("세션 시작");
 
     await page.getByRole("button", { name: /주문 시작하기/ }).click();
@@ -188,8 +231,7 @@ test.describe("A계열 — 프로필 흐름", () => {
 
   test("A10 S03 에서 정한 저장 의사가 주문 확정까지 살아남는다", async ({ page }) => {
     await toSaveChoice(page);
-    await radio(page, "이 기기에 저장하기").click();
-    await page.getByRole("button", { name: /매장 QR 없이 계속하기/ }).click();
+    await chooseAndSkipQr(page, true);
     await page.getByRole("button", { name: /주문 시작하기/ }).click();
 
     // 7문항을 첫 선택지로 답한다
@@ -222,7 +264,7 @@ test.describe("A계열 — 프로필 흐름", () => {
         .map((e) => ({ h: e.getBoundingClientRect().height, t: (e as HTMLElement).innerText.slice(0, 24) })));
     const check = async (where: string) => {
       const boxes = await heights();
-      expect(boxes.length, `${where} 에 조작 요소가 없습니다`).toBeGreaterThan(3);
+      expect(boxes.length, `${where} 에 조작 요소가 없습니다`).toBeGreaterThan(1);
       for (const b of boxes) expect(b.h, `${where} "${b.t}" 높이 ${b.h}px`).toBeGreaterThanOrEqual(48);
     };
 
@@ -236,9 +278,15 @@ test.describe("A계열 — 프로필 흐름", () => {
     await check("S02 3/3");
     await page.getByRole("button", { name: "다음", exact: true }).click();
     await check("S03");
-    await page.getByRole("button", { name: /매장 QR 없이 계속하기/ }).click();
+    await chooseAndSkipQr(page);
     await check("S05");
-    await page.getByRole("button", { name: "처음으로" }).click();
+    /* S05 에는 «처음으로»가 없다 — 주문을 시작하기 전이라 되돌릴 곳은 «앞 화면»뿐이고,
+       가지 않은 곳으로 보내는 버튼을 두지 않는다. 홈은 왔던 길을 되짚어 간다.
+       새로 열지 않는 이유는 방금 켠 고대비·끈 큰 글씨를 그대로 지고 가야
+       **가장 불리한 조건**에서 홈을 잴 수 있기 때문이다(다시 열면 기본값으로 돌아간다).
+       S05 → S03 → 3/3 → 2/3 → 1/3 → S01, 다섯 걸음. */
+    for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "뒤로" }).click();
+    await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요/ })).toBeVisible();
     await check("S01");
   });
 
@@ -250,7 +298,7 @@ test.describe("A계열 — 프로필 흐름", () => {
     await expect(staff).toBeVisible();
     for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
     await expect(staff).toBeVisible();                                   // S03
-    await page.getByRole("button", { name: /매장 QR 없이 계속하기/ }).click();
+    await chooseAndSkipQr(page);
     await expect(staff).toBeVisible();                                   // S05
   });
 });

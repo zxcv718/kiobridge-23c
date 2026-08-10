@@ -24,50 +24,22 @@ const STEPS = [
   "confirm", "run", "result", "staff", "edit", "stopped",
 ];
 
-/**
- * 앱의 현재 step 을 읽고, `next` 를 주면 그 step 으로 옮긴다.
- *
- * **임시 다리다.** QR 화면으로 가는 길(S03 저장 방식 → QR)은 레인 A 가 만들고 있어서
- * 아직 화면에서 닿을 수 없다. 길이 이어지면 이 함수는 실제 클릭 경로로 바꾸는 편이 낫다
- * (통합 담당 몫). 지금 이것을 쓰는 이유는, 길이 없다고 화면 자체를 못 재고 넘어가면
- * 「폴백이 실제로 동작하는가」가 아무에게도 확인되지 않은 채 남기 때문이다.
- *
- * 읽기는 React 내부 구조에 기대므로 여기서만 쓴다 — 화면 동작 단정에는 DOM 만 본다.
- */
-async function stepState(page: Page, next?: string): Promise<string | null> {
-  return page.evaluate(
-    ({ steps, next }) => {
-      const root = document.querySelector(".app");
-      if (!root) return null;
-      const key = Object.keys(root).find((k) => k.startsWith("__reactFiber$"));
-      if (!key) return null;
-      /* eslint-disable @typescript-eslint/no-explicit-any */
-      let fiber: any = (root as any)[key];
-      while (fiber) {
-        let hook: any = fiber.memoizedState;
-        for (let i = 0; hook && i < 200; i++, hook = hook.next) {
-          if (typeof hook.memoizedState !== "string") continue;
-          if (!steps.includes(hook.memoizedState)) continue;
-          if (!hook.queue || typeof hook.queue.dispatch !== "function") continue;
-          const cur = hook.memoizedState as string;
-          if (next) hook.queue.dispatch(next);
-          return cur;
-        }
-        fiber = fiber.return;
-      }
-      return null;
-    },
-    { steps: STEPS, next },
-  );
-}
+/* QR 화면으로 가는 길이 이어졌다. 예전에는 레인 A 가 S03 을 만드는 중이라 React 내부
+   상태를 직접 건드리는 임시 다리를 놓았는데, 그건 «화면에서 실제로 닿을 수 있는가»를
+   재지 못한다. 이제 사용자와 같은 길로 간다. */
 
-const screen = (page: Page) => page.locator("section[aria-label='매장 QR 연동']");
+const screen = (page: Page) => page.locator("section[aria-label^='매장 QR 연동']");
+/** 5단계 인디케이터의 현재 라벨 — 내부 상태를 훔쳐보지 않고 화면에 보이는 것으로 잰다. */
+const nowStep = (page: Page) => page.locator(".kb-steps:not(.mini) .kb-step.now .kb-steplabel");
 
 /** 홈을 띄우고 QR 화면으로 옮긴 뒤, 매장 정보(fixture)가 도착할 때까지 기다린다. */
 async function openQr(page: Page) {
   await page.goto("http://localhost:5173/");
-  await expect(page.getByRole("heading", { name: /닭강정 가게 주문/ })).toBeVisible();
-  expect(await stepState(page, "qr"), "앱 상태를 qr 로 옮기지 못했습니다").not.toBeNull();
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
+  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "이번만 사용하기" }).click();
   await expect(screen(page)).toBeVisible();
   // fixture 가 오기 전에는 대조할 매장이 없어 «확인» 버튼이 잠겨 있다
   await expect(page.getByRole("button", { name: "이 코드로 연결하기" })).toBeEnabled();
@@ -143,7 +115,7 @@ test.describe("레인 B — 매장 QR 읽기", () => {
       await expect(screen(page)).not.toContainText(/세션 발급|세션이 발급/);
 
       await page.getByRole("button", { name: /이 매장으로 계속하기/ }).click();
-      expect(await stepState(page)).toBe("sessionStart");
+      await expect(nowStep(page), "세션 시작으로 넘어가지 않았습니다").toHaveText("세션 시작");
     });
 
     test("QR을 URL 로 적어도 매장 코드를 알아본다", async ({ page }) => {
@@ -163,12 +135,12 @@ test.describe("레인 B — 매장 QR 읽기", () => {
       // 막다른 길이 아니다
       await expect(page.getByRole("button", { name: "직원 도움" })).toBeVisible();
       await page.getByRole("button", { name: /이대로 계속하기/ }).click();
-      expect(await stepState(page)).toBe("sessionStart");
+      await expect(nowStep(page), "세션 시작으로 넘어가지 않았습니다").toHaveText("세션 시작");
     });
 
     test("QR 없이 건너뛰어도 흐름이 이어진다", async ({ page }) => {
       await page.getByRole("button", { name: /QR 없이 계속하기/ }).click();
-      expect(await stepState(page)).toBe("sessionStart");
+      await expect(nowStep(page), "세션 시작으로 넘어가지 않았습니다").toHaveText("세션 시작");
     });
 
     test("진행 표시에서 QR은 5단계 중 4번째다", async ({ page }) => {
@@ -212,7 +184,7 @@ test.describe("레인 B — 매장 QR 읽기", () => {
     test("화면을 벗어나면 카메라가 꺼진다", async ({ page }) => {
       await expect(screen(page).locator("video")).toBeVisible();
       await page.getByRole("button", { name: /QR 없이 계속하기/ }).click();
-      expect(await stepState(page)).toBe("sessionStart");
+      await expect(nowStep(page), "세션 시작으로 넘어가지 않았습니다").toHaveText("세션 시작");
       expect(await page.evaluate(() => (window as unknown as { __stopped: number }).__stopped)).toBeGreaterThan(0);
     });
   });

@@ -1,6 +1,9 @@
 /* 프로필 흐름 4화면 전용 — Figma S01a/b(150:162·150:190) · S02 1~3/3(150:221·150:454·150:509)
  * · S03(150:275) · S05(150:396).
  *
+ * 화면의 뼈대(뒤로 → 진행 표시 → 제목 → 부제 → 넓은 여백 → 아래 붙는 CTA)는 전부
+ * `components/Screen.tsx` 가 맡는다. 여기 남는 것은 **그 뼈대 안에 들어가는 것**뿐이다.
+ *
  * 규칙 둘을 지킨다.
  *
  * ① **의미 이름만 쓴다.** `--kb-…` 원시 토큰을 화면 CSS 에서 직접 쓰면 고대비 모드가
@@ -14,17 +17,22 @@
  *    규칙을 전수로 검사한다 — 선언을 낮추는 대신 타깃을 키운다.
  */
 
-/* ───────── 홈 TitleBlock (150:183 / 150:211) ─────────
- * 디자인은 «환영» 한 줄과 부제 한 줄이다. 우리 홈에는 이미 시연 사례·저장본 카드가
- * 있어 제목을 통째로 갈아끼우면 그것들이 갈 곳을 잃는다. 그래서 환영 문구를 제목 위
- * 작은 줄로 남기고 부제는 그대로 쓴다. */
-.p-eyebrow {
-  margin: 0 0 4px; font-size: 0.8em; font-weight: 700; letter-spacing: 0.02em;
-  color: var(--muted);
+/* ───────── S02 세 걸음 표시 (Figma MiniStepIndicator 183:205) ─────────
+ * 제목 바로 위, 디자인이 미니 인디케이터를 둔 자리다. `Screen` 의 eyebrow 슬롯은
+ * <p> 안이라 **인라인 요소만** 쓴다 — 블록을 넣으면 브라우저가 문단을 쪼갠다.
+ * 점 색은 거들 뿐이고 «3단계 중 2단계 — 고대비»라는 문장이 실제 신호다. */
+.p-mini { display: inline-flex; align-items: center; gap: 5px; vertical-align: middle; }
+.p-minidot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 999px;
+  border: 1.5px solid var(--line-soft); background: var(--card);
+  font-size: 10px; font-weight: 700; line-height: 1; color: var(--muted);
 }
+.p-minidot.on { background: var(--brand-strong); border-color: var(--brand-strong); color: var(--on-brand); }
+.p-minitext { margin-left: 5px; }
 
-/* 카드 위에 붙는 작은 설명 (S05 «지난 주문») */
-.p-cap { margin: 16px 0 6px; font-size: 0.82em; font-weight: 700; color: var(--muted); }
+/* 카드 위에 붙는 작은 설명 (S05 «지난 주문» · S03 «저장 방식을 선택해주세요») */
+.p-cap { margin: 4px 0 6px; font-size: 0.82em; font-weight: 700; color: var(--muted); }
 
 /* ───────── 화면 글씨 맞춰보기 (우리 것 — 디자인에 없다) ─────────
  * 설정 이름을 고르게 하는 대신 실제 크기로 렌더한 문장을 보여주고 보이는지만 묻는다. */
@@ -32,8 +40,9 @@
 .p-sample { font-weight: 700; margin: 18px 0; line-height: 1.35; }
 
 /* ───────── 자세한 설정 ─────────
- * 3단계 라디오는 «가장 많이 쓰는 셋»이고, 나머지 넷을 포함한 7종 전부는 여기 남는다.
- * 접힌 채로 두지 않는다(open) — 설정이 필요한 사람에게 한 걸음을 더 요구하지 않는다. */
+ * 세 걸음의 라디오는 «가장 많이 쓰는 셋»이고, 나머지 넷을 포함한 7종 전부는 여기 남는다.
+ * 마지막 걸음(3/3)에만 붙는다 — 걸음마다 달아 두면 디자인의 넓은 여백이 세 화면 다
+ * 사라진다. 열린 채로 둔다(open) — 설정이 필요한 사람에게 한 걸음을 더 요구하지 않는다. */
 .p-more { margin: 18px 0 4px; border: 1.5px solid var(--line-soft); border-radius: 12px; overflow: hidden; }
 .p-more > summary {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -54,5 +63,5 @@
   font-size: 0.86em; font-weight: 800; font-family: inherit; text-decoration: underline;
 }
 
-/* 저장 방식·세션 시작의 안내 문구 */
+/* 저장 방식·세션 시작·홈의 안내 문구 */
 .p-note { margin: 12px 0 0; font-size: 0.84em; color: var(--muted); line-height: 1.6; }

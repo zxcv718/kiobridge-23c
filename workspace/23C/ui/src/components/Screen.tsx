@@ -18,7 +18,7 @@ import { StepIndicator } from "./StepIndicator";
  * 홈 버튼이 있는 기기에서 가려지지 않도록 안전 영역(safe-area)만큼 아래를 띄운다.
  */
 export function Screen({
-  onBack, backLabel, steps, eyebrow, title, subtitle, children, actions, label, busy,
+  onBack, backLabel, steps, eyebrow, title, titleId, subtitle, children, actions, label, busy,
 }: {
   /** 없으면 뒤로가기를 그리지 않는다 */
   onBack?: () => void;
@@ -28,6 +28,12 @@ export function Screen({
   /** 제목 위 한 줄 (Figma 의 «고객님,») */
   eyebrow?: React.ReactNode;
   title?: React.ReactNode;
+  /**
+   * 제목에 붙일 id. 화면 밖에서 «이 화면의 제목»을 가리켜야 할 때 쓴다 —
+   * 질문 화면은 `qtitle` 을 쓰며, 그 이름으로 e2e 가 «지금 몇 번째 질문인가»를 잡는다.
+   * 손잡이가 없으면 화면은 멀쩡한데 검사만 눈이 머는 일이 생긴다(실제로 났다).
+   */
+  titleId?: string;
   subtitle?: React.ReactNode;
   children?: React.ReactNode;
   /** 화면 아래에 붙는 버튼들. 넘긴 순서가 곧 중요도 순서다. */
@@ -51,7 +57,7 @@ export function Screen({
 
       <div className="kb-screen-body">
         {eyebrow && <p className="kb-eyebrow">{eyebrow}</p>}
-        {title && <h2 className="kb-title">{title}</h2>}
+        {title && <h2 className="kb-title" id={titleId}>{title}</h2>}
         {subtitle && <p className="kb-subtitle">{subtitle}</p>}
         {children}
       </div>

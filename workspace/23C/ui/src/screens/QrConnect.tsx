@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useFlow } from "../flow";
-import { Card, Cta, Header, StepIndicator } from "../components";
+import { FLOW_STEPS } from "../model";
+import { Card, Cta, Emphasize, Screen } from "../components";
 import "./qr.css";
 
 /**
@@ -15,14 +16,18 @@ import "./qr.css";
  * 대조하는 것. 같으면 어느 매장인지 밝히고 다음으로 보내고, 다르면 «이 매장 정보는 아직
  * 없습니다»라고 정직하게 말한다. 어느 쪽이든 막다른 길을 만들지 않는다.
  * 「세션이 발급되었습니다」 같은, 우리가 하지 않은 일을 한 것처럼 말하는 문구를 쓰지 않는다.
+ * (디자인 150:365 의 부제가 «매장 정보와 세션을 모두 확인했어요»인데 그대로 쓰지 않는 이유다.)
  *
  * **이 화면의 핵심은 읽히는 경우가 아니라 읽히지 않는 경우다.** BarcodeDetector 는
  * Safari·Firefox 에 없고, 카메라 권한은 거부될 수 있고, 카메라가 없는 기기도 있다.
  * 세 경우 모두에서 ① 왜 안 되는지 한 문장으로 말하고 ② 직접 입력 ③ 직원 요청
- * ④ 건너뛰기가 같은 화면에 있어야 한다. tests/e2e/lane-b.spec.ts 가 그것을 눌러 본다.
+ * ④ 건너뛰기가 같은 화면에 있어야 한다.
+ *
+ * 디자인은 «직접 입력»·«직원 요청»을 화면 아래 버튼 두 개로 두었지만, 직접 입력은 그
+ * 자리에 입력칸으로 펼쳐 둔다. 카메라가 안 되는 사용자에게는 그쪽이 본길이고, 본길을
+ * «한 번 더 눌러야 닿는 곳»에 두면 안 되기 때문이다. 아래 버튼 자리는 건너뛰기와
+ * 직원 도움이 쓴다.
  */
-/** 5단계 중 QR은 4번째다 (Figma StepIndicator 181:230). */
-const STEP_LABELS = ["홈", "프로필 생성", "저장 방식", "QR 연동", "세션 시작"];
 
 /** 카메라 프레임을 얼마나 자주 훑는가. 너무 촘촘하면 저사양 기기에서 화면이 끊긴다. */
 const SCAN_INTERVAL_MS = 250;
@@ -179,123 +184,126 @@ export function QrConnect() {
   const rescan = () => { setReadCode(""); setReadVia(""); setPhase("checking"); };
   const goNext = () => setStep("sessionStart");
 
-  /** 어느 국면에서나 같은 자리에 있는 빠져나갈 길. 막다른 길을 만들지 않는다. */
-  const exits = (
-    <div className="btnrow">
-      {staffBtn()}
-      <button type="button" className="btn ghost" onClick={() => setStep("start")}>처음으로</button>
-    </div>
-  );
+  const steps = { labels: FLOW_STEPS, current: 4 };
 
   /* ── S04b 연결 완료 ── */
   if (phase === "connected") {
     return (
-      <>
-        <Header onBack={rescan} backLabel="다시 스캔" />
-        <StepIndicator labels={STEP_LABELS} current={4} />
-        <Card label="매장 QR 연동" title="연결되었습니다"
-          hint="QR에 적힌 매장이 이 기기에 있는 매장 정보와 같습니다.">
-          <div className="qr-view done">
-            <span className="qr-mark" aria-hidden="true">✓</span>
-          </div>
-          {/* 성공을 테두리 색으로만 말하지 않는다 — 문장으로도 말한다 */}
-          <p className="banner ok" role="status">
-            <b>{storeName}</b> 매장으로 확인했습니다.
-          </p>
-          <Card rows={[
-            { label: "매장", value: storeName },
-            { label: "매장 코드", value: <code className="qr-code">{readCode}</code> },
-            { label: "확인 방법", value: readVia },
-          ]} />
-          <p className="hint">
-            여기서 한 일은 <b>매장을 맞춰 본 것</b>까지입니다. 주문은 다음 화면에서 이 기기 안에서 시작됩니다.
-          </p>
-          <div className="btnrow">
-            <Cta tone="primary" label="이 매장으로 계속하기" onClick={goNext} />
-            <Cta label="다시 스캔하기" onClick={rescan} />
-          </div>
-          {exits}
-        </Card>
-      </>
+      <Screen
+        onBack={rescan} backLabel="다시 스캔"
+        steps={steps}
+        label="매장 QR 연동 — 연결됨"
+        title={<Emphasize text="연결되었습니다" word="연결" />}
+        subtitle="QR에 적힌 매장이 이 기기에 있는 매장 정보와 같습니다."
+        actions={<>
+          <Cta tone="primary" label="이 매장으로 계속하기" onClick={goNext} />
+          <Cta label="다시 스캔하기" onClick={rescan} />
+          {staffBtn()}
+        </>}
+      >
+        <div className="qr-view done">
+          <span className="qr-mark" aria-hidden="true">✓</span>
+        </div>
+        {/* 성공을 테두리 색으로만 말하지 않는다 — 문장으로도 말한다 */}
+        <p className="banner ok" role="status">
+          <b>{storeName}</b> 매장으로 확인했습니다.
+        </p>
+        <Card rows={[
+          { label: "매장", value: storeName },
+          { label: "매장 코드", value: <code className="qr-code">{readCode}</code> },
+          { label: "확인 방법", value: readVia },
+        ]} />
+        <p className="hint">
+          여기서 한 일은 <b>매장을 맞춰 본 것</b>까지입니다. 주문은 다음 화면에서 이 기기 안에서 시작됩니다.
+        </p>
+      </Screen>
     );
   }
 
   /* ── 읽기는 됐지만 우리가 모르는 매장 ── */
   if (phase === "unknownStore") {
     return (
-      <>
-        <Header onBack={rescan} backLabel="다시 스캔" />
-        <StepIndicator labels={STEP_LABELS} current={4} />
-        <Card label="매장 QR 연동" title="이 매장 정보는 아직 없습니다"
-          hint="QR은 읽었습니다. 다만 이 기기에 담긴 매장과 다릅니다.">
-          <div className="qr-view miss">
-            <span className="qr-mark" aria-hidden="true">⌗</span>
-          </div>
-          <p className="banner warn" role="status">
-            읽은 매장 코드는 <code className="qr-code">{readCode}</code> 입니다.
-            {" "}이 기기에는 <b>{storeName}</b>(<code className="qr-code">{envId}</code>) 정보만 있습니다.
-          </p>
-          <p className="hint">
-            {t(
-              "그냥 진행하셔도 됩니다. 이 기기에 있는 매장으로 주문을 도와드립니다.",
-              "QR이 가리키는 매장 정보를 가져올 방법이 없어 그 매장으로는 진행할 수 없습니다. 이대로 계속하시면 이 기기에 담긴 매장 정보로 주문을 도와드립니다.",
-            )}
-          </p>
-          <div className="btnrow">
-            <Cta tone="primary" label="이대로 계속하기" onClick={goNext} />
-            <Cta label="다시 스캔하기" onClick={rescan} />
-          </div>
-          {exits}
-        </Card>
-      </>
+      <Screen
+        onBack={rescan} backLabel="다시 스캔"
+        steps={steps}
+        label="매장 QR 연동 — 모르는 매장"
+        title={<Emphasize text="이 매장 정보는 아직 없습니다" word="아직" />}
+        subtitle="QR은 읽었습니다. 다만 이 기기에 담긴 매장과 다릅니다."
+        actions={<>
+          <Cta tone="primary" label="이대로 계속하기" onClick={goNext} />
+          <Cta label="다시 스캔하기" onClick={rescan} />
+          {staffBtn()}
+        </>}
+      >
+        <div className="qr-view miss">
+          <span className="qr-mark" aria-hidden="true">⌗</span>
+        </div>
+        <p className="banner warn" role="status">
+          읽은 매장 코드는 <code className="qr-code">{readCode}</code> 입니다.
+          {" "}이 기기에는 <b>{storeName}</b>(<code className="qr-code">{envId}</code>) 정보만 있습니다.
+        </p>
+        <p className="hint">
+          {t(
+            "그냥 진행하셔도 됩니다. 이 기기에 있는 매장으로 주문을 도와드립니다.",
+            "QR이 가리키는 매장 정보를 가져올 방법이 없어 그 매장으로는 진행할 수 없습니다. 이대로 계속하시면 이 기기에 담긴 매장 정보로 주문을 도와드립니다.",
+          )}
+        </p>
+      </Screen>
     );
   }
 
   /* ── S04a 스캔 안내 (검사 중·스캔 중·카메라 불가) ── */
   return (
-    <>
-      <Header onBack={() => setStep("saveChoice")} />
-      <StepIndicator labels={STEP_LABELS} current={4} />
-      <Card
-        label="매장 QR 연동"
-        title={cameraWanted ? "매장 QR을 비춰 주세요" : "카메라로 QR을 읽을 수 없습니다"}
-        hint={t(
+    <Screen
+      onBack={() => setStep("saveChoice")}
+      steps={steps}
+      label="매장 QR 연동"
+      title={cameraWanted
+        ? <Emphasize text="매장 QR을 비춰 주세요" word="QR" />
+        : <Emphasize text="카메라로 QR을 읽을 수 없습니다" word="QR" />}
+      subtitle={cameraWanted
+        ? t(
           "키오스크 화면의 QR을 카메라에 비춰 주세요.",
           "키오스크에 표시된 QR을 카메라에 비춰 주시면 어느 매장인지 확인해 드립니다. 사진을 찍거나 어디로 보내지 않습니다.",
-        )}
-      >
+        )
+        : "카메라 대신 아래 방법으로 진행하실 수 있습니다."}
+      actions={<>
+        <Cta label="QR 없이 계속하기" onClick={goNext} />
+        {staffBtn()}
+      </>}
+    >
+      {/* 카메라를 못 쓸 때는 창을 그리지 않는다. 볼 것이 없는 200px 상자가 화면 절반을
+          차지하면, 이때 실제로 써야 하는 입력칸이 아래로 밀려 접힌 화면 밖으로 나간다. */}
+      {cameraWanted && (
         <div className="qr-view">
-          {cameraWanted
-            ? <video ref={videoRef} className="qr-cam" muted playsInline autoPlay aria-hidden="true" />
-            : <span className="qr-mark" aria-hidden="true">⌗</span>}
+          <video ref={videoRef} className="qr-cam" muted playsInline autoPlay aria-hidden="true" />
         </div>
-        {/* 상태를 색이나 그림이 아니라 문장으로 말한다. 카메라 영상 위에는 아무것도 얹지 않는다. */}
-        <p className={phase === "noCamera" ? "banner warn" : "qr-status"} role="status">
-          {phase === "checking" ? "카메라를 준비하고 있습니다."
-            : phase === "scanning" ? "카메라가 켜졌습니다. QR을 찾고 있습니다."
-              : blocked}
-        </p>
+      )}
+      {/* 상태를 색이나 그림이 아니라 문장으로 말한다. 카메라 영상 위에는 아무것도 얹지 않는다. */}
+      <p className={phase === "noCamera" ? "banner warn" : "qr-status"} role="status">
+        {phase === "checking" ? "카메라를 준비하고 있습니다."
+          : phase === "scanning" ? "카메라가 켜졌습니다. QR을 찾고 있습니다."
+            : blocked}
+      </p>
 
-        <form className="qr-fallback" onSubmit={submitTyped}>
-          <p className="qr-asks">QR을 스캔하기 어려우신가요?</p>
-          <p className="hint">매장 코드를 손으로 넣으셔도 됩니다. 키오스크 화면 아래쪽에 적혀 있습니다.</p>
-          <label className="field">
-            <span className="qr-label">매장 코드 직접 입력</span>
-            <input name="storeCode" value={typed} inputMode="text" autoComplete="off"
-              placeholder="예: chicken-store"
-              onChange={(e) => { setTyped(e.target.value); setTypedError(""); }} />
-          </label>
-          {typedError && <p className="qr-error" role="alert">{typedError}</p>}
-          <div className="btnrow">
-            {/* Cta 는 type="button" 이라 폼 제출을 못 한다. 여기만 네이티브 제출 버튼을 쓴다 —
-                Enter 키로도 넘어갈 수 있어야 하기 때문이다(같은 .btn 클래스라 모양은 같다). */}
-            <button type="submit" className="btn primary" disabled={!fixture}>이 코드로 연결하기</button>
-            <Cta label="QR 없이 계속하기" onClick={goNext} />
-          </div>
-          {!fixture && <p className="hint">매장 정보를 불러오는 중입니다. 잠시만 기다려 주세요.</p>}
-        </form>
-        {exits}
-      </Card>
-    </>
+      <form className="qr-fallback" onSubmit={submitTyped}>
+        <p className="qr-asks">QR을 스캔하기 어려우신가요?</p>
+        <label className="field">
+          {/* 안내를 라벨 안에 넣는다. 설명을 한 줄 더 두면 접힌 화면(390×844)에서
+              정작 눌러야 할 «이 코드로 연결하기»가 밖으로 밀린다. */}
+          <span className="qr-label">매장 코드 직접 입력 — 키오스크 화면 아래쪽에 있습니다</span>
+          <input name="storeCode" value={typed} inputMode="text" autoComplete="off"
+            placeholder="예: chicken-store"
+            onChange={(e) => { setTyped(e.target.value); setTypedError(""); }} />
+        </label>
+        {typedError && <p className="qr-error" role="alert">{typedError}</p>}
+        <div className="btnrow">
+          {/* Cta 는 type="button" 이라 폼 제출을 못 한다. 여기만 네이티브 제출 버튼을 쓴다 —
+              Enter 키로도 넘어갈 수 있어야 하기 때문이다(같은 .btn 클래스라 모양은 같다). */}
+          <button type="submit" className="btn primary" disabled={!fixture}>이 코드로 연결하기</button>
+        </div>
+        {!fixture && <p className="hint">매장 정보를 불러오는 중입니다. 잠시만 기다려 주세요.</p>}
+      </form>
+    </Screen>
   );
 }

@@ -93,7 +93,8 @@ export function App() {
               차지할 만큼 사용자에게 중요한 정보는 아니라 바닥에 둔다. */}
           <footer className="foot">
             <span>시뮬레이션 — 실제 주문·결제 없음</span>
-            <span>{TIME_SLOT_KO[timeSlotOf(now)]}{demoHour !== null ? " (시연용 고정)" : ""}</span>
+            <span aria-hidden="true"> · </span>
+            <span>지금은 {TIME_SLOT_KO[timeSlotOf(now)]}{demoHour !== null ? " (시연용 고정)" : ""}</span>
           </footer>
         </div>
       </div>

@@ -40,7 +40,7 @@ const openWizard = async (page: Page, a11y: Record<string, boolean> = {}) => {
     }));
   }, a11y);
   await page.reload();
-  await page.getByRole("button", { name: "저장된 설정으로 시작하기" }).click();
+  await page.getByRole("button", { name: /저장된 설정으로 시작하기|지난번과 똑같이 주문하기/ }).click();
   await expect(page.locator("#qtitle")).toBeVisible();
 };
 
@@ -50,10 +50,35 @@ const pick = async (page: Page, nth: number) => {
   await page.getByRole("button", { name: /다음|추천 보기/ }).click();
 };
 
-/** 선택지 n번째의 그림 자리에 깔린 배경 그림 URL (없으면 "none"). */
-const iconOf = (page: Page, nth: number) =>
-  page.locator(".choices .choice").nth(nth - 1).locator(".ico")
-    .evaluate((el) => getComputedStyle(el).backgroundImage);
+/**
+ * 선택지 n번째의 그림. Figma SVG 면 파일 경로, 이모지면 그 글자, 없으면 "".
+ *
+ * 한때 CSS 배경 그림으로 깔았다가 «아무것도 안 보이는» 상태가 됐다. 지금은 <img> 라
+ * 로드 실패도 바로 드러난다 — naturalWidth 가 0 이면 파일이 없는 것이다.
+ */
+const iconOf = async (page: Page, nth: number) => {
+  const el = page.locator(".choices .choice").nth(nth - 1).locator(".ico").first();
+  /* <img> 는 로드가 끝나야 naturalWidth 로 «파일이 실제로 왔는가»를 잴 수 있다.
+     화면이 바뀐 직후에 그대로 재면 «파일이 없다»와 «아직 안 왔다»가 구분되지 않아,
+     멀쩡한 에셋이 «로드 실패»로 잡힌다. 끝날 때까지(성공이든 실패든) 기다린 뒤에 잰다 —
+     정말 없는 파일은 error 로 끝나므로 여전히 «로드 실패»로 걸린다. */
+  await el.waitFor();
+  await el.evaluate((e) => {
+    const img = e as HTMLImageElement;
+    if (e.tagName !== "IMG" || img.complete) return undefined;
+    return new Promise<void>((done) => {
+      img.addEventListener("load", () => done(), { once: true });
+      img.addEventListener("error", () => done(), { once: true });
+    });
+  });
+  return el.evaluate((e) => {
+    if (e.tagName === "IMG") {
+      const img = e as HTMLImageElement;
+      return img.naturalWidth > 0 ? new URL(img.src).pathname : "(로드 실패)";
+    }
+    return (e as HTMLElement).innerText;
+  });
+};
 
 test.describe("레인 C — 질문 화면", () => {
   test("C-L1 제목을 강조 어절로 쪼개도 문장이 그대로 읽힌다", async ({ page }) => {
@@ -61,7 +86,7 @@ test.describe("레인 C — 질문 화면", () => {
     // 조각 사이에 공백이 끼면 여기서 걸린다 (정규식이 아니라 문장 전체 비교)
     await expect(page.locator("#qtitle")).toHaveText("피해야 하는 알레르기가 있으세요?");
     // 강조 어절이 실제로 따로 그려진다
-    await expect(page.locator("#qtitle .qkey")).toHaveText("알레르기");
+    await expect(page.locator("#qtitle .kb-title-key")).toHaveText("알레르기");
   });
 
   test("C-L2 그림이 붙은 선택지에도 글자가 반드시 남는다", async ({ page }) => {
@@ -76,8 +101,12 @@ test.describe("레인 C — 질문 화면", () => {
   test("C-L3 매핑에 없는 선택지는 이모지를 그대로 쓴다", async ({ page }) => {
     await openWizard(page, { visualGuidance: true });
 
-    // 「땅콩」은 디자인 에셋이 없으므로 배경 그림이 깔리지 않고 이모지가 남는다
-    expect(await iconOf(page, 2)).toBe("none");
+    /* 「땅콩」은 디자인 에셋이 없으므로 그림이 깔리지 않고 이모지가 남는다.
+       기대값이 "none" 이던 자리다 — 그림을 CSS 배경으로 깔던 시절 backgroundImage 의
+       «없음»이었고, `<img class="ico">` 로 바뀐 지금은 그 값이 나올 수 없다.
+       재는 것은 그대로다: iconOf 는 <img> 면 파일 경로를 돌려주므로, 이모지가 그대로
+       나온다는 사실이 곧 «디자인 그림이 끼어들지 않았다»는 뜻이다. */
+    expect(await iconOf(page, 2)).toBe("🥜");
     await expect(page.locator(".choices .choice").nth(1).locator(".ico")).toHaveText("🥜");
   });
 
@@ -140,7 +169,7 @@ test.describe("레인 C — 질문 화면", () => {
     await expect(page.locator("#qtitle")).toHaveText(/알레르기/);
 
     await page.getByRole("button", { name: "뒤로" }).click();
-    await expect(page.getByRole("heading", { name: /닭강정 가게 주문/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요|다시 오셨네요/ })).toBeVisible();
   });
 
   test("C-L8 계산 화면에 진행 표시와 직원 도움이 함께 있다", async ({ page }) => {
@@ -177,7 +206,7 @@ test.describe("레인 C — 질문 화면", () => {
 
   test("C-L10 질문 화면에 생략·조기 종료를 권하는 자리가 없다", async ({ page }) => {
     await openWizard(page);
-    const body = await page.locator("section.card").first().innerText();
+    const body = await page.locator(".kb-screen").first().innerText();
     expect(body).not.toMatch(/생략|건너뛰|바로 추천|그만 묻/);
     await pick(page, 1);
     // 「상관없어요」는 없애지 않는다 — NO_PREFERENCE 로 계약에 들어간다
@@ -200,6 +229,9 @@ test.describe("레인 C — 움직임 줄이기", () => {
     // 도는 표시를 멈추는 데서 그치지 않고 지연 자체를 없앤다.
     // 기다리면 어차피 사라지므로 마지막 답 직후 그 자리에서 잰다(재시도 없는 count).
     expect(await page.locator(".calcspin").count(), "계산 화면을 거쳤습니다").toBe(0);
-    await expect(page.getByRole("heading", { name: /이런 메뉴는|조건에 맞는 메뉴가 없습니다/ })).toBeVisible();
+    /* 화면 제목은 h2(.kb-title) 하나뿐이다 — 본문 소제목(h3.q-sechead «이런 메뉴는
+       제외했어요»)이 같은 정규식에 걸려 두 개가 잡히므로 단계를 지정해 화면 제목만 본다. */
+    await expect(page.getByRole("heading", { level: 2, name: /이런 메뉴는 어떠세요|조건에 맞는 메뉴가 없어요/ }))
+      .toBeVisible();
   });
 });
