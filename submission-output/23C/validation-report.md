@@ -4,11 +4,11 @@
 | --- | --- |
 | 팀 ID | `23C` |
 | 환경 | `chicken-store` |
-| 제출 시각 | `2026-08-09T16:42:39.688Z` |
+| 제출 시각 | `2026-08-10T12:33:54.115Z` |
 | productVersion | `5.1.4` |
 | inputContractVersion | `1.0.0` |
-| submission SHA-256 | `f917940f0c0c541506c1aec1b8dc2bb3dfe5b4941d0271e859e805ba605a35e5` |
-| Evidence runId | `RUN-chicken-store-20260809164239-7q50gz` |
+| submission SHA-256 | `5586125af13d9783f570e45b5a52badbb80c327ef9a128b8494ebc2fefc8e9ca` |
+| Evidence runId | `RUN-chicken-store-20260810123354-d58usl` |
 
 ## 검증 결과
 

@@ -15,7 +15,7 @@ import { buildExecutionPlanCore, explainSelections } from "../../src/core/plan";
 import { canStopAsking, shouldSafetyStop, isUnresolved } from "../../src/core/ask";
 import {
   migrateSaved, SAVED_VERSION,
-  type SavedSettings as CoreSaved, type SaveScope,
+  type SavedSettings as CoreSaved,
 } from "../../src/core/saved";
 
 type Step =
@@ -176,26 +176,18 @@ function answerLabel(key: string, v: unknown): string {
  *   저장 여부를 사용자가 선택 · 저장된 내용 확인 · 수정 · 삭제 ·
  *   공용기기 자동저장 방지 · 자동으로 불러온 정보의 재확인
  *
- * 저장 대상을 우리가 정하지 않는다. 같은 안내문이 "이전 이용 내역을 반영한 추천"과
- * "자주 이용하는 메뉴 저장"을 명시적으로 허용하므로, 범위까지 사용자가 고르게 한다.
- *   ALL     — 이번 답변 전부 (다음에 같은 주문을 빠르게)
- *   LASTING — 오래 쓰는 것만: 알레르기·맛 선호·화면 설정 (공용기기·가끔 이용)
- * 기본값은 "저장 안 함"이며, 켤 때 범위를 함께 고른다. */
+ * 그래서 묻는 것은 **켤지 말지 하나뿐**이다. 저장 범위를 나누지 않는 이유는
+ * core/saved.ts 에 적었다 — 공용기기의 답은 부분 저장이 아니라 저장 끄기다.
+ * 묻는 자리도 결제 직전이 아니라 **주문이 끝난 뒤**다(화면목록 S15). 뒷사람 눈치가
+ * 최고조인 순간에 다음 방문에 관한 판단을 시키지 않는다. */
 const STORAGE_KEY = "kb23c-saved-settings-v4";
 /** v3 저장본을 버리지 않는다 — 형식이 바뀌었다고 사용자 설정이 사라지면 안 된다. */
 const LEGACY_KEY = "kb23c-saved-settings-v3";
-const LASTING_KEYS = ["allergies", "spicyLevel", "boneType"] as const;
 
 /** 화면에서 쓰는 저장본 — core 형식에 UI 의 A11y 타입을 입힌 것 */
 interface SavedSettings extends Omit<CoreSaved, "a11y"> {
   a11y: A11y;
 }
-const pickByScope = (answers: Record<string, unknown>, scope: SaveScope): Record<string, unknown> => {
-  if (scope === "ALL") return { ...answers };
-  const out: Record<string, unknown> = {};
-  for (const k of LASTING_KEYS) if (answers[k] !== undefined) out[k] = answers[k];
-  return out;
-};
 /** 해석은 core/saved.ts 가 한다 — localStorage 는 무엇이든 들어올 수 있는 입구다. */
 const readSaved = (key: string): SavedSettings | null => {
   try {
@@ -356,7 +348,6 @@ export function App() {
   const [saved, setSaved] = useState<SavedSettings | null>(null);
   const [fromSaved, setFromSaved] = useState(false);
   const [storeToggle, setStoreToggle] = useState(false); // "이번 한 번만"이 기본값 — 저장은 명시적 선택
-  const [saveScope, setSaveScope] = useState<SaveScope>("ALL"); // 무엇을 저장할지는 사용자가 고른다
   const [editOpen, setEditOpen] = useState<string | null>(null); // 조건 수정 화면에서 펼쳐진 행 (한 번에 하나)
   /** 저장본에서 불러온 항목의 key — 마법사에서 건너뛰고, 무엇이 불러와졌는지 화면에 밝힌다 */
   const [carried, setCarried] = useState<string[]>([]);
@@ -474,7 +465,7 @@ export function App() {
     setAnswers(next);
     setA11y(saved.a11y);
     setCarried(QUESTIONS.map((q) => q.key).filter((k) => next[k] !== undefined));
-    setFromSaved(true); setStoreToggle(true); setSaveScope(saved.scope);
+    setFromSaved(true); setStoreToggle(true);
     setManual(false); setDemoHour(null); setSkipped([]); resetRun();
     const loaded = QUESTIONS.map((qq) => qq.key).filter((k) => next[k] !== undefined);
     const start = nextToAsk(0, loaded);
@@ -534,41 +525,21 @@ export function App() {
     );
   };
 
-  /** 저장. 메뉴를 새로 주지 않으면 이미 저장돼 있던 것을 그대로 둔다. */
-  const persist = (lastCandidateId?: string) => {
-    const keep = lastCandidateId ?? saved?.lastCandidateId;
+  /**
+   * 저장. 이번 답변 전부와 화면 설정, 그리고 확정된 메뉴를 함께 남긴다.
+   * 부분 저장은 없다 — 무엇을 남길지 사용자에게 또 묻지 않기로 했다(core/saved.ts 참조).
+   */
+  const persist = () => {
+    const id = uiRec?.rec.recommendedCandidateId ?? saved?.lastCandidateId;
     const s: SavedSettings = {
       v: SAVED_VERSION,
-      answers: pickByScope(answers, saveScope), a11y, scope: saveScope, savedAt: new Date().toISOString(),
-      ...(keep ? { lastCandidateId: keep } : {}),
+      answers: { ...answers }, a11y, savedAt: new Date().toISOString(),
+      ...(id ? { lastCandidateId: id } : {}),
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); setSaved(s); } catch { /* 저장 불가 환경이면 조용히 건너뜀 */ }
   };
 
-  /**
-   * 확정된 메뉴를 남긴다 (화면목록 S05). 답변은 persist 가 저장 범위대로 이미 저장하므로
-   * 여기서 따로 복제하지 않는다 — 같은 데이터를 두 벌 두면 어느 쪽이 사실인지 알 수 없어진다.
-   * 저장을 켠 경우에만 기록한다. 저장 여부는 끝까지 사용자가 정한다.
-   */
-  const rememberOrder = () => {
-    const id = uiRec?.rec.recommendedCandidateId;
-    if (!storeToggle || !id) return;
-    persist(id);
-  };
-
   /** 토글 = 즉시 반영: 켜는 순간 저장되고, 끄면 저장본이 삭제된다 (사용자 기대와 일치). */
-  /** 저장 범위 변경 — 켜져 있으면 즉시 다시 저장한다(사용자 기대와 일치). */
-  const changeScope = (next: SaveScope) => {
-    setSaveScope(next);
-    if (!storeToggle) return;
-    const rec: SavedSettings = {
-      v: SAVED_VERSION,
-      answers: pickByScope(answers, next), a11y, scope: next, savedAt: new Date().toISOString(),
-      ...(saved?.lastCandidateId ? { lastCandidateId: saved.lastCandidateId } : {}),
-    };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rec)); setSaved(rec); } catch { /* 무시 */ }
-  };
-
   const toggleStore = () => {
     const next = !storeToggle;
     setStoreToggle(next);
@@ -579,7 +550,6 @@ export function App() {
 
   const runSimulation = async () => {
     if (!fixture || !uiRec) return;
-    rememberOrder(); // 확정한 주문을 "지난번처럼"의 근거로 남긴다 (저장을 켠 경우만)
     setStep("run"); setRunLog([]); setRunError(null); setSubmitted(null); setErrResults({});
     try {
       const submission = buildUiSubmission(uiRec, fixture, true, manual);
@@ -593,10 +563,10 @@ export function App() {
     }
   };
 
-  /* 저장 범위가 곧 "무엇을 되살릴지"의 답이다 — 저장할 때 이미 고른 것을 시작 화면에서
-     다시 묻지 않는다. ALL 이면 더 여쭤볼 것이 없으니 지난번 주문을 그대로 되살리는 것이고,
-     LASTING 이면 지속값만 채우고 이번 이용 정보는 다시 여쭤본다. */
-  const resumesWholeOrder = saved?.scope === "ALL";
+  /* 저장본에 7문항이 다 들어 있으면 되살리는 순간 더 여쭤볼 것이 없다 = 지난번 주문 그대로다.
+     저장해 둔 플래그가 아니라 **실제로 들어 있는 답변**을 보고 판단한다 — 옛 형식에서 옮겨온
+     부분 저장본이라면 남은 질문을 다시 여쭤봐야 하고, 문구도 그에 맞아야 한다. */
+  const savedCoversAll = !!saved && QUESTIONS.every((qq) => saved.answers[qq.key] !== undefined);
   const q = QUESTIONS[qIndex];
   const answered = q ? answers[q.key] !== undefined : false;
   const ev = outcome?.evidence as (Evidence & Record<string, unknown>) | undefined;
@@ -658,13 +628,13 @@ export function App() {
                 )}
                 <p className="hint">
                   자동으로 적용하지 않습니다 — 내용을 확인하시고 골라 주세요.
-                  {resumesWholeOrder
+                  {savedCoversAll
                     ? " 저장해 두신 항목은 다시 여쭤보지 않고 확인 화면으로 넘어갑니다."
-                    : " 저장 범위가 '오래 쓰는 것만'이라 수량·예산 같은 이번 이용 정보는 다시 여쭤봅니다."}
+                    : " 저장돼 있지 않은 항목만 다시 여쭤봅니다."}
                 </p>
                 <div className="btnrow">
                   <button type="button" className="btn primary" onClick={startFromSaved} disabled={!fixture}>
-                    {resumesWholeOrder ? "지난번과 똑같이 주문하기" : "저장된 설정으로 시작하기"}
+                    {savedCoversAll ? "지난번과 똑같이 주문하기" : "저장된 설정으로 시작하기"}
                   </button>
                   <button type="button" className="btn danger" onClick={deleteSaved}>기록 지우기</button>
                   {staffBtn()}
@@ -1016,36 +986,8 @@ export function App() {
                 </>
               );
             })()}
+            {/* 이 화면에서는 주문만 확인한다. 저장 얘기는 주문이 끝난 뒤에 한 번 묻는다(S15). */}
             <div className="banner ok">가상 키오스크에서 장바구니 확인까지만 진행합니다. <b>실제 결제·주문은 일어나지 않습니다.</b></div>
-
-            <div className="savebox">
-              <button type="button" className="toggle" aria-pressed={storeToggle} onClick={toggleStore}>
-                이 설정을 이 기기에 저장 {storeToggle ? "— 저장됨 ✓" : "— 저장 안 함 (기본)"}
-              </button>
-
-              {storeToggle && (
-                <>
-                  <p className="hint" style={{ margin: "12px 0 6px" }}>무엇을 저장할까요?</p>
-                  <div className="choices" role="group" aria-label="저장 범위">
-                    <button type="button" className="choice" aria-pressed={saveScope === "ALL"}
-                      onClick={() => changeScope("ALL")}>
-                      이번 답변 전부
-                      <small>다음에 같은 주문을 빠르게 하실 수 있습니다</small>
-                    </button>
-                    <button type="button" className="choice" aria-pressed={saveScope === "LASTING"}
-                      onClick={() => changeScope("LASTING")}>
-                      오래 쓰는 것만
-                      <small>알레르기·맛 선호·화면 설정. 수량·예산은 매번 새로 여쭤봅니다</small>
-                    </button>
-                  </div>
-                </>
-              )}
-
-              <p className="hint" style={{ marginTop: 10 }}>
-                끄면 저장본이 즉시 삭제되며, 시작 화면에서도 지울 수 있습니다.
-                공용 기기에서는 꺼 두세요. <b>서버·계정에는 아무것도 저장되지 않습니다.</b>
-              </p>
-            </div>
             {live ? (
               <>
                 <label className="field">공식 시뮬레이터 세션에 제출하기 (선택 — 시뮬레이터 화면의 세션 ID 입력)
@@ -1063,7 +1005,6 @@ export function App() {
                   {/* 체험 모드에서도 주문은 끝까지 간다 — 계획을 만들어 보관하고 결과 화면에서 그 결말을 보여준다. */}
                   <button type="button" className="btn primary" onClick={() => {
                     if (!fixture || !uiRec) return;
-                    rememberOrder();
                     setSubmitted(buildUiSubmission(uiRec, fixture, true, manual));
                     setStep("result");
                   }}>주문 확정하기</button>
@@ -1179,6 +1120,28 @@ export function App() {
                 );
               })()}
             </div>
+
+            {/* 화면목록 S15 «안내·저장 유도» — 주문이 끝난 뒤에 한 번만 묻는다.
+             *
+             * 결제 직전 확인 화면에 두었더니, 뒷사람 눈치가 최고조인 순간에 다음 방문에 관한
+             * 판단을 시키는 꼴이었다. 우리 컨셉이 «눈치 볼 틈과 이유를 없애기»인데 정반대다.
+             * 무엇을 저장할지는 묻지 않는다 — 켜면 전부, 끄면 즉시 삭제. */}
+            <section className="card savebox" aria-label="다음 방문을 위한 저장">
+              <h2>다음에도 쓰시게 저장할까요?</h2>
+              <p className="hint">
+                {t(
+                  "저장하면 다음에 오실 때 한 번만 누르면 됩니다.",
+                  "알레르기·맛 선호·화면 설정과 이번에 고르신 메뉴를 이 기기에 저장합니다. 다음에 오시면 «지난번과 똑같이 주문하기» 한 번으로 끝납니다.",
+                )}
+              </p>
+              <button type="button" className="toggle" aria-pressed={storeToggle} onClick={toggleStore}>
+                이 기기에 저장 {storeToggle ? "— 저장됨 ✓" : "— 저장 안 함 (기본)"}
+              </button>
+              <p className="hint" style={{ marginTop: 10 }}>
+                끄면 저장본이 즉시 삭제되며, 시작 화면에서도 지울 수 있습니다.
+                공용 기기에서는 꺼 두세요. <b>서버·계정에는 아무것도 저장되지 않습니다.</b>
+              </p>
+            </section>
 
             {outcome?.valid && submitted && (
               <div className="card errpanel">

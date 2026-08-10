@@ -20,7 +20,6 @@ describe("저장본 마이그레이션", () => {
     expect(m).not.toBeNull();
     expect(m!.answers).toEqual(v3.answers);
     expect(m!.a11y).toEqual(v3.a11y);
-    expect(m!.scope).toBe("LASTING");
     expect(m!.v).toBe(SAVED_VERSION);
   });
 
@@ -41,8 +40,15 @@ describe("저장본 마이그레이션", () => {
     expect(m!.lastCandidateId).toBe("CHICKEN-003");
   });
 
-  it("알 수 없는 scope 는 ALL 로 되돌린다 — 저장 범위를 임의로 넓히지 않는다", () => {
-    expect(migrateSaved({ ...v3, scope: "EVERYTHING" })!.scope).toBe("ALL");
+  it("옛 저장 범위(scope)는 읽지 않고 버린다 — 부분 저장 개념이 사라졌다", () => {
+    const m = migrateSaved({ ...v3, scope: "EVERYTHING" }) as unknown as Record<string, unknown>;
+    expect(m.scope).toBeUndefined();
+  });
+
+  it("부분 저장이던 옛 저장본의 답변은 있는 그대로 둔다 — 없는 답을 지어내지 않는다", () => {
+    // v3 는 알레르기·맵기·형태만 저장했다. 화면이 나머지를 다시 여쭤보면 된다.
+    const m = migrateSaved(v3)!;
+    expect(Object.keys(m.answers).sort()).toEqual(["allergies", "boneType", "spicyLevel"]);
   });
 
   it("메뉴 ID 가 문자열이 아니면 버리되 나머지 설정은 살린다", () => {
