@@ -92,8 +92,10 @@ describe("접근성 — 선언한 보증이 실제로 코드에 있는가", () =
 
   it("아이콘은 항상 글자와 함께 나온다 (아이콘 단독 금지)", () => {
     expect(UI_GUARANTEES.iconsAlwaysPairedWithText).toBe(true);
-    // 아이콘 span 바로 뒤에 라벨이 이어진다
-    expect(APP).toMatch(/aria-hidden="true">\{o\.icon\}<\/span>\}\s*\n?\s*\{o\.label\}/);
+    /* 그림(이모지든 SVG 든) 바로 뒤에 라벨이 이어진다 — 그림만 남는 길이 없다.
+       그림을 CSS 배경으로 깔면 이 구조가 무너지므로 <img>/<span> 으로만 그린다. */
+    expect(APP).toMatch(/aria-hidden="true"[^\n]*\}\s*\n\s*\{o\.label\}/);
+    expect(APP, "그림을 CSS 배경으로 깔면 라벨을 지워도 티가 안 난다").not.toMatch(/\.ico\s*\{[^}]*background-image/);
   });
 
   it("직원 도움이 모든 화면에서 닿는다 — 화면 목록을 손으로 적지 않는다", () => {

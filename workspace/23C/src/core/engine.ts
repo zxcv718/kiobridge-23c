@@ -247,7 +247,11 @@ export function explainCore(rec: Recommendation, ctx: EngineContext): string[] {
   if (byReason.get("SERVICE_TYPE_UNSUPPORTED"))
     reasons.push(`원하시는 이용 방식이 불가능한 메뉴 ${byReason.get("SERVICE_TYPE_UNSUPPORTED")}개를 제외했습니다.`);
 
-  if (rec.requiresReconfirmation)
+  /* 재확인 안내는 «추천은 있는데 확신이 부족할 때»의 말이다. 조건에 맞는 메뉴가
+     아예 없을 때 이 문장을 붙이면 거짓말이 된다 — 알레르기를 «없어요»라고 확실히
+     답한 사람에게 «확실하지 않은 정보가 있다»고 말하는 꼴이고, 실제 원인(예산이
+     최저가보다 낮음)은 바로 위 문장이 이미 정확히 말하고 있다. */
+  if (rec.requiresReconfirmation && rec.recommendedCandidateId !== null)
     reasons.push("확실하지 않은 정보가 있어, 진행 전에 한 번 더 확인을 요청드립니다.");
 
   // 사용한 정보의 범위를 정직하게 고지한다.

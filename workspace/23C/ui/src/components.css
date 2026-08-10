@@ -126,3 +126,40 @@
   .kb-pick { grid-column: 2 / -1; text-align: left; }
 }
 
+
+/* ───────── Screen — 화면 한 장의 골격 ─────────
+ * 뒤로가기 → 진행 표시 → 인사말 → 큰 제목 → 부제 → 넓은 여백 → 아래 붙는 CTA. */
+.kb-screen { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.kb-screen-top { flex: 0 0 auto; }
+/* 본문이 남는 높이를 다 차지해야 CTA 가 화면 아래로 내려간다 (디자인의 넓은 여백) */
+.kb-screen-body { flex: 1 1 auto; }
+
+.kb-eyebrow { color: var(--muted); font-size: 0.9em; margin: var(--kb-spacing-sm) 0 2px; }
+/* 디자인의 display(28px) — 본문 18px 기준 약 1.55배. 큰 글씨를 켜면 함께 커진다. */
+.kb-title { font-size: 1.55em; line-height: var(--kb-line-height-tight); margin: 0 0 var(--kb-spacing-sm); word-break: keep-all; }
+.kb-title-key { font-size: 1.24em; }
+.kb-subtitle { color: var(--muted); margin: 0 0 var(--kb-spacing-lg); word-break: keep-all; }
+
+/* CTA 는 화면 아래에 붙는다. 내용이 길어져도 «다음»을 찾으러 스크롤하지 않아도 되고,
+   홈 인디케이터가 있는 기기에서 가려지지 않도록 안전 영역만큼 띄운다. */
+.kb-actions {
+  position: sticky;
+  bottom: 0;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--kb-spacing-sm);
+  padding: var(--kb-spacing-md) 0 calc(var(--kb-spacing-md) + env(safe-area-inset-bottom, 0px));
+  margin-top: var(--kb-spacing-lg);
+  background: var(--bg);
+}
+/* 스크롤되는 내용이 버튼 밑으로 사라질 때 경계가 보이게 — 잘린 글자를 «끝»으로 오해하지 않게 */
+.kb-actions::before {
+  content: "";
+  position: absolute; left: 0; right: 0; top: calc(var(--kb-spacing-md) * -1);
+  height: var(--kb-spacing-md);
+  background: linear-gradient(to bottom, transparent, var(--bg));
+  pointer-events: none;
+}
+/* 화면 아래 버튼은 한 줄을 다 쓴다 (Figma 354px CTA) */
+.kb-actions .btn { width: 100%; }

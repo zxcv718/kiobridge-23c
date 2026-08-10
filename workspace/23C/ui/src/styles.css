@@ -41,11 +41,25 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
 .app {
-  min-height: 100vh; background: var(--bg); color: var(--fg);
+  /* 100vh 는 모바일 브라우저에서 주소창 높이를 빼지 않아 화면 아래가 잘린다.
+     dvh 는 실제로 보이는 높이를 따라간다(미지원 브라우저는 앞 줄로 떨어진다). */
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg); color: var(--fg);
   font-family: var(--kb-font-family);
   font-size: var(--fs); line-height: var(--kb-line-height-body); -webkit-font-smoothing: antialiased;
 }
-.shell { max-width: 760px; margin: 0 auto; padding: 20px 20px 80px; }
+/* 디자인은 402×874 · 390×844 모바일 시안이다. 컨테이너를 760px 로 두면 같은 화면이
+   가로로 늘어나 여백·글자 크기 비율이 시안과 달라진다 — «디자인을 반영한 것 같은데
+   두 개가 섞인» 느낌의 가장 큰 원인이었다. 시안 폭을 그대로 쓰고 가운데 정렬한다. */
+.shell {
+  max-width: var(--kb-screen-max);
+  margin: 0 auto;
+  padding: var(--kb-spacing-md) var(--kb-spacing-md) 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
 /* 포커스 테두리는 brand 가 아니라 brand-strong 이다.
    brand(#ff5a1f)는 순백 위에서 3.12:1 로 겨우 통과하지만, 실제 바탕인 캔버스(#f7f7f8)
    위에서는 2.91:1 로 떨어진다. 바탕이 1.6% 어두워진 것만으로 합불이 뒤집힌다 — 눈으로는
@@ -127,7 +141,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 
 /* 모바일 — 좁은 화면에서 카드·그리드가 1열로 접히고 여백이 줄어든다 */
 @media (max-width: 560px) {
-  .shell { padding: 12px 14px 60px; }
+  .shell { padding: 12px 14px 0; }
   .app { --fs: 17px; }
   .app.large { --fs: 20px; }
   .evgrid { grid-template-columns: 1fr; }

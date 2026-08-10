@@ -140,8 +140,15 @@ export const QUESTIONS: Question[] = [
   { key: "cupOption", title: "컵이 필요하세요?", hint: "메뉴에 따라 선택할 수 있는 컵이 다릅니다.", options: [
     { value: "종이컵", label: "종이컵", icon: "🥤" }, { value: "일반컵", label: "일반컵", icon: "🥛" },
     { value: "없음", label: "필요 없어요", icon: "🚫" }, { value: "상관없음", label: "상관없어요", icon: "🤷" } ] },
+  /* 5,000원이 있어야 하는 이유: 이 가게의 최저가가 5,500원(매운 뼈 닭강정)이다.
+   * 선택지가 6,000원부터 시작하면 «조건에 맞는 메뉴가 없습니다»가 **어떤 답변으로도
+   * 일어나지 않는다.** 그 화면과 엔진 경로는 이미 다 만들어 두었는데 사용자만 못 갔다.
+   * 5,000원 들고 온 사람에게 «그 예산으로는 없습니다, 조건을 고쳐 보시겠어요»라고
+   * 말하는 것은 이 서비스가 마땅히 해야 할 일이다.
+   * (계약도 이 상태를 이미 모델링한다 — recommendation.schema.json 의
+   *  recommendedCandidateId 는 ["string", "null"] 이다.) */
   { key: "budgetKrw", title: "예산 상한이 있으세요?", options: [
-    { value: "없음", label: "없어요" }, { value: 6000, label: "6,000원" }, { value: 7000, label: "7,000원" }, { value: 10000, label: "10,000원" } ] },
+    { value: "없음", label: "없어요" }, { value: 5000, label: "5,000원" }, { value: 6000, label: "6,000원" }, { value: 7000, label: "7,000원" }, { value: 10000, label: "10,000원" } ] },
 ];
 
 export const EDIT_LABELS: Record<string, string> = {

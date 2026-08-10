@@ -35,7 +35,7 @@ const CHOICES = {
   serviceType: ["포장", "매장", "상관없음"],
   quantity: [1, 2, 3],
   cupOption: ["종이컵", "일반컵", "없음", "상관없음"],
-  budgetKrw: ["없음", 6000, 7000, 10000],
+  budgetKrw: ["없음", 5000, 6000, 7000, 10000],
 } as const;
 const KEYS = Object.keys(CHOICES) as (keyof typeof CHOICES)[];
 
@@ -116,6 +116,9 @@ async function main() {
   const groups = new Map<string, { answers: Answers; count: number }>();
   let total = 0, allergyMissing = 0, reconfirm = 0, noCandidate = 0;
   const reconfirmSample: Answers[] = [];
+  /* 「조건에 맞는 메뉴가 없음」 경로의 표본. 세기만 하고 넘어가면, 이 경로로 만든
+     제출물이 계약을 지키는지는 아무도 모른 채 남는다. */
+  const noCandidateSample: Answers[] = [];
 
   const walk = (i: number, acc: Answers): void => {
     if (i === KEYS.length) {
@@ -125,8 +128,15 @@ async function main() {
       // 질문이 고정이므로 늘 참이어야 한다 — 구성이 바뀌면 여기서 걸린다
       if (!allergensAnswered(engineCtx)) { allergyMissing++; return; }
 
+      /* 순서가 중요하다. 후보가 없으면 confidence 가 바닥이라 requiresReconfirmation 도
+         참이 되는데, 재확인을 먼저 세면 «후보 없음»이 영원히 0건으로 보인다.
+         더 구체적인 상태를 먼저 센다. */
+      if (rec.recommendedCandidateId === null) {
+        noCandidate++;
+        if (noCandidateSample.length === 0) noCandidateSample.push({ ...acc });
+        return;
+      }
       if (rec.requiresReconfirmation) { reconfirm++; if (reconfirmSample.length === 0) reconfirmSample.push({ ...acc }); return; }
-      if (rec.recommendedCandidateId === null) { noCandidate++; return; }
 
       // 서버가 보는 것은 실행계획이다 — 같은 계획이면 같은 판정이므로 서명으로 묶는다
       const plan = buildExecutionPlanCore({ approved: true, decision: "APPROVE" }, rec, fixture, engineCtx);
@@ -166,6 +176,19 @@ async function main() {
     const r = await replay(sub);
     console.log(`\n재확인 경로 표본: 계획 액션 ${sub.executionPlan.actions.length}개(0이어야 함) · ` +
       `검증 valid=${r.valid}${r.valid ? "" : ` (${r.errors.map((e) => e.code).join(",")})`}`);
+  }
+
+  if (noCandidateSample.length > 0) {
+    const sub = buildSubmission(noCandidateSample[0], fixture, false);
+    const r = await replay(sub);
+    console.log(`\n후보 없음 경로 표본: 추천=${sub.recommendation.recommendedCandidateId}(null 이어야 함) · ` +
+      `제외 ${sub.recommendation.excludedCandidates.length}개 · 계획 액션 ${sub.executionPlan.actions.length}개(0이어야 함) · ` +
+      `검증 valid=${r.valid}${r.valid ? "" : ` (${r.errors.map((e) => e.code).join(",")})`}`);
+    if (!r.valid || sub.executionPlan.actions.length !== 0 || sub.recommendation.recommendedCandidateId !== null) {
+      bad.push("후보 없음 경로가 계약을 깨뜨립니다");
+    }
+  } else {
+    bad.push("후보 없음 경로가 한 번도 나오지 않았습니다 — 예산 최저 선택지가 최저가보다 높지 않은지 보세요");
   }
 
   const verdict = allergyMissing === 0 && bad.length === 0;
