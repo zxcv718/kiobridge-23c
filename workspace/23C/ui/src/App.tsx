@@ -27,14 +27,23 @@ import { Running } from "./screens/Running";
 import { Result } from "./screens/Result";
 import { SafetyStop } from "./screens/SafetyStop";
 import { StaffHelp } from "./screens/StaffHelp";
+// 아직 만들지 않은 화면들 — 자리만 잡아 둔다 (screens/*.tsx 의 PLACEHOLDER 참고)
+import { SaveChoice } from "./screens/SaveChoice";
+import { QrConnect } from "./screens/QrConnect";
+import { SessionStart } from "./screens/SessionStart";
+import { MenuConfirm } from "./screens/MenuConfirm";
 
 /** 라우팅 표 — 화면 하나 = 한 줄. 여기 없는 Step 은 존재할 수 없다. */
 const SCREENS: Record<Step, React.ComponentType> = {
   start: Home,               // S01a·S01b 홈
   profile: ProfileSetup,     // S02 화면·안내 설정
+  saveChoice: SaveChoice,    // S03 저장 방식            ← 아직 만들지 않음
+  qr: QrConnect,             // S04a·S04b QR 연동        ← 아직 만들지 않음
+  sessionStart: SessionStart, // S05 세션 시작            ← 아직 만들지 않음
   wizard: QuestionScreen,    // S06~S10 질문
   calculating: Calculating,  // S11 계산 중
   recommend: Recommend,      // 추천 결과
+  menuConfirm: MenuConfirm,  // 메뉴 확인(신규)          ← 아직 만들지 않음
   confirm: CartReview,       // S13 장바구니 확인
   edit: CartEdit,            // S14 조건·메뉴 수정
   run: Running,              // 가상 키오스크 실행 중

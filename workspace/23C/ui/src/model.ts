@@ -15,7 +15,8 @@ import { migrateSaved, type SavedSettings as CoreSaved } from "../../src/core/sa
  * (`Record<Step, …>`) — 새 화면을 만들면 표에 넣지 않고는 타입이 통과하지 않는다.
  */
 export type Step =
-  | "start" | "profile" | "wizard" | "calculating" | "recommend"
+  | "start" | "profile" | "saveChoice" | "qr" | "sessionStart"
+  | "wizard" | "calculating" | "recommend" | "menuConfirm"
   | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
 
 /** 추천 계산 화면(S11)을 보여주는 시간. 진행 중임을 알리는 최소한이며, 결과를 늦추려는 것이 아니다. */

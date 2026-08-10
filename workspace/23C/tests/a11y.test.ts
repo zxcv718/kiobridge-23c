@@ -203,3 +203,38 @@ describe("공통 컴포넌트 규약 — 네 갈래로 나눠 만들어도 어�
     expect(cta!.text).not.toMatch(/label\?:/);
   });
 });
+
+/**
+ * 아직 만들지 않은 화면의 명단.
+ *
+ * 자리만 뚫어 둔 화면이 조용히 남아 배포되는 것을 막는다. 명단과 코드가 어긋나면
+ * 여기서 걸린다 — 자리를 새로 뚫고 명단에 안 적어도, 다 만들어 놓고 명단에서
+ * 안 지워도 실패한다. **마지막에는 이 명단이 비어 있어야 한다.**
+ */
+const PLACEHOLDER_SCREENS = [
+  "MenuConfirm.tsx",   // 레인 D — 메뉴 확인(신규)
+  "QrConnect.tsx",     // 레인 B — S04a·S04b QR 연동
+  "SaveChoice.tsx",    // 레인 A — S03 저장 방식
+  "SessionStart.tsx",  // 레인 A — S05 세션 시작
+];
+
+describe("미완성 화면은 명단에 적힌 것뿐이다", () => {
+  it("PLACEHOLDER 를 단 화면과 명단이 정확히 일치한다", () => {
+    const marked = uiSources()
+      .filter((f) => f.name.startsWith("screens/") && /export const PLACEHOLDER/.test(f.text))
+      .map((f) => f.name.slice("screens/".length))
+      .sort();
+    expect(marked, "미완성 명단과 코드가 어긋납니다 (자리를 뚫었거나 다 만들었으면 명단을 고치세요)")
+      .toEqual([...PLACEHOLDER_SCREENS].sort());
+  });
+
+  it("미완성 화면도 직원 도움과 빠져나갈 길은 갖는다", () => {
+    // 자리만 뚫었더라도 막다른 길이어서는 안 된다
+    for (const name of PLACEHOLDER_SCREENS) {
+      const f = uiSources().find((x) => x.name === `screens/${name}`);
+      expect(f, `${name} 이 없습니다`).toBeDefined();
+      expect(f!.text, `${name} 에 직원 도움이 없습니다`).toMatch(/staffBtn\(/);
+      expect(f!.text, `${name} 에 빠져나갈 길이 없습니다`).toMatch(/setStep\("start"\)/);
+    }
+  });
+});
