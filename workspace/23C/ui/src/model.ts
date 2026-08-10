@@ -285,6 +285,8 @@ export function savedSummary(s: SavedSettings): string {
 export function buildRawInput(
   answers: Record<string, unknown>, a11y: A11y,
   fromSaved: boolean, storeProfile: boolean,
+  /** 사용자가 직접 만진 화면 설정 — 기본값으로 켜진 것과 구분한다 */
+  touchedA11y: string[] = [],
 ): RawUserInput {
   const a = { ...answers };
   const allergies = (a.allergies as (string | number)[] | undefined)?.filter((x) => x !== "없음") ?? [];
@@ -312,5 +314,8 @@ export function buildRawInput(
     // 대리 입력이면 출처를 정직하게 남긴다 (공식 enum)
     _collectedVia: fromSaved ? "IMPORTED" : a11y.preferredInput === "ASSISTED" ? "ASSISTED_INPUT" : "WEB_FORM",
     _confirmedByUser: true, // 저장본도 배너에서 사용자가 확인한 뒤에만 이 경로에 들어온다
+    /* 켜져 있다는 것과 사용자가 골랐다는 것은 다르다. 제출물의 «이번 세션에 선택한
+       채널»은 후자만 센다 — 기본값을 사용자의 선택으로 적지 않는다. */
+    _touchedA11y: touchedA11y,
   };
 }

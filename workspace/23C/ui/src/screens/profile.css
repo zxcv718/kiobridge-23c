@@ -65,3 +65,15 @@
 
 /* 저장 방식·세션 시작·홈의 안내 문구 */
 .p-note { margin: 12px 0 0; font-size: 0.84em; color: var(--muted); line-height: 1.6; }
+
+/* 저장하면 무엇이 남는지 — 고르기 «전에» 보여준다 (guide.txt 5번 «저장된 내용 확인»).
+   경고가 아니라 안내라 danger 색을 쓰지 않는다. */
+.p-willsave {
+  margin: 14px 0 4px; padding: 14px 16px;
+  border: 1.5px solid var(--line-soft); border-radius: var(--kb-radius-md);
+  background: var(--sunken); font-size: 0.86em; line-height: 1.6;
+}
+.p-willsave ul { margin: 8px 0; padding-left: 20px; }
+.p-willsave li { margin: 4px 0; color: var(--muted); }
+.p-willsave li span, .p-willsave li b { color: var(--fg); }
+.p-willsave > p { margin: 8px 0 0; color: var(--muted); }

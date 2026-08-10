@@ -161,6 +161,23 @@ describe("접근성 증거 — 켠 것만 보고한다", () => {
     expect(e.profileFlagsOn).toContain("highContrast");
   });
 
+  it("기본값으로 켜진 것을 «사용자가 선택했다»고 적지 않는다", () => {
+    /* 서비스는 largeText·simpleSteps 를 켠 채로 시작한다. 그 편이 이 서비스의 대상에게
+       낫다고 판단한 기본값이지 사용자의 선택이 아니다. 아무것도 고르지 않고 지나간
+       사람의 제출물에 LARGE_TEXT 가 실리면, 우리가 정해 놓고 그가 골랐다고 적는 것이다. */
+    const untouched = buildAccessibilityEvidence({
+      largeText: true, simpleSteps: true, _touchedA11y: [],
+    });
+    expect(untouched.supportModesSelectedInThisSession).toEqual([]);
+    // 다만 «지금 켜져 있다»는 사실 자체는 숨기지 않는다 — 화면 상태는 그대로 보고한다
+    expect(untouched.profileFlagsOn).toEqual(["largeText", "simpleSteps"]);
+
+    const chosen = buildAccessibilityEvidence({
+      largeText: true, simpleSteps: true, _touchedA11y: ["largeText"],
+    });
+    expect(chosen.supportModesSelectedInThisSession).toEqual(["LARGE_TEXT"]);
+  });
+
   it("대리 입력은 GUARDIAN_MODE 로 기록된다", () => {
     const e = buildAccessibilityEvidence({ preferredInput: "ASSISTED" });
     expect(e.supportModesSelectedInThisSession).toContain("GUARDIAN_MODE");

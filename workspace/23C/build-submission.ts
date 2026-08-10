@@ -43,7 +43,13 @@ const ANSWERS = {
   budgetKrw: 7000,
 } as const;
 
-/** 화면 설정 — 큰 글씨와 쉬운 말을 켠 상태. 켠 것만 accessibilityEvidence 에 실린다. */
+/**
+ * 화면 설정 — 이 사람은 큰 글씨와 쉬운 말을 **직접 골랐다.**
+ *
+ * `_touchedA11y` 를 함께 넘기는 이유: 서비스는 이 둘을 켠 채로 시작하는데, 켜져 있다는
+ * 이유만으로 «사용자가 선택했다»고 적으면 아무것도 고르지 않은 사람의 제출물에도 같은
+ * 채널이 실린다. 무엇을 고른 사람인지 여기서 분명히 밝힌다.
+ */
 const A11Y = {
   largeText: true, highContrast: false, simpleSteps: true, visualGuidance: false,
   hearingSupport: false, mobilitySupport: false, staffAssistancePreferred: false,
@@ -59,6 +65,7 @@ async function main(): Promise<void> {
     ...ANSWERS,
     allergies: [...ANSWERS.allergies],
     ...A11Y,
+    _touchedA11y: ["largeText", "simpleSteps"],
     language: "ko-KR",
     storeProfile: false,
     _collectedVia: "WEB_FORM",

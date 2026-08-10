@@ -61,6 +61,11 @@ export function useFlowState() {
    * 화면 밖에서 사는 값은 흐름 상태로 둔다.
    */
   const [profileStep, setProfileStep] = useState<1 | 2 | 3>(1);
+  /**
+   * 사용자가 **직접 만진** 화면 설정. 기본값으로 켜져 있는 것과 구분하기 위해서다 —
+   * 제출물의 «이번 세션에 선택한 채널»은 고른 것만이어야 한다(core/submission-meta.ts).
+   */
+  const [touchedA11y, setTouchedA11y] = useState<string[]>([]);
   /** 계산 화면(S11) 타이머 — 화면을 벗어나면 남은 전환이 덮어쓰지 않게 관리한다 */
   const calcTimer = useRef<number | null>(null);
   useEffect(() => () => { if (calcTimer.current !== null) window.clearTimeout(calcTimer.current); }, []);
@@ -82,11 +87,14 @@ export function useFlowState() {
   const t = (short: string, long: string) => (simple ? short : long);
 
   const rawInput = useMemo(
-    () => buildRawInput(answers, a11y, fromSaved, storeToggle),
-    [answers, a11y, fromSaved, storeToggle],
+    () => buildRawInput(answers, a11y, fromSaved, storeToggle, touchedA11y),
+    [answers, a11y, fromSaved, storeToggle, touchedA11y],
   );
 
-  const setFlag = (k: keyof A11y, v: A11y[keyof A11y]) => setA11y((s) => ({ ...s, [k]: v }));
+  const setFlag = (k: keyof A11y, v: A11y[keyof A11y]) => {
+    setA11y((s) => ({ ...s, [k]: v }));
+    setTouchedA11y((t) => (t.includes(k) ? t : [...t, k]));
+  };
 
   const resetRun = () => { setOutcome(null); setSubmitted(null); setRunError(null); setErrResults({}); };
 
@@ -164,7 +172,7 @@ export function useFlowState() {
     const start = nextToAsk(0, loaded);
     if (start >= QUESTIONS.length) {
       // 저장본에 7문항이 다 있어 더 여쭤볼 것이 없다 = 지난번 주문을 그대로 되살리는 경우다
-      const u = computeRecommendation(buildRawInput(next, saved.a11y, true, true), fixture, new Date());
+      const u = computeRecommendation(buildRawInput(next, saved.a11y, true, true, touchedA11y), fixture, new Date());
       /* 지난번에 직접 고른 메뉴를 되살린다.
        * 답변만 재현하면 엔진이 다시 1위를 뽑으므로, 대안을 골랐던 경우 지난번과 달라진다.
        * 되살리는 대상은 scoreBreakdown 에 남은 **생존 후보뿐**이다 — 그 사이 품절되었거나
@@ -224,7 +232,7 @@ export function useFlowState() {
     if (!fixture) return;
     if (storeToggle) persist();
     // 고쳐서 다시 받는 경로 — 여기서도 미확정이면 시도 횟수가 올라가고, 2회째면 안전 중단이다
-    goRecommend(computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle), fixture, now));
+    goRecommend(computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle, touchedA11y), fixture, now));
   };
 
   /**

@@ -31,15 +31,28 @@ export const UI_GUARANTEES = {
 } as const;
 
 export function buildAccessibilityEvidence(raw: RawLike): Record<string, unknown> {
+  /**
+   * «이번 세션에 선택한 채널»은 **사용자가 실제로 고른 것**만이다.
+   *
+   * 서비스는 largeText·simpleSteps 를 켠 채로 시작한다 — 이 서비스의 대상에게 그 편이
+   * 낫다고 판단한 기본값이다. 그런데 켜져 있다는 이유로 «사용자가 선택했다»고 적으면,
+   * 아무것도 고르지 않고 지나간 사람의 제출물에도 LARGE_TEXT·SIMPLE_STEPS 가 실린다.
+   * 그건 우리가 정해 놓고 그가 골랐다고 적는 것이다.
+   *
+   * `_touchedA11y` 가 없으면(스크립트·테스트에서 직접 부를 때) 예전처럼 켜진 것을 센다 —
+   * 그 경우 «기본값이 무엇인지»가 아니라 «넘겨준 값이 무엇인지»가 곧 의도이기 때문이다.
+   */
+  const touched = Array.isArray(raw._touchedA11y) ? (raw._touchedA11y as string[]) : null;
   const on = (k: string) => raw[k] === true;
+  const chose = (k: string) => on(k) && (touched === null || touched.includes(k));
   // supportModes 어휘로 매핑되는 것만 채널로 센다. 대응 항목이 없는 플래그
   // (mobilitySupport · highContrast)를 억지로 끼워 넣지 않는다.
   const selected: string[] = [];
-  if (on("largeText")) selected.push("LARGE_TEXT");
-  if (on("hearingSupport")) selected.push("HEARING_SUPPORT");
-  if (on("visualGuidance")) selected.push("VISUAL_GUIDANCE");
-  if (on("simpleSteps")) selected.push("SIMPLE_STEPS");
-  if (on("staffAssistancePreferred")) selected.push("STAFF_HELP");
+  if (chose("largeText")) selected.push("LARGE_TEXT");
+  if (chose("hearingSupport")) selected.push("HEARING_SUPPORT");
+  if (chose("visualGuidance")) selected.push("VISUAL_GUIDANCE");
+  if (chose("simpleSteps")) selected.push("SIMPLE_STEPS");
+  if (chose("staffAssistancePreferred")) selected.push("STAFF_HELP");
   if (raw.preferredInput === "ASSISTED") selected.push("GUARDIAN_MODE");
 
   return {
