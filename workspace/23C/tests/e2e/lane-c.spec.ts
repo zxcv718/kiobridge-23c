@@ -84,16 +84,18 @@ test.describe("레인 C — 질문 화면", () => {
   test("C-L1 제목을 강조 어절로 쪼개도 문장이 그대로 읽힌다", async ({ page }) => {
     await openWizard(page);
     // 조각 사이에 공백이 끼면 여기서 걸린다 (정규식이 아니라 문장 전체 비교)
-    await expect(page.locator("#qtitle")).toHaveText("피해야 하는 알레르기가 있으세요?");
+    await expect(page.locator("#qtitle")).toHaveText("알레르기가 있으신가요?");
     // 강조 어절이 실제로 따로 그려진다
     await expect(page.locator("#qtitle .kb-title-key")).toHaveText("알레르기");
   });
 
   test("C-L2 그림이 붙은 선택지에도 글자가 반드시 남는다", async ({ page }) => {
     await openWizard(page, { visualGuidance: true });
+    // 알레르기 첫 걸음은 타일 두 장뿐이다 — 그림이 여럿 붙는 곳은 항목 목록이다
+    await page.getByRole("button", { name: "있어요", exact: true }).click();
 
-    /* 알레르기는 이모지로 통일했다 — 항목마다 다른 음식이라 이모지가 실제로 구별을 돕고,
-       여기에 Figma 방패(safe)를 하나만 섞으면 «없어요»가 다른 종류처럼 보인다. */
+    /* 항목은 이모지로 통일했다 — 항목마다 다른 음식이라 이모지가 실제로 구별을 돕는다.
+       첫 걸음의 방패(safe/danger)는 «있다/없다»를 가르는 그림이라 여기 섞지 않는다. */
     expect(await iconOf(page, 1)).not.toBe("");
 
     // 그림만 두지 않는다 — 그림이 붙은 **모든** 선택지에 글자가 함께 있어야 한다
@@ -116,8 +118,9 @@ test.describe("레인 C — 질문 화면", () => {
        «없음»이었고, `<img class="ico">` 로 바뀐 지금은 그 값이 나올 수 없다.
        재는 것은 그대로다: iconOf 는 <img> 면 파일 경로를 돌려주므로, 이모지가 그대로
        나온다는 사실이 곧 «디자인 그림이 끼어들지 않았다»는 뜻이다. */
-    expect(await iconOf(page, 2)).toBe("🥜");
-    await expect(page.locator(".choices .choice").nth(1).locator(".ico")).toHaveText("🥜");
+    await page.getByRole("button", { name: "있어요", exact: true }).click();
+    expect(await iconOf(page, 1)).toBe("🥜");
+    await expect(page.locator(".choices .choice").first().locator(".ico")).toHaveText("🥜");
   });
 
   test("C-L4 종류에는 그림, 정도에는 같은 표식의 개수", async ({ page }) => {
@@ -174,7 +177,8 @@ test.describe("레인 C — 질문 화면", () => {
 
   test("C-L6 고른 것은 색 말고 기호로도 읽힌다", async ({ page }) => {
     await openWizard(page);
-    await page.locator(".choices .choice").nth(1).click(); // 땅콩
+    await page.getByRole("button", { name: "있어요", exact: true }).click();
+    await page.locator(".choices .choice").first().click(); // 땅콩
 
     const chosen = page.locator('.choices .choice[aria-pressed="true"]');
     await expect(chosen).toHaveCount(1);

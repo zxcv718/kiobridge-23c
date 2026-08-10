@@ -19,6 +19,8 @@ const start = openHome;
  */
 async function answerAll(page: Page) {
   await enterWizard(page);
+  // 알레르기는 «있으신가요?» → 항목 목록 두 걸음이다 (디자인 S06 기본/확장)
+  await page.getByRole("button", { name: "있어요", exact: true }).click();
   await page.getByRole("button", { name: "땅콩", exact: true }).click();
   await page.getByRole("button", { name: "콩(대두)" }).click();
   await page.getByRole("button", { name: /다음/ }).click();

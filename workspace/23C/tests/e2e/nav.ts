@@ -21,6 +21,28 @@ import { expect, type Page } from "@playwright/test";
 
 export const HOME = "http://localhost:5173/";
 
+/** 알레르기 «확장» 걸음에만 있는 항목들 — 첫 걸음에는 「없어요/있어요/잘 모르겠어요」뿐이다 */
+const ALLERGY_ITEMS = ["땅콩", "콩(대두)", "우유", "계란", "밀", "새우"];
+
+/**
+ * 라벨로 선택지를 찾는다. 정확히 일치하는 것이 없으면 «그 말로 시작하는» 것을 쓴다.
+ *
+ * 선택지 중에는 설명을 함께 읽어 주는 것이 있다 — 「잘 모르겠어요」에는 «확실하지 않으면
+ * 이걸 골라 주세요»가 버튼 안에 들어 있고, 화면 낭독기는 그것까지 한 이름으로 읽는다.
+ * 그게 맞는 설계라서, 설명을 빼는 대신 여기서 찾는 방법을 넓힌다. 정확히 일치하는 쪽을
+ * 먼저 보는 이유는 「없어요」처럼 짧은 라벨이 다른 것의 앞부분과 겹칠 수 있어서다.
+ */
+function 선택지(page: Page, label: string) {
+  const exact = page.getByRole("button", { name: label, exact: true });
+  return {
+    click: async () => {
+      if (await exact.count()) { await exact.first().click(); return; }
+      const 앞말 = new RegExp("^" + label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+      await page.getByRole("button", { name: 앞말 }).first().click();
+    },
+  };
+}
+
 /** 홈을 연다. 저장본을 비우므로 늘 «최초 방문» 상태에서 시작한다. */
 export async function openHome(page: Page): Promise<void> {
   await page.goto(HOME);
@@ -98,7 +120,13 @@ export async function answerWizard(page: Page, picks: (string | string[] | null)
       await page.locator(".choices .choice").first().click();
     } else {
       for (const label of Array.isArray(pick) ? pick : [pick]) {
-        await page.getByRole("button", { name: label, exact: true }).click();
+        /* 알레르기는 «있으신가요?» → 항목 목록 두 걸음이다(디자인 S06). 항목 이름을
+           바로 누르려면 먼저 «있어요»로 목록을 펴야 한다. 스펙마다 이 두 줄을 적으면
+           또 여섯 파일이 되므로 길을 아는 이 파일이 대신 안다. */
+        if (ALLERGY_ITEMS.includes(label) && (await page.getByRole("button", { name: "있어요", exact: true }).count())) {
+          await page.getByRole("button", { name: "있어요", exact: true }).click();
+        }
+        await 선택지(page, label).click();
       }
     }
     await page.getByRole("button", { name: /다음|추천 보기/ }).click();

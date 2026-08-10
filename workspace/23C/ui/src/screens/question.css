@@ -66,6 +66,18 @@
   flex-direction: row; gap: 12px;
 }
 
+/* 「잘 모르겠어요」 — 타일 두 장 아래 한 줄.
+   시안에 없는 우리 선택지라 타일과 나란히 두지 않는다(«둘 중 하나»가 흐려진다).
+   그렇다고 작게 만들지도 않는다 — 안전 판정의 입구이고, 확실하지 않은 사람이
+   지나쳐 버리면 우리가 사실이 아닌 것을 사실로 다루게 된다. 타깃 크기는 같다. */
+.q-unsure {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  width: 100%; min-height: 64px; margin-top: 12px; padding: 12px 18px;
+  text-align: center;
+}
+.q-unsure small { color: var(--muted); font-size: 0.78em; font-weight: 500; line-height: 1.4; }
+.q-unsure[aria-pressed="true"] small { color: inherit; }
+
 /* 고른 것은 색 말고 기호로도 읽혀야 한다.
  * 디자인도 선택된 버튼에 «대두 ✓» 처럼 체크를 함께 넣는다 — 주황 테두리와 연노랑 바탕만으로는
  * 색각 이상·저시력 사용자에게 신호가 되지 못하기 때문이다.

@@ -1,7 +1,7 @@
 import React from "react";
 import { useFlow } from "../flow";
 import { ChoiceGrid, Cta, Emphasize, Screen } from "../components";
-import { EDIT_LABELS, QUESTIONS, answerLabel } from "../model";
+import { ALLERGY_GATE, ALLERGY_ITEMS, ALLERGY_UNKNOWN, EDIT_LABELS, QUESTIONS, answerLabel } from "../model";
 import hotIcon from "../assets/icons/hot.svg";
 import "./question.css";
 
@@ -9,6 +9,8 @@ import boneIcon from "../assets/icons/bone.svg";
 import bonelessIcon from "../assets/icons/boneless.svg";
 import takeoutIcon from "../assets/icons/takeout.svg";
 import hereIcon from "../assets/icons/here.svg";
+import safeIcon from "../assets/icons/safe.svg";
+import dangerIcon from "../assets/icons/danger.svg";
 
 /**
  * 선택지에 붙일 디자인 아이콘 — «질문 key + 선택지 value → 파일».
@@ -71,10 +73,11 @@ const EMPHASIS: Record<string, string> = {
  *  · **목록** — 한 줄을 다 쓰는 버튼이 세로로 쌓인 것
  *    (99:1246 알레르기 «확장» · 99:1264 맵기)
  *
- * 알레르기를 목록으로 두는 이유: 시안은 «없어요/있어요»를 먼저 묻고 «있어요»를 누르면
- * 항목 목록으로 펼치는 두 걸음인데, 우리 QUESTIONS 의 알레르기는 「없어요」와 항목들이
- * 처음부터 한 목록에 있다. 두 걸음으로 쪼개려면 model.ts 와 흐름을 고쳐야 하고 그건
- * 이 레인의 파일이 아니다. 그래서 **시안의 «확장» 상태 모양**을 그대로 쓴다.
+ * 알레르기는 시안대로 **두 걸음**이다 — 첫 걸음은 타일 두 장(99:1228), 둘째 걸음은
+ * 목록(99:1246). 한때 한 목록에 「없어요 + 6종 + 잘 모르겠어요」를 다 늘어놓았는데,
+ * 그건 디자인 판단이 아니라 «두 걸음으로 쪼개려면 model.ts 와 흐름을 고쳐야 하는데
+ * 그건 이 레인의 파일이 아니다»라는 **작업 분담의 자국**이었다. 그런 자국은 코드에
+ * 남으면 안 된다 — 나중에 읽는 사람은 그게 설계였다고 믿는다.
  */
 const LAYOUT: Record<string, "tiles" | "rows"> = {
   boneType: "tiles",    // 99:1270
@@ -102,6 +105,7 @@ export function QuestionScreen() {
   const {
     q, qIndex, setQIndex, answers, setAnswers, askPos, askTotal, carried,
     simple, a11y, answered, advance, setStep, setEditOpen, nextToAsk, staffBtn,
+    allergyOpen, setAllergyOpen,
   } = useFlow();
 
   if (!q) return null;
@@ -109,15 +113,43 @@ export function QuestionScreen() {
   const isLast = nextToAsk(qIndex + 1) >= QUESTIONS.length;
   const shape = LAYOUT[q.key] ?? "rows";
 
+  /* 알레르기는 «있으신가요?» → «모두 골라 주세요» 두 걸음이다(디자인 S06 기본/확장).
+     지금 어느 걸음인지는 상태 하나로 정하지 않는다 — 질문을 되돌아왔을 때 이미 항목을
+     골라 둔 사람에게 «있으신가요?»를 다시 묻는 것은, 방금 한 답을 못 본 척하는 일이다.
+     고른 항목이 남아 있으면 목록을 편 채로 맞는다. */
+  const 고른항목 = Array.isArray(answers.allergies)
+    ? (answers.allergies as unknown[]).filter((v) => v !== "없음" && v !== "모름")
+    : [];
+  const 알레르기목록 = q.key === "allergies" && (allergyOpen || 고른항목.length > 0);
+  const 알레르기첫걸음 = q.key === "allergies" && !알레르기목록;
+
+  /** 첫 걸음에서 하나를 고른다. «있어요»는 답이 아니라 목록을 여는 일이다. */
+  const 알레르기선택 = (value: string) => {
+    if (value === "있음") { setAnswers((p) => ({ ...p, allergies: [] })); setAllergyOpen(true); return; }
+    setAnswers((p) => ({ ...p, allergies: [value] }));
+    setAllergyOpen(false);
+  };
+
+  const 뒤로 = () => {
+    // 목록에서 뒤로는 «있으신가요?»로 돌아간다 — 질문 자체를 벗어나지 않는다
+    if (알레르기목록) { setAnswers((p) => ({ ...p, allergies: [] })); setAllergyOpen(false); return; }
+    if (qIndex === 0) { setStep("start"); return; }
+    setQIndex(qIndex - 1);
+  };
+
   return (
     <Screen
       label={q.title}
-      onBack={() => (qIndex === 0 ? setStep("start") : setQIndex(qIndex - 1))}
+      onBack={뒤로}
       steps={{ total: askTotal, current: askPos + 1, srLabel: `질문 ${askPos + 1} / ${askTotal}` }}
       eyebrow="고객님,"
       titleId="qtitle"
-      title={<Emphasize text={q.title} word={EMPHASIS[q.key]} />}
-      subtitle={q.hint && !simple ? q.hint : undefined}
+      title={<Emphasize text={알레르기첫걸음 ? "알레르기가 있으신가요?" : q.title} word={EMPHASIS[q.key]} />}
+      subtitle={
+        알레르기목록 ? "보유하신 알레르기를 모두 선택해 주세요."
+        : 알레르기첫걸음 ? (simple ? undefined : "알레르기가 있는 메뉴는 점수를 깎는 게 아니라 아예 빼고 추천합니다.")
+        : q.hint && !simple ? q.hint : undefined
+      }
       actions={
         <>
           <Cta tone="primary" label={isLast ? "추천 보기" : "다음"} disabled={!answered} onClick={advance} />
@@ -129,10 +161,45 @@ export function QuestionScreen() {
         <p className="hint">지난번 설정에서 불러온 값입니다. 바꾸셔도 됩니다.</p>
       )}
 
-      <div className={`q-choices q-${shape}`}>
-        <ChoiceGrid q={q} answers={answers} setAnswers={setAnswers}
-          showIcons={a11y.visualGuidance} icons={DESIGN_ICON[q.key]} marks={DESIGN_MARK[q.key]} />
-      </div>
+      {알레르기첫걸음 ? (
+        <>
+          <div className="q-choices q-tiles">
+            {/* 안쪽 .choices 는 ChoiceGrid 가 만드는 것과 같은 상자다 — 타일 모양을 정한
+                CSS 가 그 이름에 걸려 있으므로, 직접 그릴 때도 같은 이름을 쓴다. */}
+            <div className="choices" role="group" aria-label="알레르기 여부">
+              {ALLERGY_GATE.map((o) => (
+                <button key={o.value} type="button" className="choice"
+                  aria-pressed={Array.isArray(answers.allergies) && answers.allergies[0] === o.value}
+                  onClick={() => 알레르기선택(o.value)}>
+                  {a11y.visualGuidance && (
+                    <img className="ico" src={o.value === "없음" ? safeIcon : dangerIcon} alt="" aria-hidden="true" />
+                  )}
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* 시안에 없는 우리 선택지. 타일 두 장과 나란히 두면 «둘 중 하나»가 흐려지므로
+              아래 한 줄로 두되, 해당하는 사람이 못 보고 지나치지 않게 감추지는 않는다. */}
+          <button type="button" className="choice q-unsure"
+            aria-pressed={Array.isArray(answers.allergies) && answers.allergies[0] === ALLERGY_UNKNOWN.value}
+            onClick={() => 알레르기선택(ALLERGY_UNKNOWN.value)}>
+            {ALLERGY_UNKNOWN.label}
+            <small>확실하지 않으면 이걸 골라 주세요. 임의로 판단하지 않고 다시 확인합니다.</small>
+          </button>
+        </>
+      ) : (
+        <div className={`q-choices q-${알레르기목록 ? "rows" : shape}`}>
+          {/* 목록 걸음에서는 「없어요」·「잘 모르겠어요」를 뺀 6종만 남긴다. 라벨과 이모지는
+              원래 선택지의 것을 그대로 쓴다 — 같은 것을 두 곳에 적어 두면 언젠가 갈라진다. */}
+          <ChoiceGrid
+            q={알레르기목록
+              ? { ...q, options: q.options.filter((o) => (ALLERGY_ITEMS as readonly string[]).includes(String(o.value))) }
+              : q}
+            answers={answers} setAnswers={setAnswers}
+            showIcons={a11y.visualGuidance} icons={DESIGN_ICON[q.key]} marks={DESIGN_MARK[q.key]} />
+        </div>
+      )}
 
       {carried.length > 0 && (
         <div className="carried">

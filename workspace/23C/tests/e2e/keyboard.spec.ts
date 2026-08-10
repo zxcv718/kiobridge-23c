@@ -83,6 +83,8 @@ test.describe("접근성 실측", () => {
     await enterWizard(page);
 
     // 예전에 3문항 만에 종료되던 조합
+    // 알레르기는 «있으신가요?» → 항목 목록 두 걸음이지만 질문은 하나다 (디자인 S06)
+    await page.getByRole("button", { name: "있어요", exact: true }).click();
     await page.getByRole("button", { name: "땅콩", exact: true }).click();
     await page.getByRole("button", { name: "콩(대두)" }).click();
     await page.getByRole("button", { name: /다음/ }).click();

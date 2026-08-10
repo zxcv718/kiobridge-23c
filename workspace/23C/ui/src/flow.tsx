@@ -49,6 +49,14 @@ export function useFlowState() {
   const [demoHour, setDemoHour] = useState<number | null>(null); // 프리셋의 시간대 시연용
   /** 확정되지 않은 추천을 몇 번 만났는가 — 2회째면 안전 중단(S12) */
   const [reconfirmCount, setReconfirmCount] = useState(0);
+  /**
+   * 알레르기 질문의 둘째 걸음(항목 목록)에 들어와 있는가 — 디자인 S06 기본/확장.
+   *
+   * 질문 자체는 하나다(QUESTIONS 7개는 그대로). 나뉘는 것은 묻는 방법뿐이라 질문
+   * 번호가 아니라 별도 상태로 둔다 — qIndex 를 늘리면 «질문 7개 고정»이 8개가 되고,
+   * 진행 표시·저장본 되살리기·조건 수정이 전부 어긋난다.
+   */
+  const [allergyOpen, setAllergyOpen] = useState(false);
   /** S02 화면 맞춤 문답 — null 이면 안 하는 중, 0~2 는 지금 보여주는 크기 단계 */
   const [probeStep, setProbeStep] = useState<number | null>(null);
   /** 문답으로 정해진 단계 — 결과를 화면에 밝혀 준다 */
@@ -154,6 +162,7 @@ export function useFlowState() {
 
   /** 답변 확정 후 다음 질문으로. 질문은 7개 고정이므로 시스템이 먼저 끝내지 않는다. */
   const advance = () => {
+    setAllergyOpen(false);   // 다음 질문으로 갈 때 알레르기는 늘 «있으신가요?»부터 다시
     const n = nextToAsk(qIndex + 1);
     if (n >= QUESTIONS.length) { finishWizard(); return; }
     setQIndex(n);
@@ -290,7 +299,12 @@ export function useFlowState() {
      부분 저장본이라면 남은 질문을 다시 여쭤봐야 하고, 문구도 그에 맞아야 한다. */
   const savedCoversAll = !!saved && QUESTIONS.every((qq) => saved.answers[qq.key] !== undefined);
   const q = QUESTIONS[qIndex];
-  const answered = q ? answers[q.key] !== undefined : false;
+  /* 알레르기만 «값이 있는가»로 부족하다. 항목 목록에서 고른 것을 전부 해제하면 빈 배열이
+     남는데, 그건 답이 아니라 «아직 안 골랐다»이다. 빈 채로 넘어가면 알레르기가 없는
+     사람과 구별이 되지 않는다 — 제외해야 할 것을 못 제외하게 되는 쪽이다. */
+  const answered = !q ? false
+    : q.key === "allergies" ? Array.isArray(answers.allergies) && answers.allergies.length > 0
+    : answers[q.key] !== undefined;
   const ev = outcome?.evidence as (Evidence & Record<string, unknown>) | undefined;
 
   /**
@@ -305,13 +319,13 @@ export function useFlowState() {
     // 상태
     step, a11y, fixture, live, qIndex, answers, uiRec, manual, sessionInput, runLog,
     outcome, submitted, runError, errResults, saved, fromSaved, storeToggle, editOpen,
-    carried, demoHour, reconfirmCount, probeStep, probeResult, profileStep,
+    carried, demoHour, reconfirmCount, probeStep, probeResult, profileStep, allergyOpen,
     // 파생값
     now, simple, rawInput, savedCoversAll, q, answered, ev, askTotal, askPos,
     // 조작
     setStep, setA11y, setFlag, setQIndex, setAnswers, setUiRec, setManual, setSessionInput,
     setSubmitted, setErrResults, setStoreToggle, setEditOpen, setReconfirmCount,
-    setProbeStep, setProbeResult, setProfileStep,
+    setProbeStep, setProbeResult, setProfileStep, setAllergyOpen,
     t, staffBtn, nextToAsk, advance, startWizard, startFromSaved, applyPreset, deleteSaved,
     openEdit, applyEditAndRecommend, toggleStore, setStoreIntent, finishOrder,
     confirmOffline, runSimulation, goRecommend,
