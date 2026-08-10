@@ -21,7 +21,17 @@ const APP = allTsx();
 const STAFF_EXEMPT: Record<string, string> = {
   "StaffHelp.tsx": "직원 도움 화면 자체다",
   "Running.tsx": "1초 남짓 지나가는 진행 표시이며 조작 요소가 없다",
+  "SafetyStop.tsx": "여기서는 직원 도움이 비상구가 아니라 주 동작이라 아래 첫 버튼으로 둔다",
 };
+
+/**
+ * 머리 줄의 직원 도움을 끄고 **대신 자기 화면에 두는** 곳.
+ *
+ * 면제(STAFF_EXEMPT)라고 다 같지 않다. StaffHelp·Running 은 정말로 없어도 되는
+ * 화면이지만, SafetyStop 은 «없어도 되는» 것이 아니라 «더 크게 있어야 하는» 화면이다.
+ * 둘을 한 목록으로 두면 언젠가 안전 중단에서 직원 도움이 통째로 사라져도 검사가 통과한다.
+ */
+const STAFF_IN_ACTIONS = ["SafetyStop.tsx"];
 
 /** `min-height: 64px;` 같은 선언에서 픽셀값을 전부 뽑는다. */
 function minHeights(selector: string): number[] {
@@ -100,23 +110,39 @@ describe("접근성 — 선언한 보증이 실제로 코드에 있는가", () =
 
   it("직원 도움이 모든 화면에서 닿는다 — 화면 목록을 손으로 적지 않는다", () => {
     expect(UI_GUARANTEES.staffHelpReachableFromEveryStep).toBe(true);
-    expect(APP).toMatch(/const staffBtn = /); // 공통 버튼 팩토리
 
-    /* 예전에는 화면 이름을 배열로 적어 두었다. 그러면 화면을 새로 만든 사람이 배열을
-       고치지 않는 한 그 화면은 영원히 검사 밖이다 — 실제로 «설정» 화면이 그렇게 빠져
-       있었다. 이제는 screens/ 를 통째로 훑고, 면제만 이유와 함께 적는다. */
+    /* 예전에는 화면마다 `staffBtn()` 을 부르게 하고 그 호출을 셌다. 화면 아래 버튼 더미가
+       비상구 때문에 매번 한 칸씩 길어지자 비상구를 **화면 골격(Screen)**의 머리 줄로
+       옮겼고, 그러면서 «화면 파일에 staffBtn 이 있는가»는 잴 수 있는 것이 아니게 됐다.
+       재는 것을 바꾼다 — 약하게가 아니라 **한 단계 위에서**:
+         ① 골격이 실제로 직원 도움을 그리는가
+         ② 모든 화면이 그 골격을 쓰는가
+         ③ 끄는 곳은 이유를 적었는가, 그리고 «끄고 대신 자기가 두는» 곳은 정말 두었는가
+       화면마다 한 줄씩 반복하지 않게 됐으니, 새 화면은 아무것도 안 해도 비상구를 갖는다. */
+    const screen = uiSources().find((f) => f.name === "components/Screen.tsx");
+    expect(screen, "components/Screen.tsx 를 못 찾았습니다").toBeDefined();
+    expect(screen!.text, "화면 골격이 직원 도움을 그리지 않습니다").toMatch(/직원 도움/);
+    expect(screen!.text, "직원 도움이 «staff» 화면으로 가지 않습니다").toMatch(/setStep\("staff"\)/);
+    /* 이유 없이 끌 수 없어야 한다 — boolean 이면 `noStaff` 한 단어로 비상구가 사라진다 */
+    expect(screen!.text, "noStaff 가 문자열(이유)이 아닙니다").toMatch(/noStaff\?:\s*string/);
+
     const screens = uiSources().filter((f) => f.name.startsWith("screens/"));
     expect(screens.length, "screens/ 에서 화면 파일을 찾지 못했습니다").toBeGreaterThan(5);
     for (const s of screens) {
       const base = s.name.slice("screens/".length);
+      expect(/<Screen[\s>]/.test(s.text), `${base} 가 화면 골격(Screen)을 쓰지 않아 비상구가 없습니다`).toBe(true);
+
+      const 껐나 = /noStaff=/.test(s.text);
       const reason = STAFF_EXEMPT[base];
-      if (reason) {
-        // 면제였던 화면이 나중에 조작 요소를 갖게 되면 면제 목록에서 빼야 한다
-        expect(s.text, `${base} 는 면제(${reason})인데 직원 도움을 쓰고 있습니다 — 면제 목록에서 빼 주세요`)
-          .not.toMatch(/staffBtn\(/);
-        continue;
+      expect(껐나, 껐나
+        ? `${base} 가 직원 도움을 껐는데 면제 목록에 없습니다 — 이유와 함께 적어 주세요`
+        : `${base} 는 면제(${reason})인데 끄지 않았습니다 — 면제 목록에서 빼 주세요`)
+        .toBe(Boolean(reason));
+
+      // 끄고 «대신 자기가 두기로 한» 화면은 정말로 두어야 한다
+      if (STAFF_IN_ACTIONS.includes(base)) {
+        expect(/staffBtn\(/.test(s.text), `${base} 는 직원 도움을 스스로 두기로 한 화면인데 없습니다`).toBe(true);
       }
-      expect(/staffBtn\(/.test(s.text), `${base} 에 직원 도움 경로가 없습니다`).toBe(true);
     }
   });
 

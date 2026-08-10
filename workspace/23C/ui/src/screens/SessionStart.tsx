@@ -22,8 +22,7 @@ import "./profile.css";
  */
 export function SessionStart() {
   const {
-    saved, fixture, a11y, storeToggle, setStoreToggle, startWizard, startFromSaved, setStep, staffBtn,
-  } = useFlow();
+    saved, fixture, a11y, storeToggle, setStoreToggle, startWizard, startFromSaved, setStep, } = useFlow();
 
   /* 저장 «의사»만 있고 답변이 없는 저장본이 있을 수 있다 — S03 에서 저장하기를 고르면
      그 자리에서 화면 설정만 먼저 남기기 때문이다. 그건 «지난 주문»이 아니다. */
@@ -71,7 +70,6 @@ export function SessionStart() {
             <Cta label="아니오, 새로 고를게요" onClick={beginFresh} disabled={!fixture} />
           </>
           : <Cta tone="primary" label="주문 시작하기" onClick={beginFresh} disabled={!fixture} />}
-        {staffBtn()}
       </>}
     >
       {prev && fixture ? (

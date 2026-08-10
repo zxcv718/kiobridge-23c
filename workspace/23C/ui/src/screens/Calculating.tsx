@@ -16,7 +16,7 @@ import "./question.css";
  * 전에 밝히는 편이 낫고, 화면이 잠깐 지나가더라도 막다른 길이면 안 된다.
  */
 export function Calculating() {
-  const { t, answers, staffBtn } = useFlow();
+  const { t, answers } = useFlow();
 
   return (
     <Screen
@@ -24,7 +24,6 @@ export function Calculating() {
       busy
       title={t("메뉴를 찾고 있어요", "추천할 메뉴를 찾고 있어요")}
       subtitle="잠시만 기다려 주세요"
-      actions={staffBtn()}
     >
       {/* 도는 고리는 장식이다 — 진행 중이라는 뜻은 위 문구와 aria-busy 가 전한다 */}
       <div className="calcspin" aria-hidden="true" />

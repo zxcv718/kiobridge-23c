@@ -64,8 +64,7 @@ const SUBSTEPS: {
 export function ProfileSetup() {
   const {
     a11y, setA11y, setFlag, probeStep, setProbeStep, probeResult, setProbeResult,
-    profileStep, setProfileStep, setStep, staffBtn,
-  } = useFlow();
+    profileStep, setProfileStep, setStep, } = useFlow();
   const sub = profileStep;
   const setSub = (n: number) => setProfileStep(n as 1 | 2 | 3);
 
@@ -96,7 +95,6 @@ export function ProfileSetup() {
       subtitle="고르시면 이 화면이 바로 바뀝니다. 언제든 다시 바꾸실 수 있습니다."
       actions={<>
         <Cta tone="primary" label="다음" onClick={next} />
-        {staffBtn()}
       </>}
     >
       <div className="kb-radios" role="group" aria-label={here.group}>

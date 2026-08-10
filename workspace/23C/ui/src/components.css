@@ -204,3 +204,24 @@
 .stepnote { text-align: center; max-width: 30ch; }
 /* 스테퍼 자체가 초점을 받는다(버튼 셋이 아니라 수 입력 하나로 읽힌다) */
 .stepper:focus-visible { outline: 3px solid var(--brand-strong); outline-offset: 6px; }
+
+/* ───────── 직원 도움 — 머리 줄 오른쪽 고정 ─────────
+ * 화면 아래 버튼 더미에서 이리로 옮겼다. 아래는 그 화면의 주 동작이 서는 자리인데
+ * 비상구가 매번 한 칸을 차지하면(재방문 홈은 넉 장이 화면의 3분의 1) 정작 할 일이
+ * 묻힌다. 머리 줄은 뒤로가기 하나뿐이라 오른쪽이 늘 비어 있었다.
+ *
+ * **떠 있게(position:fixed) 두지 않는다.** 떠 있는 것은 내용을 덮고, 덮인 부분은
+ * 눌러도 딴 것이 눌린다 — 오늘 고친 결함이 정확히 그것이다(tap-target.spec.ts).
+ * 여기 있으면 자기 자리를 차지하므로 아무것도 가리지 않는다.
+ *
+ * 작아 보이지만 타깃은 48px 그대로다. 비상구를 «작은 글씨»로 만들지 않는다. */
+.kb-staff {
+  margin-left: auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; padding: 0 16px; cursor: pointer;
+  border: 1.5px solid var(--line); border-radius: var(--kb-radius-full);
+  background: var(--card); color: var(--fg);
+  font: inherit; font-size: 0.82em; font-weight: 700; white-space: nowrap;
+}
+/* 뒤로가기가 없는 화면(홈 등)에서도 오른쪽 끝에 선다 — 자리가 화면마다 흔들리지 않게 */
+.kb-header:has(> .kb-staff:only-child) { justify-content: flex-end; }

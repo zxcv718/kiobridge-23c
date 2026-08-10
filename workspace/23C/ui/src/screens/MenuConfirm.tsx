@@ -45,7 +45,7 @@ function whyClauses(
 }
 
 export function MenuConfirm() {
-  const { uiRec, fixture, setStep, staffBtn, simple } = useFlow();
+  const { uiRec, fixture, setStep, simple } = useFlow();
   if (!uiRec || !fixture) return null;
 
   const id = uiRec.rec.recommendedCandidateId;
@@ -73,7 +73,6 @@ export function MenuConfirm() {
           <Cta tone="primary" label="이대로 담기" disabled={blocked} onClick={() => setStep("confirm")} />
           <div className="q-actrow">
             <button type="button" className="btn ghost" onClick={() => setStep("recommend")}>다른 메뉴 볼게요</button>
-            {staffBtn()}
           </div>
         </>
       }

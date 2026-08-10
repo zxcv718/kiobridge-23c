@@ -77,3 +77,11 @@
 .p-willsave li { margin: 4px 0; color: var(--muted); }
 .p-willsave li span, .p-willsave li b { color: var(--fg); }
 .p-willsave > p { margin: 8px 0 0; color: var(--muted); }
+
+/* 저장 기록을 지우는 자리 — 카드 바로 아래. 되돌릴 수 없다는 사실을 색이 아니라
+   글자로 말한다. 시작 버튼들과 나란히 두지 않는 이유는 Home.tsx 주석에 적었다. */
+.home-erase {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  width: 100%; margin-top: 10px; text-align: left;
+}
+.home-erase small { font-size: 0.76em; font-weight: 500; color: var(--muted); }

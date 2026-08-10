@@ -104,8 +104,7 @@ const LAYOUT: Record<string, "tiles" | "rows"> = {
 export function QuestionScreen() {
   const {
     q, qIndex, setQIndex, answers, setAnswers, askPos, askTotal, carried,
-    simple, a11y, answered, advance, setStep, setEditOpen, nextToAsk, staffBtn,
-    allergyOpen, setAllergyOpen,
+    simple, a11y, answered, advance, setStep, setEditOpen, nextToAsk, allergyOpen, setAllergyOpen,
   } = useFlow();
 
   if (!q) return null;
@@ -153,7 +152,6 @@ export function QuestionScreen() {
       actions={
         <>
           <Cta tone="primary" label={isLast ? "추천 보기" : "다음"} disabled={!answered} onClick={advance} />
-          {staffBtn()}
         </>
       }
     >

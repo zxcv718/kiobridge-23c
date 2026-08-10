@@ -69,7 +69,7 @@ export function parseStoreCode(raw: string): string {
 }
 
 export function QrConnect() {
-  const { fixture, setStep, staffBtn, t } = useFlow();
+  const { fixture, setStep, t } = useFlow();
   const envId = fixture?.manifest.environmentId ?? "";
   const storeName = fixture?.manifest.displayName ?? fixture?.manifest.name ?? "";
 
@@ -198,7 +198,6 @@ export function QrConnect() {
         actions={<>
           <Cta tone="primary" label="이 매장으로 계속하기" onClick={goNext} />
           <Cta label="다시 스캔하기" onClick={rescan} />
-          {staffBtn()}
         </>}
       >
         <div className="qr-view done">
@@ -232,7 +231,6 @@ export function QrConnect() {
         actions={<>
           <Cta tone="primary" label="이대로 계속하기" onClick={goNext} />
           <Cta label="다시 스캔하기" onClick={rescan} />
-          {staffBtn()}
         </>}
       >
         <div className="qr-view miss">
@@ -269,7 +267,6 @@ export function QrConnect() {
         : "카메라 대신 아래 방법으로 진행하실 수 있습니다."}
       actions={<>
         <Cta label="QR 없이 계속하기" onClick={goNext} />
-        {staffBtn()}
       </>}
     >
       {/* 카메라를 못 쓸 때는 창을 그리지 않는다. 볼 것이 없는 200px 상자가 화면 절반을

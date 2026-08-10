@@ -101,7 +101,7 @@ function SelList({ title, items }: { title: string; items: PlanSelection[] }) {
 export function CartReview() {
   const {
     uiRec, fixture, live, sessionInput, setSessionInput, runSimulation,
-    setStep, openEdit, confirmOffline, staffBtn, simple,
+    setStep, openEdit, confirmOffline, simple,
   } = useFlow();
   if (!uiRec || !fixture) return null;
 
@@ -168,7 +168,6 @@ export function CartReview() {
             label={live ? "가상 키오스크에서 실행" : "주문 확정하기"}
             onClick={live ? runSimulation : confirmOffline} />
           <Cta label="수정하기" onClick={openEdit} />
-          {staffBtn()}
         </>
       )}
     >

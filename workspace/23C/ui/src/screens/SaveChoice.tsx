@@ -23,7 +23,7 @@ import "./profile.css";
  * 상태인지»를 화면에 남길 필요도 없다 — 누르는 순간 정해지고 화면을 떠난다.
  */
 export function SaveChoice() {
-  const { a11y, setStoreIntent, setProfileStep, setStep, staffBtn } = useFlow();
+  const { a11y, setStoreIntent, setProfileStep, setStep } = useFlow();
 
   /** 요약 한 줄 — 값과 «수정»(진짜 버튼)을 함께 준다 (Figma SummaryCard 185:209). */
   const row = (label: string, value: string, to: 1 | 2 | 3) => ({
@@ -50,7 +50,6 @@ export function SaveChoice() {
       actions={<>
         <Cta tone="primary" label="이 기기에 저장하기" onClick={() => choose(true)} />
         <Cta label="이번만 사용하기" onClick={() => choose(false)} />
-        {staffBtn()}
       </>}
     >
       <Card

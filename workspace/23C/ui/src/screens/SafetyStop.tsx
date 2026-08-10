@@ -37,6 +37,7 @@ export function SafetyStop() {
   return (
     <Screen
       label="안전 중단"
+      noStaff="이 화면에서는 직원 도움이 «비상구»가 아니라 **주 동작**이다 — 머리 줄의 작은 버튼이 아니라 아래 첫 버튼으로 둔다"
       eyebrow={<span className="stoplabel">진행 중단</span>}
       title="확인이 어려워 진행을 멈췄어요"
       subtitle={t(

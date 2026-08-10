@@ -43,8 +43,7 @@ const VIEW_ROWS: {
 export function CartEdit() {
   const {
     editOpen, setEditOpen, uiRec, fixture, answers, setAnswers, simple, a11y, setFlag,
-    applyEditAndRecommend, setStep, setUiRec, setManual, staffBtn,
-  } = useFlow();
+    applyEditAndRecommend, setStep, setUiRec, setManual, } = useFlow();
 
   /* 디자인의 «수정»은 14px 텍스트 링크지만 여기서는 진짜 버튼이다 —
      누르면 그 자리에서 화면이 바뀌고, 무엇이 바뀌었는지는 옆 값이 글자로 말한다. */
@@ -70,7 +69,6 @@ export function CartEdit() {
           {/* 디자인의 «수정 완료»는 화면을 닫기만 한다. 우리 것은 고친 조건으로 추천을
               다시 계산하므로, 버튼 이름이 하는 일과 같아야 한다. */}
           <Cta tone="primary" label="이 조건으로 추천 다시 받기" onClick={applyEditAndRecommend} />
-          {staffBtn()}
         </>
       )}
     >

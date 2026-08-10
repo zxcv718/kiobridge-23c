@@ -23,7 +23,7 @@ import "./profile.css";
  * 놓이면 처음 온 사람이 무엇을 눌러야 하는지부터 고르게 된다.
  */
 export function Home() {
-  const { saved, fixture, savedCoversAll, startFromSaved, deleteSaved, setStep, staffBtn, t } = useFlow();
+  const { saved, fixture, savedCoversAll, startFromSaved, deleteSaved, setStep, t } = useFlow();
 
   /* 저장본 요약 — 실제로 들어 있는 것만 줄로 만든다. 비어 있는 항목을 «아직 선택 안 함»
      으로 채우면 저장된 것보다 저장 안 된 것이 더 눈에 띈다. */
@@ -54,13 +54,9 @@ export function Home() {
           <Cta tone="primary" disabled={!fixture} onClick={startFromSaved}
             label={savedCoversAll ? "지난번과 똑같이 주문하기" : "저장된 설정으로 시작하기"} />
           <Cta label="처음부터 새로 시작하기" disabled={!fixture} onClick={() => setStep("profile")} />
-          {/* 지우기는 되돌릴 수 없다 — 시작 버튼들과 같은 무게로 놓지 않는다 */}
-          <Cta tone="danger" label="이 기기에서 기록 지우기" onClick={deleteSaved} />
-          {staffBtn()}
         </>
         : <>
           <Cta tone="primary" disabled={!fixture} onClick={() => setStep("profile")} label="시작하기" />
-          {staffBtn()}
         </>}
     >
       {saved && (
@@ -71,6 +67,16 @@ export function Home() {
           <p className="p-note">
             {savedCoversAll ? "저장된 항목은 다시 여쭤보지 않습니다." : "저장돼 있지 않은 것만 다시 여쭤봅니다."}
           </p>
+          {/* 지우기는 시작 버튼들 옆이 아니라 **지워질 것 바로 아래**에 둔다.
+              시안의 아래 버튼은 「이전 설정 사용」·「새로 설정하기」 둘뿐이고, 거기 나란히
+              세워 두면 «새로 시작»과 «지우기»가 같은 일처럼 읽힌다. 실제로는 하나는
+              이번 회차만 안 쓰는 것이고 하나는 되돌릴 수 없이 없애는 것이다.
+              그렇다고 없앨 수도 없다 — guide.txt 5번이 «저장된 내용 확인·수정·삭제»를
+              요구하고, 삭제가 없으면 저장을 한 번 고른 사람이 되돌릴 방법이 없다. */}
+          <button type="button" className="btn ghost home-erase" onClick={deleteSaved}>
+            이 기록 지우기
+            <small>이 기기에서 지웁니다. 되돌릴 수 없습니다.</small>
+          </button>
         </>
       )}
 

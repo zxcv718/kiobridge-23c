@@ -29,8 +29,7 @@ import "./cart.css";
 export function Result() {
   const {
     ev, outcome, runError, submitted, uiRec, fixture, setStep, answers, saved,
-    storeToggle, toggleStore, t, errResults, setErrResults, staffBtn,
-  } = useFlow();
+    storeToggle, toggleStore, t, errResults, setErrResults, } = useFlow();
 
   /** 계획에서 읽어낸 사실 — 서버가 있든 없든 같은 함수가 같은 것을 읽는다. */
   const plan = submitted && fixture ? summarizeOrderPlan(submitted, fixture) : null;
@@ -81,7 +80,6 @@ export function Result() {
           {/* 저장은 이미 끝났다(finishOrder). 여기 버튼은 «마음이 바뀌었을 때» 하나뿐이다. */}
           <Cta label={storeToggle ? "저장 지우기" : "이 기기에 저장하기"} onClick={toggleStore} />
           {/* 화면이 길어도 도움은 늘 화면 아래에 붙어 있다 — 끝까지 내려가지 않아도 닿는다. */}
-          {staffBtn()}
         </>
       )}
     >

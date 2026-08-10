@@ -23,7 +23,7 @@ import "./recommend.css";
  * 임의로 판단해서 진행하지 않는다는 계약이 화면에서도 그대로 지켜져야 한다.
  */
 export function Recommend() {
-  const { uiRec, fixture, setUiRec, setManual, openEdit, setStep, staffBtn } = useFlow();
+  const { uiRec, fixture, setUiRec, setManual, openEdit, setStep } = useFlow();
   if (!uiRec || !fixture) return null;
 
   const rec = uiRec.rec;
@@ -43,7 +43,6 @@ export function Recommend() {
         actions={
           <>
             <Cta tone="primary" label="조건 수정하기" onClick={openEdit} />
-            {staffBtn()}
           </>
         }
       >
@@ -70,7 +69,6 @@ export function Recommend() {
           <div className="q-actrow">
             <button type="button" className="btn ghost" onClick={openEdit}>조건 수정</button>
             <button type="button" className="btn danger" onClick={() => setStep("start")}>추천 거절</button>
-            {staffBtn()}
           </div>
         </>
       }

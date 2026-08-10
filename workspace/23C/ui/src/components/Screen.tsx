@@ -1,6 +1,7 @@
 import React from "react";
 import { Header } from "./Header";
 import { StepIndicator } from "./StepIndicator";
+import { useFlow } from "../flow";
 
 /**
  * 화면 한 장의 골격 — 디자인의 레이아웃 문법을 한 곳에 담는다.
@@ -18,8 +19,14 @@ import { StepIndicator } from "./StepIndicator";
  * 홈 버튼이 있는 기기에서 가려지지 않도록 안전 영역(safe-area)만큼 아래를 띄운다.
  */
 export function Screen({
-  onBack, backLabel, steps, eyebrow, title, titleId, subtitle, children, actions, label, busy,
+  onBack, backLabel, steps, eyebrow, title, titleId, subtitle, children, actions, label, busy, noStaff,
 }: {
+  /**
+   * 직원 도움을 그리지 않는 이유. **문자열이라 이유 없이는 끌 수 없다** —
+   * boolean 이면 `noStaff` 한 단어로 조용히 비상구가 사라진다.
+   * 지금 쓰이는 곳은 둘뿐이고 tests/a11y.test.ts 가 그 둘을 이름으로 알고 있다.
+   */
+  noStaff?: string;
   /** 없으면 뒤로가기를 그리지 않는다 */
   onBack?: () => void;
   backLabel?: string;
@@ -42,11 +49,27 @@ export function Screen({
   label?: string;
   busy?: boolean;
 }) {
+  const { setStep } = useFlow();
+
   return (
     <section className="kb-screen" aria-label={label} aria-busy={busy}>
-      {(onBack || steps) && (
+      {(onBack || steps || !noStaff) && (
         <div className="kb-screen-top">
-          {onBack && <Header onBack={onBack} backLabel={backLabel} />}
+          {/* 뒤로가기와 직원 도움이 한 줄을 나눠 쓴다. 화면 아래 버튼 더미에서 빼낸 이유:
+              ① 어느 화면에서든 **같은 자리**에 있어야 «찾는» 일이 없다
+              ② 아래는 그 화면의 주 동작이 서는 자리다. 비상구가 매번 한 칸을 차지하면
+                 재방문 홈처럼 버튼 넉 장이 화면의 3분의 1을 먹는다
+              떠 있게(floating) 두지 않는다 — 떠 있는 것은 내용을 덮고, 덮인 부분은
+              눌러도 딴 것이 눌린다(tap-target.spec.ts 가 잡은 결함이 정확히 그것이다). */}
+          {(onBack || !noStaff) && (
+            <Header
+              onBack={onBack}
+              backLabel={backLabel}
+              right={noStaff ? undefined : (
+                <button type="button" className="kb-staff" onClick={() => setStep("staff")}>직원 도움</button>
+              )}
+            />
+          )}
           {steps && (
             <StepIndicator
               labels={steps.labels} total={steps.total} current={steps.current} srLabel={steps.srLabel}
