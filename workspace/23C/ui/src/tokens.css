@@ -1,0 +1,91 @@
+/* ─────────────────────────────────────────────────────────────
+ * 디자인 토큰 — Figma `KioBradge` / Design System (150:1200)
+ *
+ * 값은 `get_variable_defs` 로 받은 것을 옮긴 것이고, 눈으로 고르지 않았다.
+ * 다만 **그대로 옮기지 않은 것이 넷** 있고, 이유를 여기 적는다. 접근성이
+ * 이 제품의 핵심 주장이라 «디자인이 그래서»는 근거가 되지 못한다.
+ * 판정은 src/core/contrast.ts 가 하고 tests/a11y.test.ts 가 지킨다.
+ *
+ * ① 보조 글씨색
+ *    같은 파일에 두 값이 있었다 — `color/text/secondary` #8c8c8c 와
+ *    `--kb-color-text-secondary` #45454d. 앞의 것은 흰 배경에서 3.36:1 로
+ *    본문 기준(4.5) 미달이다. 뒤의 것(9.50:1)을 채택한다.
+ *
+ * ② 흰 글씨가 올라가는 주황
+ *    브랜드 주황 #ff5a1f 위의 흰 글씨는 3.12:1 이다. CTA 라벨이 18px Medium 이라
+ *    «큰 글씨» 예외(18.66px 이상 굵게)도 못 받는다. 그래서 브랜드색은 그대로 두되,
+ *    글자를 얹는 면에만 쓰는 --kb-color-accent-strong #d1430e (4.65:1) 를 더한다.
+ *    주황이 눈에 밝아 보여도 휘도가 낮은 것은 휘도 계수가 초록에 0.7152 로
+ *    쏠려 있기 때문이며, 눈대중이 가장 크게 빗나가는 색이 하필 이것이다.
+ *
+ * ③ 누를 수 있는 것의 경계
+ *    #b1b8be 는 흰 배경에서 2.01:1 이라 WCAG 1.4.11(3:1) 미달이다. 장식용
+ *    구분선은 그대로 두고, **경계가 컨트롤을 식별하는 유일한 수단인 자리**에는
+ *    --kb-color-border-control #8a8a8a (3.45:1) 를 쓴다.
+ *
+ * ④ 줄 간격
+ *    Figma 타입 스타일은 lineHeight 100(=1.0)인데, 한국어 본문에서 1.0 은
+ *    읽기 어렵고 WCAG 1.4.12 가 요구하는 1.5 확대 여지도 남지 않는다. 1.6 을 쓴다.
+ *
+ * 글꼴은 이름만 받는다 — "Noto Sans KR" 을 1순위로 두되 웹폰트를 내려받지
+ * 않는다. 외부 요청 하나가 오프라인·CSP·레이아웃 이동 위험을 데려오고,
+ * 그 대가로 얻는 것이 자형 차이뿐이기 때문이다.
+ * ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── 색: 글자 ── */
+  --kb-color-text-primary: #1b1b1f;    /* 흰 배경 17.17:1 */
+  --kb-color-text-secondary: #45454d;  /* 흰 배경  9.50:1 — ①  */
+  --kb-color-text-tertiary: #464c53;   /* 흰 배경  8.68:1 */
+  --kb-color-text-inverse: #ffffff;
+
+  /* ── 색: 바탕 ── */
+  --kb-color-bg-canvas: #f7f7f8;
+  --kb-color-bg-surface: #ffffff;
+  --kb-color-bg-surface-sunken: #f2f2f2;
+  --kb-color-bg-surface-accent: #fbf3d8;
+
+  /* ── 색: 경계 ── */
+  --kb-color-border-subtle: #e5e5e5;   /* 1.26:1 — 장식용 구분선 전용 */
+  --kb-color-border-default: #b1b8be;  /* 2.01:1 — 비대화형 컨테이너 */
+  --kb-color-border-control: #8a8a8a;  /* 3.45:1 — 누를 수 있는 것 — ③ */
+
+  /* ── 색: 강조 ── */
+  --kb-color-accent-primary: #ff5a1f;  /* 브랜드. 글자를 얹지 않는 자리 (3.12:1) */
+  --kb-color-accent-strong: #d1430e;   /* 흰 글씨를 얹는 자리 (4.65:1) — ② */
+  --kb-color-accent-weak: #fff1eb;     /* 강조의 옅은 바탕 (우리가 채움) */
+
+  /* ── 모서리 ── */
+  --kb-radius-sm: 8px;
+  --kb-radius-md: 12px;
+  --kb-radius-lg: 16px;
+  --kb-radius-full: 999px;
+
+  /* ── 간격 — Figma 에는 md(16) 하나만 정의돼 있어 8의 배수로 채웠다 ── */
+  --kb-spacing-xs: 4px;
+  --kb-spacing-sm: 8px;
+  --kb-spacing-md: 16px;
+  --kb-spacing-lg: 24px;
+  --kb-spacing-xl: 32px;
+
+  /* ── 글자 ── */
+  --kb-font-family: "Noto Sans KR", "Pretendard Variable", Pretendard,
+    -apple-system, "Apple SD Gothic Neo", sans-serif;
+  --kb-font-size-label: 14px;
+  --kb-font-size-caption: 15px;
+  --kb-font-size-body: 18px;
+  --kb-font-size-button: 18px;
+  --kb-font-size-heading: 22px;
+  --kb-font-size-display: 28px;
+  --kb-line-height-body: 1.6;   /* ④ */
+  --kb-line-height-tight: 1.3;
+
+  /* ── 그림자 — Figma Effect 를 CSS 로 옮긴 것 (#00000014 = 8% 검정) ── */
+  --kb-shadow-button: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --kb-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06), 0 6px 16px rgba(0, 0, 0, 0.08);
+  --kb-shadow-cta-glow: 0 1px 2px rgba(0, 0, 0, 0.10), 0 6px 16px rgba(255, 90, 31, 0.28);
+
+  /* ── 화면 폭 — 시안이 402(프로필)와 390(세션·카탈로그)으로 갈려 있어
+        큰 쪽으로 흡수한다. 키오스크·폰 어느 쪽에서도 가운데 정렬된다. ── */
+  --kb-screen-max: 402px;
+}

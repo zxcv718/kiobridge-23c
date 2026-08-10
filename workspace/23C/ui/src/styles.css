@@ -1,30 +1,56 @@
-/* 팀 23C 데모 UI — 접근성 우선: 큰 타깃(≥48px), 키보드 포커스 가시화, 큰 글씨/고대비 토글 */
+/* 팀 23C 데모 UI — 접근성 우선: 큰 타깃(≥48px), 키보드 포커스 가시화, 큰 글씨/고대비 토글
+ *
+ * 색은 여기서 정하지 않는다. tokens.css 의 Figma 토큰을 **의미 이름에 배선**할 뿐이다.
+ * 화면 코드는 계속 --fg/--card 같은 의미 이름만 보므로, 토큰이 바뀌어도 화면은 안 바뀐다.
+ * 어떤 배선이 실제로 읽히는지는 tests/tokens.test.ts 가 CSS 를 파싱해 전수로 잰다. */
+@import "./tokens.css";
+
 :root {
-  --bg: #f6f7f6; --card: #ffffff; --fg: #17211f; --muted: #596965;
-  --line: #d8e0dd; --brand: #0e6e5c; --brand-weak: #e2f2ee;
-  --danger: #b73e33; --danger-weak: #f9e9e7; --warn: #a56a12; --warn-weak: #f8efdd;
-  --fs: 18px;
+  --bg: var(--kb-color-bg-canvas);
+  --card: var(--kb-color-bg-surface);
+  --fg: var(--kb-color-text-primary);
+  --muted: var(--kb-color-text-secondary);
+  /* 경계는 둘로 나뉜다 — 누를 수 있는 것(3:1 필요)과 장식용 구분선 */
+  --line: var(--kb-color-border-control);
+  --line-soft: var(--kb-color-border-subtle);
+  /* 브랜드 주황은 «면»이고, 글자를 얹는 자리는 strong 이다 (tokens.css ②) */
+  --brand: var(--kb-color-accent-primary);
+  --brand-strong: var(--kb-color-accent-strong);
+  --brand-weak: var(--kb-color-accent-weak);
+  --on-brand: var(--kb-color-text-inverse);
+  --danger: #b73e33; --danger-weak: #f9e9e7;
+  /* #a56a12 는 제 옅은 바탕 위에서 3.94:1 이라 본문 기준 미달이었다 → 4.62:1 로 낮춘다 */
+  --warn: #96600f; --warn-weak: #f8efdd;
+  --fs: var(--kb-font-size-body);
 }
 .app.large { --fs: 23px; }
 .app.contrast {
   --bg: #000000; --card: #101010; --fg: #ffffff; --muted: #d8d8d8;
-  --line: #6b6b6b; --brand: #ffd400; --brand-weak: #333000;
+  --line: #9a9a9a; --line-soft: #6b6b6b;
+  --brand: #ffd400; --brand-strong: #ffd400; --brand-weak: #333000;
+  --on-brand: #000000;
   --danger: #ff7b6e; --danger-weak: #3a1512; --warn: #ffc861; --warn-weak: #332711;
 }
 * { box-sizing: border-box; }
 body { margin: 0; }
 .app {
   min-height: 100vh; background: var(--bg); color: var(--fg);
-  font-family: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  font-size: var(--fs); line-height: 1.6; -webkit-font-smoothing: antialiased;
+  font-family: var(--kb-font-family);
+  font-size: var(--fs); line-height: var(--kb-line-height-body); -webkit-font-smoothing: antialiased;
 }
 .shell { max-width: 760px; margin: 0 auto; padding: 20px 20px 80px; }
-:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; border-radius: 6px; }
+/* 포커스 테두리는 brand 가 아니라 brand-strong 이다.
+   brand(#ff5a1f)는 순백 위에서 3.12:1 로 겨우 통과하지만, 실제 바탕인 캔버스(#f7f7f8)
+   위에서는 2.91:1 로 떨어진다. 바탕이 1.6% 어두워진 것만으로 합불이 뒤집힌다 — 눈으로는
+   절대 못 잡는 종류의 미달이라 :root 의 강한 쪽을 쓴다. */
+:focus-visible { outline: 3px solid var(--brand-strong); outline-offset: 3px; border-radius: var(--kb-radius-sm); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0 18px; flex-wrap: wrap; }
 .topbar h1 { font-size: 1.05em; margin: 0; }
-.simbadge { font-size: 0.72em; font-weight: 700; color: var(--brand); background: var(--brand-weak); padding: 4px 12px; border-radius: 999px; }
+/* 강조색 글씨를 강조색 바탕에 얹으면 어떤 조합으로도 4.5:1 이 안 나온다(최대 4.21).
+   그래서 글씨는 본문색으로 두고, 강조는 바탕과 테두리가 맡는다 — 색이 유일한 신호가 아니다. */
+.simbadge { font-size: 0.72em; font-weight: 700; color: var(--fg); background: var(--brand-weak); border: 1px solid var(--brand); padding: 4px 12px; border-radius: var(--kb-radius-full); }
 .a11y { display: flex; gap: 8px; }
 
 .toggle {
@@ -33,7 +59,7 @@ body { margin: 0; }
 }
 .toggle[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-weak); color: var(--fg); }
 
-.card { background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; padding: 22px; margin: 14px 0; }
+.card { background: var(--card); border: 1.5px solid var(--line-soft); border-radius: var(--kb-radius-lg); padding: 22px; margin: 14px 0; box-shadow: var(--kb-shadow-card); }
 h2 { font-size: 1.25em; margin: 0 0 6px; }
 .hint { color: var(--muted); font-size: 0.88em; margin: 0 0 14px; }
 .stepmeta { color: var(--muted); font-size: 0.8em; font-weight: 700; letter-spacing: 0.06em; }
@@ -54,8 +80,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
   min-height: 56px; padding: 12px 22px; font-size: 1em; font-weight: 800; cursor: pointer;
   border-radius: 12px; border: 2px solid transparent;
 }
-.btn.primary { background: var(--brand); color: var(--bg); }
-.app.contrast .btn.primary { color: #000; }
+.btn.primary { background: var(--brand-strong); color: var(--on-brand); box-shadow: var(--kb-shadow-cta-glow); }
 .btn.ghost { background: var(--card); color: var(--fg); border-color: var(--line); }
 .btn.danger { background: var(--danger-weak); color: var(--danger); border-color: var(--danger); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -71,7 +96,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 .banner { border-radius: 12px; padding: 14px 18px; margin: 12px 0; font-weight: 600; }
 .banner.warn { background: var(--warn-weak); color: var(--warn); border: 1.5px solid var(--warn); }
 .banner.danger { background: var(--danger-weak); color: var(--danger); border: 1.5px solid var(--danger); }
-.banner.ok { background: var(--brand-weak); color: var(--brand); border: 1.5px solid var(--brand); }
+.banner.ok { background: var(--brand-weak); color: var(--fg); border: 1.5px solid var(--brand); }
 
 .excluded { border-left: 4px solid var(--danger); padding: 8px 14px; margin: 8px 0; background: var(--danger-weak); border-radius: 8px; font-size: 0.9em; }
 .altcard { border: 2px dashed var(--line); border-radius: 12px; padding: 14px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -84,9 +109,9 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 .runlog li { padding: 10px 14px; border-left: 4px solid var(--brand); background: var(--brand-weak); border-radius: 8px; margin: 8px 0; font-weight: 600; }
 
 .evgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
-.evitem { border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 0.85em; }
+.evitem { border: 1.5px solid var(--line-soft); border-radius: var(--kb-radius-sm); padding: 10px 14px; font-size: 0.85em; }
 .evitem b { display: block; font-size: 0.82em; color: var(--muted); font-weight: 700; }
-.pass { color: var(--brand); font-weight: 800; }
+.pass { color: var(--brand-strong); font-weight: 800; }
 .fail { color: var(--danger); font-weight: 800; }
 
 .errpanel .choices { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
@@ -158,7 +183,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 .alabel { font-weight: 800; }
 .aeffect { color: var(--muted); font-size: 0.82em; }
 .astate { font-weight: 800; color: var(--muted); min-width: 2.2em; text-align: right; }
-.a11yrow[aria-pressed="true"] .astate { color: var(--brand); }
+.a11yrow[aria-pressed="true"] .astate { color: var(--fg); }
 
 /* 시연 프리셋 — 입력을 채우는 버튼(결과를 정해두지 않는다) */
 .presetrow {
@@ -204,7 +229,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 .sellist { list-style: none; padding: 0; margin: 0 0 6px; }
 .sellist li {
   display: grid; grid-template-columns: 5.5em auto 1fr; align-items: baseline; gap: 10px;
-  padding: 10px 14px; border: 1.5px solid var(--line); border-radius: 10px; margin: 6px 0;
+  padding: 10px 14px; border: 1.5px solid var(--line-soft); border-radius: var(--kb-radius-sm); margin: 6px 0;
 }
 .sellist li[data-origin="AUTO"],
 .sellist li[data-origin="SUBSTITUTED"] { border-color: var(--warn); background: var(--warn-weak); }
