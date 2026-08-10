@@ -1,0 +1,58 @@
+/* 프로필 흐름 4화면 전용 — Figma S01a/b(150:162·150:190) · S02 1~3/3(150:221·150:454·150:509)
+ * · S03(150:275) · S05(150:396).
+ *
+ * 규칙 둘을 지킨다.
+ *
+ * ① **의미 이름만 쓴다.** `--kb-…` 원시 토큰을 화면 CSS 에서 직접 쓰면 고대비 모드가
+ *    그것만 갈아끼우지 못해 검은 배경에 밝은 배경용 색이 남는다(실제로 났던 버그다).
+ *    그래서 색은 전부 --fg/--card/--line/… 을 거친다. 모서리·간격은 원시 토큰과 같은
+ *    값을 숫자로 적었다 — 색이 아니라 갈아끼울 일이 없고, 위 규칙에 예외를 두지 않기 위해서다.
+ *    (16px = radius/lg, 12px = radius/md, 8px = radius/sm — Figma 값 그대로)
+ *
+ * ② **누를 수 있다고 말한 것은 48px 이상이다.** 디자인의 44px 아이콘 박스·45px 요약 행보다
+ *    크다. 제출물에 선언한 보증이 48px 이고 tests/a11y.test.ts 가 `cursor: pointer` 를 쓴
+ *    규칙을 전수로 검사한다 — 선언을 낮추는 대신 타깃을 키운다.
+ */
+
+/* ───────── 홈 TitleBlock (150:183 / 150:211) ─────────
+ * 디자인은 «환영» 한 줄과 부제 한 줄이다. 우리 홈에는 이미 시연 사례·저장본 카드가
+ * 있어 제목을 통째로 갈아끼우면 그것들이 갈 곳을 잃는다. 그래서 환영 문구를 제목 위
+ * 작은 줄로 남기고 부제는 그대로 쓴다. */
+.p-eyebrow {
+  margin: 0 0 4px; font-size: 0.8em; font-weight: 700; letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+/* 카드 위에 붙는 작은 설명 (S05 «지난 주문») */
+.p-cap { margin: 16px 0 6px; font-size: 0.82em; font-weight: 700; color: var(--muted); }
+
+/* ───────── 화면 글씨 맞춰보기 (우리 것 — 디자인에 없다) ─────────
+ * 설정 이름을 고르게 하는 대신 실제 크기로 렌더한 문장을 보여주고 보이는지만 묻는다. */
+.p-probe { margin: 14px 0 4px; border-style: dashed; }
+.p-sample { font-weight: 700; margin: 18px 0; line-height: 1.35; }
+
+/* ───────── 자세한 설정 ─────────
+ * 3단계 라디오는 «가장 많이 쓰는 셋»이고, 나머지 넷을 포함한 7종 전부는 여기 남는다.
+ * 접힌 채로 두지 않는다(open) — 설정이 필요한 사람에게 한 걸음을 더 요구하지 않는다. */
+.p-more { margin: 18px 0 4px; border: 1.5px solid var(--line-soft); border-radius: 12px; overflow: hidden; }
+.p-more > summary {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  min-height: 48px; padding: 10px 16px; cursor: pointer; list-style: none;
+  background: var(--sunken); color: var(--fg); font-weight: 800;
+}
+.p-more > summary::-webkit-details-marker { display: none; }
+.p-morehint { font-size: 0.78em; font-weight: 500; color: var(--muted); }
+.p-morebody { padding: 4px 16px 16px; }
+.p-subhead { font-size: 1em; margin: 18px 0 6px; }
+
+/* ───────── 요약 행의 «수정» (SummaryCard 185:214) ─────────
+ * 디자인에서는 글자 링크지만 진짜 버튼으로 만든다 — 눌러서 그 단계로 돌아간다.
+ * 밑줄을 함께 두는 것은 색만으로 «누를 수 있음»을 말하지 않기 위해서다. */
+.p-edit {
+  min-height: 48px; padding: 0 12px; cursor: pointer;
+  border: 0; border-radius: 8px; background: var(--card); color: var(--brand-strong);
+  font-size: 0.86em; font-weight: 800; font-family: inherit; text-decoration: underline;
+}
+
+/* 저장 방식·세션 시작의 안내 문구 */
+.p-note { margin: 12px 0 0; font-size: 0.84em; color: var(--muted); line-height: 1.6; }

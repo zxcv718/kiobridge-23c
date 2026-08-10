@@ -53,6 +53,14 @@ export function useFlowState() {
   const [probeStep, setProbeStep] = useState<number | null>(null);
   /** 문답으로 정해진 단계 — 결과를 화면에 밝혀 준다 */
   const [probeResult, setProbeResult] = useState<number | null>(null);
+  /**
+   * 프로필 생성(S02)의 하위 단계 1~3. S03 의 «수정»이 어느 걸음으로 돌아갈지 정한다.
+   *
+   * 화면 안의 모듈 변수로 두었더니 StrictMode 에서 깨졌다 — 개발 모드는 컴포넌트를 두 번
+   * 마운트하는데, 첫 마운트의 정리 코드가 값을 되돌려 두 번째 마운트가 늘 1단계를 읽었다.
+   * 화면 밖에서 사는 값은 흐름 상태로 둔다.
+   */
+  const [profileStep, setProfileStep] = useState<1 | 2 | 3>(1);
   /** 계산 화면(S11) 타이머 — 화면을 벗어나면 남은 전환이 덮어쓰지 않게 관리한다 */
   const calcTimer = useRef<number | null>(null);
   useEffect(() => () => { if (calcTimer.current !== null) window.clearTimeout(calcTimer.current); }, []);
@@ -82,9 +90,16 @@ export function useFlowState() {
 
   const resetRun = () => { setOutcome(null); setSubmitted(null); setRunError(null); setErrResults({}); };
 
+  /**
+   * 질문을 처음부터 시작한다.
+   *
+   * **저장 의사(storeToggle)는 건드리지 않는다.** 여기 오기 직전 화면이 S03 «저장 방식»이고,
+   * 사용자가 방금 답한 것을 그 다음 걸음이 지워 버리면 주문을 마쳐도 아무것도 남지 않는다.
+   * 답변·진행 위치처럼 «이번 주문에 관한 것»만 비운다.
+   */
   const startWizard = () => {
     setAnswers({}); setQIndex(0); setManual(false); setFromSaved(false); setCarried([]);
-    setStoreToggle(false); setDemoHour(null); setReconfirmCount(0);
+    setDemoHour(null); setReconfirmCount(0);
     resetRun(); setStep("wizard");
   };
 
@@ -282,13 +297,13 @@ export function useFlowState() {
     // 상태
     step, a11y, fixture, live, qIndex, answers, uiRec, manual, sessionInput, runLog,
     outcome, submitted, runError, errResults, saved, fromSaved, storeToggle, editOpen,
-    carried, demoHour, reconfirmCount, probeStep, probeResult,
+    carried, demoHour, reconfirmCount, probeStep, probeResult, profileStep,
     // 파생값
     now, simple, rawInput, savedCoversAll, q, answered, ev, askTotal, askPos,
     // 조작
     setStep, setA11y, setFlag, setQIndex, setAnswers, setUiRec, setManual, setSessionInput,
     setSubmitted, setErrResults, setStoreToggle, setEditOpen, setReconfirmCount,
-    setProbeStep, setProbeResult,
+    setProbeStep, setProbeResult, setProfileStep,
     t, staffBtn, nextToAsk, advance, startWizard, startFromSaved, applyPreset, deleteSaved,
     openEdit, applyEditAndRecommend, toggleStore, setStoreIntent, finishOrder,
     confirmOffline, runSimulation, goRecommend,

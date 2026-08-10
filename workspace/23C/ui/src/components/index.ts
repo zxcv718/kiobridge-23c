@@ -9,4 +9,5 @@ export { StepIndicator } from "./StepIndicator";
 export { Cta, type CtaTone } from "./Cta";
 export { Card, type CardRow } from "./Card";
 export { Badge } from "./Badge";
+export { RadioCard } from "./RadioCard";
 export { ChoiceGrid } from "./ChoiceGrid";

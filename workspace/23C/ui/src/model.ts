@@ -19,6 +19,12 @@ export type Step =
   | "wizard" | "calculating" | "recommend" | "menuConfirm"
   | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
 
+/**
+ * 프로필 흐름 다섯 걸음의 이름 (Figma StepIndicator 181:177).
+ * 홈·프로필·저장방식·QR·세션시작 네 화면이 같은 표를 봐야 해서 여기 둔다.
+ */
+export const FLOW_STEPS = ["홈", "프로필 생성", "저장 방식", "QR 연동", "세션 시작"];
+
 /** 추천 계산 화면(S11)을 보여주는 시간. 진행 중임을 알리는 최소한이며, 결과를 늦추려는 것이 아니다. */
 export const CALC_MS = 600;
 

@@ -1,87 +1,170 @@
 import React from "react";
 import { useFlow } from "../flow";
-import { A11Y_ITEMS, PROBE_RESULT, PROBE_SAMPLE, PROBE_SIZES } from "../model";
+import { A11Y_ITEMS, FLOW_STEPS, PROBE_RESULT, PROBE_SAMPLE, PROBE_SIZES, type A11y } from "../model";
+import { Cta, Header, RadioCard, StepIndicator } from "../components";
+import "./profile.css";
 
 /**
- * 화면목록 S02 — 프로필(화면·안내) 설정.
+ * 화면목록 S02 — 프로필(화면·안내) 생성. Figma 150:221(1/3 글씨 크기) ·
+ * 150:454(2/3 고대비) · 150:509(3/3 화면 안내).
  *
- * 설정 이름 대신 **실제 크기로 렌더한 문장**을 보여주고 보이는지만 묻는다.
- * 판단 대상이 «무엇을 켜야 나에게 맞는가»가 아니라 «내 눈에 보이는가»가 된다.
- * 산출 결과는 곧바로 반영하되 아래 토글에서 언제든 바꿀 수 있게 둔다 —
- * 자동으로 정해 놓고 못 바꾸게 하면 «자동으로 불러온 정보의 재확인»에 어긋난다.
+ * 디자인이 한 화면을 세 걸음으로 나눈 이유는 **한 번에 하나만 고르게 하기 위해서**다.
+ * 토글 7개를 한꺼번에 보여주면 «무엇을 켜야 나에게 맞는지»를 사용자가 먼저 알아야 하고,
+ * 그건 이 제품이 없애려는 부담 그 자체다.
+ *
+ * 다만 7종을 셋으로 줄이지는 않는다. 제출물이 접근성 채널 8종을 선언하고 있고,
+ * 선언한 채널이 화면에서 닿지 않으면 그건 «없는 기능을 있다고 말한 것»이 된다.
+ * 그래서 세 걸음 아래에 «자세한 설정»으로 7종을 전부 펼쳐 둔다(접지 않는다).
+ *
+ * 「화면 글씨 맞춰보기」 문답은 1단계에 남는다 — 설정 이름 대신 실제 크기로 렌더한
+ * 문장을 보여주고 보이는지만 묻는 것이 이 화면의 핵심이기 때문이다.
  */
+
+
+
+/** 한 걸음 = 제목 + 라디오 두 장. 바꾸는 플래그는 하나뿐이다. */
+const SUBSTEPS: {
+  key: keyof A11y;
+  title: string;
+  group: string;
+  options: { on: boolean; label: string; desc: string; preview: string; previewSize?: string }[];
+}[] = [
+  {
+    key: "largeText", title: "더 읽기 편한 크기를 선택해주세요", group: "글씨 크기",
+    options: [
+      { on: false, label: "기본 크기", desc: "지금 화면과 같은 크기로 보여드려요", preview: "가", previewSize: "16px" },
+      // 디자인 문구는 «20% 크게»지만 우리 화면은 18px→23px(약 28%)이고 버튼도 함께 커진다.
+      // 숫자를 옮겨 적으면 화면과 다른 말이 되므로 실제로 일어나는 일을 적는다.
+      { on: true, label: "큰 글씨", desc: "글자와 버튼이 한 단계 커집니다", preview: "가", previewSize: "21px" },
+    ],
+  },
+  {
+    key: "highContrast", title: "더 또렷하게 보이는 화면을 선택해주세요", group: "고대비",
+    options: [
+      { on: false, label: "기본 화면", desc: "지금과 같은 밝기·색상으로 보여드려요", preview: "가" },
+      { on: true, label: "고대비 화면", desc: "검은 배경에 밝은 글씨로 바뀝니다", preview: "가" },
+    ],
+  },
+  {
+    key: "visualGuidance", title: "필요한 안내 방식을 선택해주세요", group: "화면 안내",
+    options: [
+      { on: false, label: "기본", desc: "추가 안내 없이 진행해요", preview: "○" },
+      // 디자인은 «다음에 누를 버튼을 테두리와 화살표로 강조»라고 적혀 있으나 그 기능은
+      // 만들지 않았다. 이 플래그가 실제로 하는 일(선택지에 그림 병기)을 적는다.
+      { on: true, label: "안내 켜짐", desc: "선택지에 그림이 함께 표시됩니다", preview: "🍗" },
+    ],
+  },
+];
+
+
 export function ProfileSetup() {
-  const { a11y, setA11y, setFlag, probeStep, setProbeStep, probeResult, setProbeResult, setStep, staffBtn } = useFlow();
+  const {
+    a11y, setA11y, setFlag, probeStep, setProbeStep, probeResult, setProbeResult,
+    profileStep, setProfileStep, setStep, staffBtn,
+  } = useFlow();
+  const sub = profileStep;
+  const setSub = (n: number) => setProfileStep(n as 1 | 2 | 3);
+
+  const here = SUBSTEPS[sub - 1];
+  const back = () => (sub > 1 ? setSub(sub - 1) : setStep("start"));
+  const next = () => (sub < SUBSTEPS.length ? setSub(sub + 1) : setStep("saveChoice"));
 
   return (
-    <section className="card" aria-label="화면과 안내 설정">
-      <h2>화면과 안내를 맞춰 드릴게요</h2>
-      <p className="hint">켜면 이 화면이 바로 바뀝니다. 언제든 다시 끌 수 있습니다.</p>
+    <>
+      <StepIndicator labels={FLOW_STEPS} current={2} />
+      <section className="card" aria-label="화면과 안내 설정">
+        <Header onBack={back} />
+        <StepIndicator total={SUBSTEPS.length} current={sub} srLabel={`프로필 생성 ${SUBSTEPS.length}단계 중 ${sub}단계 — ${here.group}`} />
 
-      {probeStep === null ? (
-        <div className="btnrow" style={{ marginBottom: 18 }}>
-          <button type="button" className="btn ghost" onClick={() => { setProbeStep(0); setProbeResult(null); }}>
-            화면 글씨 맞춰보기
-          </button>
-          {probeResult !== null && (
-            <span className="hint">
-              {probeResult === 0 && "기본 크기로 두었습니다."}
-              {probeResult === 1 && "큰 글씨를 켰습니다."}
-              {probeResult === 2 && "큰 글씨·고대비·그림 안내를 켰습니다."}
-              {" "}아래에서 언제든 바꾸실 수 있습니다.
-            </span>
-          )}
+        <h2>{here.title}</h2>
+        <p className="hint">고르시면 이 화면이 바로 바뀝니다. 언제든 다시 바꾸실 수 있습니다.</p>
+
+        <div className="kb-radios" role="group" aria-label={here.group}>
+          {here.options.map((o) => (
+            <RadioCard
+              key={o.label} label={o.label} desc={o.desc} preview={o.preview} previewSize={o.previewSize}
+              selected={a11y[here.key] === o.on}
+              onPick={() => setFlag(here.key, o.on)}
+            />
+          ))}
         </div>
-      ) : (
-        <div className="card" style={{ marginBottom: 18 }} aria-labelledby="probehead">
-          <h2 id="probehead">화면 글씨가 잘 보이시나요?</h2>
-          <p aria-hidden="true" style={{ fontSize: PROBE_SIZES[probeStep], fontWeight: 700, margin: "18px 0" }}>
-            {PROBE_SAMPLE}
-          </p>
-          <p className="hint">위 문장이 편하게 읽히시면 «잘 보여요»를 눌러 주세요.</p>
-          <div className="choices" role="group" aria-label="글씨 크기 확인">
-            <button type="button" className="choice" onClick={() => {
-              setA11y((s) => ({ ...s, ...PROBE_RESULT[probeStep] }));
-              setProbeResult(probeStep); setProbeStep(null);
-            }}>잘 보여요</button>
-            <button type="button" className="choice" onClick={() => {
-              if (probeStep < PROBE_SIZES.length - 1) { setProbeStep(probeStep + 1); return; }
-              const last = PROBE_SIZES.length - 1;
-              setA11y((s) => ({ ...s, ...PROBE_RESULT[last] }));
-              setProbeResult(last); setProbeStep(null);
-            }}>조금 작아요</button>
+
+        {/* 화면목록 S02 «실시간 변동되는 화면을 통해 최적 화면 맞춤» — 1단계에만 둔다.
+            글씨 크기를 스스로 고르기 어려운 분에게 «보이는지»만 물어 대신 정해 드린다. */}
+        {sub === 1 && (probeStep === null ? (
+          <div className="btnrow">
+            <Cta label="화면 글씨 맞춰보기" onClick={() => { setProbeStep(0); setProbeResult(null); }} />
+            {probeResult !== null && (
+              <span className="hint">
+                {probeResult === 0 && "기본 크기로 두었습니다."}
+                {probeResult === 1 && "큰 글씨를 켰습니다."}
+                {probeResult === 2 && "큰 글씨·고대비·그림 안내를 켰습니다."}
+                {" "}위에서 언제든 바꾸실 수 있습니다.
+              </span>
+            )}
           </div>
-        </div>
-      )}
-
-      <div className="a11ylist">
-        {A11Y_ITEMS.map((it) => (
-          <button key={it.key} type="button" className="a11yrow" aria-pressed={a11y[it.key] === true}
-            onClick={() => setFlag(it.key, !(a11y[it.key] as boolean))}>
-            <span className="alabel">{it.label}</span>
-            <span className="aeffect">{it.effect}</span>
-            <span className="astate">{a11y[it.key] ? "켬" : "끔"}</span>
-          </button>
+        ) : (
+          <div className="card p-probe" aria-labelledby="probehead">
+            <h2 id="probehead">화면 글씨가 잘 보이시나요?</h2>
+            <p className="p-sample" aria-hidden="true" style={{ fontSize: PROBE_SIZES[probeStep] }}>{PROBE_SAMPLE}</p>
+            <p className="hint">위 문장이 편하게 읽히시면 «잘 보여요»를 눌러 주세요.</p>
+            <div className="choices" role="group" aria-label="글씨 크기 확인">
+              <button type="button" className="choice" onClick={() => {
+                setA11y((s) => ({ ...s, ...PROBE_RESULT[probeStep] }));
+                setProbeResult(probeStep); setProbeStep(null);
+              }}>잘 보여요</button>
+              <button type="button" className="choice" onClick={() => {
+                if (probeStep < PROBE_SIZES.length - 1) { setProbeStep(probeStep + 1); return; }
+                const last = PROBE_SIZES.length - 1;
+                setA11y((s) => ({ ...s, ...PROBE_RESULT[last] }));
+                setProbeResult(last); setProbeStep(null);
+              }}>조금 작아요</button>
+            </div>
+          </div>
         ))}
-      </div>
 
-      <h2 style={{ marginTop: 22 }}>어떻게 입력하시겠어요?</h2>
-      <div className="choices" role="group" aria-label="입력 방식">
-        <button type="button" className="choice" aria-pressed={a11y.preferredInput === "TOUCH"}
-          onClick={() => setFlag("preferredInput", "TOUCH")}>직접 누르기</button>
-        <button type="button" className="choice" aria-pressed={a11y.preferredInput === "ASSISTED"}
-          onClick={() => setFlag("preferredInput", "ASSISTED")}>
-          옆에서 도와주기<small>보호자·직원이 대신 눌러 주는 경우</small>
-        </button>
-      </div>
-      <p className="hint">
-        도와주기를 고르시면 입력 출처를 <b>대리 입력</b>으로 기록합니다. 본인 확인을 대신하지는 않습니다.
-        {" "}음성 입력은 이번 버전에 없습니다 — 없는 기능을 있다고 표시하지 않습니다.
-      </p>
-      <div className="btnrow">
-        <button type="button" className="btn primary" onClick={() => setStep("start")}>설정 마치기</button>
-        {staffBtn()}
-      </div>
-    </section>
+        {/* 선언한 접근성 채널 7종은 세 걸음 뒤에도 전부 닿는다 — 접어 두지 않는다 */}
+        <details className="p-more" open>
+          <summary>
+            자세한 설정
+            <span className="p-morehint">위에서 고르신 것을 포함해 7가지를 하나씩 켜고 끌 수 있어요</span>
+            <span aria-hidden="true">▾</span>
+          </summary>
+          <div className="p-morebody">
+            <div className="a11ylist">
+              {A11Y_ITEMS.map((it) => (
+                <button key={it.key} type="button" className="a11yrow" aria-pressed={a11y[it.key] === true}
+                  onClick={() => setFlag(it.key, !(a11y[it.key] as boolean))}>
+                  <span className="alabel">{it.label}</span>
+                  <span className="aeffect">{it.effect}</span>
+                  <span className="astate">{a11y[it.key] ? "켬" : "끔"}</span>
+                </button>
+              ))}
+            </div>
+
+            <h3 className="p-subhead">어떻게 입력하시겠어요?</h3>
+            <div className="choices" role="group" aria-label="입력 방식">
+              <button type="button" className="choice" aria-pressed={a11y.preferredInput === "TOUCH"}
+                onClick={() => setFlag("preferredInput", "TOUCH")}>직접 누르기</button>
+              <button type="button" className="choice" aria-pressed={a11y.preferredInput === "ASSISTED"}
+                onClick={() => setFlag("preferredInput", "ASSISTED")}>
+                옆에서 도와주기<small>보호자·직원이 대신 눌러 주는 경우</small>
+              </button>
+            </div>
+            <p className="hint">
+              도와주기를 고르시면 입력 출처를 <b>대리 입력</b>으로 기록합니다. 본인 확인을 대신하지는 않습니다.
+              {" "}음성 입력은 이번 버전에 없습니다 — 없는 기능을 있다고 표시하지 않습니다.
+            </p>
+          </div>
+        </details>
+
+        <div className="btnrow">
+          {sub > 1 && <Cta label="이전" onClick={back} />}
+          <Cta tone="primary" label="다음" onClick={next} />
+          <Cta label="설정 마치기" onClick={() => setStep("start")} />
+          {staffBtn()}
+        </div>
+      </section>
+    </>
   );
 }

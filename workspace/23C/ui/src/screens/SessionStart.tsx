@@ -1,31 +1,98 @@
 import React from "react";
 import { useFlow } from "../flow";
+import { FLOW_STEPS, QUESTIONS, answerLabel} from "../model";
+import { candidateName } from "../logic";
+import { Card, Cta, Header, StepIndicator } from "../components";
+import "./profile.css";
 
 /**
- * S05 세션 시작 — **아직 만들지 않았다.**
+ * 화면목록 S05 — 세션 시작. Figma 150:396 «S05 Session 시작 (재사용 확인)».
  *
- * 자리만 뚫어 둔 것이다. 화면을 파일로 나눠 동시에 만들 참인데, 자리가 없으면
- * 사람마다 App.tsx 를 고쳐야 하고 그러면 한 파일에서 다시 줄을 서게 된다.
- * 담당: 레인 A
+ * 여기서 하는 일은 **불러온 것을 보여주고 확인받는 것**이다. 저장본을 자동으로 적용해
+ * 곧바로 주문에 들어가면 «자동으로 불러온 정보의 재확인» 원칙이 깨진다 — 지난번 알레르기
+ * 답이 지금도 맞는지는 사람만 안다.
  *
- * 만들 것: 불러온 설정을 확인받고 이번 이용을 시작한다.
- *
- * 이 화면은 아직 어디에서도 갈 수 없다(라우팅 표에는 있지만 가는 길이 없다).
- * 미완성 명단은 tests/a11y.test.ts 의 PLACEHOLDER 가 들고 있고, 명단과 코드가
- * 어긋나면 테스트가 먼저 알려준다. 마지막에는 이 명단이 비어 있어야 한다.
+ * 디자인은 지난 주문이 있는 경우(네/아니오)만 그렸다. 프로필만 새로 만들고 온 사람에게는
+ * 되살릴 주문이 없으므로, 그때는 방금 정한 화면 설정을 확인시키고 한 갈래로만 보낸다.
+ * 없는 «지난 주문» 카드를 빈 채로 그리지 않는다.
  */
 export const PLACEHOLDER = true;
 
 export function SessionStart() {
-  const { setStep, staffBtn } = useFlow();
+  const {
+    saved, fixture, a11y, storeToggle, setStoreToggle, startWizard, startFromSaved, setStep, staffBtn,
+  } = useFlow();
+
+  /* 저장 «의사»만 있고 답변이 없는 저장본이 있을 수 있다 — S03 에서 저장하기를 고르면
+     그 자리에서 화면 설정만 먼저 남기기 때문이다. 그건 «지난 주문»이 아니다. */
+  const prev = saved && QUESTIONS.some((q) => saved.answers[q.key] !== undefined) ? saved : null;
+
+  /**
+   * 처음부터 새로 고르기.
+   *
+   * startWizard 는 새 흐름을 여는 함수라 저장 의사(storeToggle)까지 초기값으로 되돌린다.
+   * 이 흐름에서는 그 결정을 **바로 앞 화면(S03)에서 방금 받았으므로** 되돌려 놓으면
+   * 주문 확정 때 finishOrder 가 저장을 건너뛴다. 그래서 다시 세워 준다.
+   * (flow.tsx 를 고쳐 startWizard 가 저장 의사를 보존하게 하는 편이 옳다 — 통합 때 볼 것)
+   */
+  const beginFresh = () => {
+    const keep = storeToggle;
+    startWizard();
+    if (keep) setStoreToggle(true);
+  };
+
   return (
-    <section className="card" aria-label="S05 세션 시작">
-      <h2>S05 세션 시작</h2>
-      <p className="hint">이 화면은 아직 만들고 있습니다.</p>
-      <div className="btnrow">
-        <button type="button" className="btn ghost" onClick={() => setStep("start")}>처음으로</button>
-        {staffBtn()}
-      </div>
-    </section>
+    <>
+      <StepIndicator labels={FLOW_STEPS} current={5} />
+      <section className="card" aria-label="세션 시작">
+        <Header onBack={() => setStep("saveChoice")} />
+
+        <h2>{prev ? "이전 주문과 동일하게 준비해드릴까요?" : "이제 주문을 시작할게요"}</h2>
+        <p className="hint">
+          {prev
+            ? "지난번에 주문하신 내용이에요. 그대로 하실지, 새로 고르실지 정해 주세요."
+            : "방금 맞추신 화면 설정으로 진행합니다. 메뉴는 몇 가지 여쭤보고 함께 골라 드릴게요."}
+        </p>
+
+        {prev && fixture && (
+          <>
+            <p className="p-cap">지난 주문</p>
+            <Card
+              label="지난 주문 내용"
+              rows={[
+                ...(prev.lastCandidateId ? [{ label: "메뉴명", value: candidateName(fixture, prev.lastCandidateId) }] : []),
+                { label: "알레르기", value: answerLabel("allergies", prev.answers.allergies) },
+                { label: "맵기 선호", value: answerLabel("spicyLevel", prev.answers.spicyLevel) },
+                { label: "뼈/순살 선택", value: answerLabel("boneType", prev.answers.boneType) },
+                { label: "수량", value: answerLabel("quantity", prev.answers.quantity) },
+              ]}
+            />
+          </>
+        )}
+
+        <p className="p-cap">이번 화면 설정</p>
+        <Card
+          label="이번에 적용된 화면 설정"
+          rows={[
+            { label: "글씨 크기", value: a11y.largeText ? "큰 글씨" : "기본 크기" },
+            { label: "고대비", value: a11y.highContrast ? "고대비 화면" : "기본 화면" },
+            { label: "화면 안내", value: a11y.visualGuidance ? "안내 켜짐" : "기본" },
+            { label: "입력 방식", value: a11y.preferredInput === "ASSISTED" ? "옆에서 도와주기" : "직접 누르기" },
+            { label: "저장 방식", value: storeToggle ? "이 기기에 저장" : "이번만 사용" },
+          ]}
+        />
+
+        <div className="btnrow">
+          {prev
+            ? <>
+              <Cta tone="primary" label="네, 지난번과 같게" onClick={startFromSaved} disabled={!fixture} />
+              <Cta label="아니오, 새로 고를게요" onClick={beginFresh} disabled={!fixture} />
+            </>
+            : <Cta tone="primary" label="주문 시작하기" onClick={beginFresh} disabled={!fixture} />}
+          <Cta label="처음으로" onClick={() => setStep("start")} />
+          {staffBtn()}
+        </div>
+      </section>
+    </>
   );
 }

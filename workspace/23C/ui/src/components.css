@@ -92,3 +92,37 @@
 .kb-row:first-child { border-top: 0; }
 .kb-rowlabel { color: var(--muted); margin: 0; }
 .kb-rowvalue { margin: 0; font-weight: 700; text-align: right; word-break: keep-all; display: flex; align-items: center; gap: 10px; }
+
+/* ───────── Radio Card (172:2373 / 172:2375) ─────────
+ * S02 세 단계와 S03 저장 방식이 같은 부품을 쓴다. 디자인도 같은 컴포넌트다.
+ *
+ * 선택 상태를 색으로만 말하지 않는다 — 라디오 그림(빈 원/찬 원)과 «선택됨» 글자가
+ * 함께 바뀌고, aria-pressed 로도 나간다. 주황 테두리를 못 보는 사람에게 색은 신호가 아니다. */
+.kb-radios { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 4px; }
+.kb-radio {
+  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 12px;
+  width: 100%; min-height: 72px; padding: 16px; text-align: left; cursor: pointer;
+  border: 2px solid var(--line); border-radius: 16px;
+  background: var(--card); color: var(--fg);
+  font-size: 1em; font-family: inherit;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.kb-radio[aria-pressed="true"] { border-color: var(--brand); background: var(--selected); }
+.kb-radioico { width: 24px; height: 24px; flex: 0 0 auto; }
+.kb-radiotext { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.kb-radiolabel { font-weight: 800; }
+.kb-radiodesc { font-size: 0.8em; font-weight: 500; color: var(--muted); line-height: 1.45; }
+/* 미리보기 상자 (Preview 172:2371) — 고른 결과가 어떻게 보이는지 그 자리에서 보여준다 */
+.kb-preview {
+  display: flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; flex: 0 0 auto; border-radius: 8px;
+  border: 1.5px solid var(--line); background: var(--sunken); color: var(--fg);
+}
+.kb-pick { font-size: 0.78em; font-weight: 800; color: var(--muted); min-width: 3.2em; text-align: right; }
+.kb-radio[aria-pressed="true"] .kb-pick { color: var(--fg); }
+
+@media (max-width: 560px) {
+  .kb-radio { grid-template-columns: auto 1fr auto; }
+  .kb-pick { grid-column: 2 / -1; text-align: left; }
+}
+
