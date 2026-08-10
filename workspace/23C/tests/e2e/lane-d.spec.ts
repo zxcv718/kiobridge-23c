@@ -212,13 +212,21 @@ test.describe("D계열 — 확인·수정·결과", () => {
     /* 예전에는 «저장 안내 카드(section.savebox)보다 위인가»로 쟀다. 결과 화면이 카드를
        쌓지 않게 되면서 그 기준점 자체가 없어졌다 — 저장 결과는 이제 본문에 한 줄로
        녹아 있다. 지키려던 것은 «어느 카드보다 위»가 아니라 **끝까지 내려가지 않아도
-       닿는다**였으므로, 이제 그것을 직접 잰다. 직원 도움은 화면 아래에 붙는 CTA
-       (.kb-actions, position:sticky)에 있어 내용이 아무리 길어도 첫 화면 안에 남는다. */
+       닿는다**였으므로, 이제 그것을 직접 잰다. 직원 도움은 화면 아래 CTA(.kb-actions)에
+       있고 그 바깥에서 본문만 스크롤하므로, 내용이 아무리 길어도 첫 화면 안에 남는다.
+
+       재는 대상이 문서에서 **본문(.kb-screen-body)**으로 바뀌었다. 문서 전체를 스크롤
+       시키면 내용이 CTA 밑으로 지나가 «보이는데 안 눌리는» 버튼이 생겨서, 높이를 화면에
+       못 박고 본문만 스크롤하도록 바꿨다(tap-target.spec.ts). 그래서 문서 스크롤은 늘 0
+       이고, 여기서 «내용이 한 화면을 넘는가»는 본문 상자에게 물어야 한다. */
     const view = page.viewportSize()!;
-    const scroll = await page.evaluate(() => ({
-      over: document.documentElement.scrollHeight - window.innerHeight,
-      y: window.scrollY,
-    }));
+    const scroll = await page.evaluate(() => {
+      const body = document.querySelector(".kb-screen-body");
+      return {
+        over: body ? body.scrollHeight - body.clientHeight : -1,
+        y: body ? body.scrollTop : -1,
+      };
+    });
     expect(scroll.y, "이 검사는 스크롤하지 않은 상태에서 재야 합니다").toBe(0);
     expect(scroll.over, "결과 화면이 한 화면에 들어와 이 검사가 무의미합니다").toBeGreaterThan(0);
 
