@@ -27,8 +27,9 @@ function walk(ext: string, dir = UI_DIR, prefix = ""): { name: string; text: str
   return out;
 }
 
-/** ui/src 아래 모든 .tsx — 화면을 파일로 쪼개도 검사 범위가 줄지 않는다. */
-export const uiSources = (): { name: string; text: string }[] => walk(".tsx");
+/** ui/src 아래 모든 .ts·.tsx — 화면을 파일로 쪼개도 검사 범위가 줄지 않는다. */
+export const uiSources = (): { name: string; text: string }[] =>
+  [...walk(".ts"), ...walk(".tsx")].sort((a, b) => a.name.localeCompare(b.name));
 
 /** 전부 이어 붙인 소스. «어딘가에 있으면 된다» 류의 검사에 쓴다. */
 export const allTsx = (): string => uiSources().map((f) => f.text).join("\n");

@@ -14,6 +14,15 @@ import { allCss, allTsx, cssFiles, uiSources } from "./ui-source";
 const CSS = allCss();
 const APP = allTsx();
 
+/**
+ * 직원 도움 버튼이 없어도 되는 화면과 그 이유.
+ * 늘리려면 **이유를 적어야** 하고, 그 이유가 사라지면 검사가 먼저 알려준다.
+ */
+const STAFF_EXEMPT: Record<string, string> = {
+  "StaffHelp.tsx": "직원 도움 화면 자체다",
+  "Running.tsx": "1초 남짓 지나가는 진행 표시이며 조작 요소가 없다",
+};
+
 /** `min-height: 64px;` 같은 선언에서 픽셀값을 전부 뽑는다. */
 function minHeights(selector: string): number[] {
   const out: number[] = [];
@@ -69,19 +78,46 @@ describe("접근성 — 선언한 보증이 실제로 코드에 있는가", () =
     expect(APP).toMatch(/aria-hidden="true">\{o\.icon\}<\/span>\}\s*\n?\s*\{o\.label\}/);
   });
 
-  it("직원 도움이 모든 주요 단계에서 닿는다", () => {
+  it("직원 도움이 모든 화면에서 닿는다 — 화면 목록을 손으로 적지 않는다", () => {
     expect(UI_GUARANTEES.staffHelpReachableFromEveryStep).toBe(true);
-    // 공통 버튼 팩토리가 있고, 주요 화면에서 쓰인다
-    expect(APP).toMatch(/const staffBtn = /);
-    // 같은 step 문자열이 조건부 배너 등에서도 쓰이므로, 등장 지점마다 살펴
-    // 그중 하나라도 뒤따르는 렌더 블록에 직원 도움이 있으면 통과로 본다.
-    // 새 화면을 만들면 여기 배열에 반드시 추가한다 — 목록이 하드코딩이라 자동으로 늘지 않는다.
-    // 특히 "stopped"(안전 중단)는 직원 도움이 그 화면의 존재 이유다.
-    for (const step of ["start", "wizard", "calculating", "recommend", "edit", "stopped"]) {
-      const parts = APP.split(`step === "${step}"`).slice(1);
-      const reachable = parts.some((seg) => /staffBtn\(/.test(seg.slice(0, 3000)));
-      expect(reachable, `${step} 화면에 직원 도움 경로가 없습니다`).toBe(true);
+    expect(APP).toMatch(/const staffBtn = /); // 공통 버튼 팩토리
+
+    /* 예전에는 화면 이름을 배열로 적어 두었다. 그러면 화면을 새로 만든 사람이 배열을
+       고치지 않는 한 그 화면은 영원히 검사 밖이다 — 실제로 «설정» 화면이 그렇게 빠져
+       있었다. 이제는 screens/ 를 통째로 훑고, 면제만 이유와 함께 적는다. */
+    const screens = uiSources().filter((f) => f.name.startsWith("screens/"));
+    expect(screens.length, "screens/ 에서 화면 파일을 찾지 못했습니다").toBeGreaterThan(5);
+    for (const s of screens) {
+      const base = s.name.slice("screens/".length);
+      const reason = STAFF_EXEMPT[base];
+      if (reason) {
+        // 면제였던 화면이 나중에 조작 요소를 갖게 되면 면제 목록에서 빼야 한다
+        expect(s.text, `${base} 는 면제(${reason})인데 직원 도움을 쓰고 있습니다 — 면제 목록에서 빼 주세요`)
+          .not.toMatch(/staffBtn\(/);
+        continue;
+      }
+      expect(/staffBtn\(/.test(s.text), `${base} 에 직원 도움 경로가 없습니다`).toBe(true);
     }
+  });
+
+  it("모든 Step 이 라우팅 표에 있고, 표에만 있는 화면도 없다", () => {
+    // 타입(Record<Step, …>)이 이미 강제하지만, 누가 표의 타입을 느슨하게 바꾸면
+    // 조용히 «어디에도 연결되지 않은 화면»이 생긴다. 문자열로 한 번 더 잠근다.
+    const model = uiSources().find((f) => f.name === "model.ts");
+    const app = uiSources().find((f) => f.name === "App.tsx");
+    expect(model, "ui/src/model.ts 를 못 찾았습니다").toBeDefined();
+    expect(app, "ui/src/App.tsx 를 못 찾았습니다").toBeDefined();
+
+    const union = /export type Step\s*=\s*([\s\S]*?);/.exec(model!.text);
+    expect(union, "model.ts 에서 Step 유니온을 못 찾았습니다").not.toBeNull();
+    const steps = [...union![1].matchAll(/"([\w]+)"/g)].map((m) => m[1]).sort();
+
+    const table = /const SCREENS[^=]*=\s*\{([\s\S]*?)\n\};/.exec(app!.text);
+    expect(table, "App.tsx 에서 SCREENS 라우팅 표를 못 찾았습니다").not.toBeNull();
+    const routed = [...table![1].matchAll(/^\s*(\w+):/gm)].map((m) => m[1]).sort();
+
+    expect(steps.length).toBeGreaterThan(5);
+    expect(routed, `라우팅 표와 Step 유니온이 어긋납니다`).toEqual(steps);
   });
 
   it("음성 입력을 구현하지 않았으므로 선택지로 노출하지 않는다", () => {
