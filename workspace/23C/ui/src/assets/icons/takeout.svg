@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="53" height="53" viewBox="0 0 53 53" fill="none">
+<g id="icon/takeout">
+<g id="Coffee">
+<circle id="Ellipse 33" cx="4.41667" cy="4.41667" r="4.41667" transform="matrix(-1 0 0 1 30.9166 30.9165)" stroke="#FF5A1F" stroke-width="3.3125" />
+<path id="Rectangle 75" d="M11.0416 16.5625C11.0416 14.7331 12.5247 13.25 14.3541 13.25H38.6458C40.4752 13.25 41.9583 14.7331 41.9583 16.5625C41.9583 18.3919 40.4752 19.875 38.6458 19.875H14.3541C12.5247 19.875 11.0416 18.3919 11.0416 16.5625Z" fill="#FF5A1F" />
+<path id="Subtract" opacity="0.3" d="M38.0481 42.5083C37.762 45.942 34.8911 48.5835 31.4456 48.5835H21.554C18.1084 48.5835 15.2376 45.942 14.9514 42.5083L13.3352 23.1099C13.6672 23.1611 14.0074 23.188 14.3538 23.188H38.6458C38.9918 23.188 39.3316 23.161 39.6633 23.1099L38.0481 42.5083Z" fill="url(#paint0_linear_56_704)" />
+<path id="Subtract_2" d="M33.1254 4.4165C35.5645 4.41668 37.5414 6.39435 37.5414 8.8335V9.93701H15.4584V8.8335C15.4584 6.39424 17.4361 4.4165 19.8754 4.4165H33.1254Z" fill="#FF5A1F" />
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_56_704" x1="26.4993" y1="23.1099" x2="26.4993" y2="48.5835" gradientUnits="userSpaceOnUse">
+<stop offset="0.15" stop-color="#FA520F" />
+<stop offset="0.5" stop-color="#FFA110" />
+<stop offset="0.75" stop-color="#FFAD27" />
+<stop offset="1" stop-color="#FFF8E0" />
+</linearGradient>
+</defs>
+</svg>

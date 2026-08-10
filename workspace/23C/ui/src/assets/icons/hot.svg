@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="54" height="54" viewBox="0 0 54 54" fill="none">
+<g id="icon/hot">
+<g id="Fire">
+<path id="Vector" d="M30.9429 7.13755C30.9381 6.96605 30.7509 6.85438 30.6037 6.94237C22.8066 11.6005 22.951 23.2854 23.0441 25.4027C23.0511 25.5624 22.9 25.6751 22.7554 25.607C21.8546 25.1828 19.2737 23.5852 19.1312 19.1595C19.1256 18.9877 18.9403 18.8773 18.7925 18.9649C14.278 21.6406 11.25 26.5824 11.25 32.0625C11.25 40.4503 18.3015 47.25 27 47.25C35.6985 47.25 42.75 40.4503 42.75 32.0625C42.7499 19.8768 31.2307 17.2561 30.9429 7.13755Z" fill="url(#paint0_linear_56_704)" stroke="url(#paint1_linear_56_704)" stroke-width="3.375" />
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_56_704" x1="27" y1="6.75" x2="27" y2="47.25" gradientUnits="userSpaceOnUse">
+<stop offset="0.15" stop-color="#FA520F" />
+<stop offset="0.5" stop-color="#FFA110" />
+<stop offset="0.75" stop-color="#FFAD27" />
+<stop offset="1" stop-color="#FFF8E0" />
+</linearGradient>
+<linearGradient id="paint1_linear_56_704" x1="27" y1="6.75" x2="27" y2="47.25" gradientUnits="userSpaceOnUse">
+<stop offset="0.15" stop-color="#FA520F" />
+<stop offset="0.5" stop-color="#FFA110" />
+<stop offset="0.75" stop-color="#FFAD27" />
+<stop offset="1" stop-color="#FFF8E0" />
+</linearGradient>
+</defs>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="53" height="53" viewBox="0 0 53 53" fill="none">
+<g id="icon/danger">
+<g id="Shield">
+<path id="Subtract" opacity="0.3" d="M25.4271 5.01221C26.0941 4.64168 26.9057 4.6417 27.5726 5.01221L43.0306 13.6001C43.7317 13.9896 44.1663 14.7288 44.1664 15.5308V25.7749C44.1663 33.7947 39.8185 41.1838 32.808 45.0786L27.5726 47.9878C26.9057 48.3583 26.0941 48.3583 25.4271 47.9878L20.1918 45.0786C13.1814 41.1838 8.83345 33.7946 8.83337 25.7749V15.5308C8.83344 14.7288 9.2681 13.9895 9.96912 13.6001L25.4271 5.01221Z" fill="url(#paint0_linear_56_704)" />
+<g id="Group 230">
+<path id="Line" d="M22.0834 31.4527L31.4525 22.0835" stroke="#FF5A1F" stroke-width="3.3125" stroke-linecap="round" stroke-linejoin="round" />
+<path id="Line_2" d="M22.0833 22.0835L31.4525 31.4526" stroke="#FF5A1F" stroke-width="3.3125" stroke-linecap="round" stroke-linejoin="round" />
+</g>
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_56_704" x1="26.4999" y1="4.73486" x2="26.4999" y2="48.2653" gradientUnits="userSpaceOnUse">
+<stop offset="0.15" stop-color="#FA520F" />
+<stop offset="0.5" stop-color="#FFA110" />
+<stop offset="0.75" stop-color="#FFAD27" />
+<stop offset="1" stop-color="#FFF8E0" />
+</linearGradient>
+</defs>
+</svg>

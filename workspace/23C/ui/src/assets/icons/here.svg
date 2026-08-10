@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="53" height="53" viewBox="0 0 53 53" fill="none">
+<g id="icon/here">
+<g id="Flag">
+<path id="Rectangle 74" d="M8.83325 7.729C8.83325 5.89956 10.3163 4.4165 12.1458 4.4165H23.1874C25.0169 4.4165 26.4999 5.89956 26.4999 7.729V25.3957C26.4999 27.2251 25.0169 28.7082 23.1874 28.7082H8.83325V7.729Z" fill="#FF5A1F" stroke="#FF5A1F" stroke-width="3.3125" />
+<path id="Rectangle 75" opacity="0.3" d="M24.2917 8.83301H39.8301C41.6349 8.83301 42.6776 10.8806 41.616 12.3402L37.2227 18.3811C36.0964 19.9298 36.0964 22.0279 37.2227 23.5766L41.616 29.6175C42.6776 31.0771 41.6349 33.1247 39.8301 33.1247H26.5001C25.2805 33.1247 24.2917 32.136 24.2917 30.9163V8.83301Z" fill="url(#paint0_linear_56_704)" stroke="url(#paint1_linear_56_704)" stroke-width="3.3125" />
+<path id="Line" d="M8.83325 48.583L8.83325 8.83301" stroke="#FF5A1F" stroke-width="3.3125" stroke-linecap="round" stroke-linejoin="round" />
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_56_704" x1="34.2292" y1="8.83301" x2="34.2292" y2="33.1247" gradientUnits="userSpaceOnUse">
+<stop offset="0.15" stop-color="#FA520F" />
+<stop offset="0.5" stop-color="#FFA110" />
+<stop offset="0.75" stop-color="#FFAD27" />
+<stop offset="1" stop-color="#FFF8E0" />
+</linearGradient>
+<linearGradient id="paint1_linear_56_704" x1="34.2292" y1="8.83301" x2="34.2292" y2="33.1247" gradientUnits="userSpaceOnUse">
+<stop offset="0.15" stop-color="#FA520F" />
+<stop offset="0.5" stop-color="#FFA110" />
+<stop offset="0.75" stop-color="#FFAD27" />
+<stop offset="1" stop-color="#FFF8E0" />
+</linearGradient>
+</defs>
+</svg>

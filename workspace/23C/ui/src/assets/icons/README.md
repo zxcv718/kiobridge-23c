@@ -1,0 +1,53 @@
+# Icons
+
+Figma에서 내려받은 아이콘 원본입니다.
+
+- **출처**: Figma `fileKey: nrI4zQXqae1vzrnDPibpMC`, `nodeId: 150:1267` (Design System › ComponentGrid)
+- **내려받은 날짜**: 2026-08-11
+- **Figma MCP가 주는 에셋 URL은 7일이면 만료되므로, URL을 코드에 박지 않고 바이트를 받아 커밋해 둡니다.**
+
+## 파일 ↔ Figma 레이어 매핑
+
+| 파일 | Figma 레이어 | node ID | viewBox | 크기 |
+| --- | --- | --- | --- | --- |
+| `safe.svg` | `icon/safe` | `38:1879` | 0 0 53 53 | 1089 B |
+| `here.svg` | `icon/here` | `38:1916` | 0 0 53 53 | 1604 B |
+| `danger.svg` | `icon/danger` | `38:1884` | 0 0 53 53 | 1249 B |
+| `hot.svg` | `icon/hot` | `38:1892` | 0 0 54 54 | 1301 B |
+| `takeout.svg` | `icon/takeout` | `38:1897` | 0 0 53 53 | 1404 B |
+| `bone.svg` | `icon/bone` | `38:1927` | 0 0 53 53 | 1821 B |
+| `boneless.svg` | `icon/boneless` | `38:1930` | 0 0 53 53 | 2415 B |
+| `chevron-left.svg` | `chevron-left` (Header › IconBox:뒤로가기) | `172:2341` | 0 0 24 24 | 253 B |
+| `radio.svg` | `Radio` (Radio Card › `status=Default`) | `172:2365` | 0 0 24 24 | 354 B |
+| `radio-selected.svg` | `Radio` (Radio Card › `status=selected`) | `172:2376` | 0 0 24 24 | 412 B |
+
+아이콘 7종의 이름은 Figma `IconRow` 안의 레이어 이름과 그 아래 라벨 텍스트로 확인했습니다.
+
+## 어떻게 받았는지
+
+Figma MCP `download_assets`를 **아이콘 노드 하나씩** 호출해서 받았습니다.
+ComponentGrid 전체(`150:1267`)로 한 번에 받으면 레이어 이름 없이 벡터 14개가 섞여 나오고,
+그중 2개는 이 아이콘들과 무관한 도형이라 어느 파일이 어느 아이콘인지 확정할 수 없습니다.
+
+각 노드의 `export` SVG에는 노드가 페이지에서 잘려 나온 탓에 조상 요소가 함께 들어옵니다
+(불투명한 검정 배경 `rect`, 페이지 배경 `#F7F7F8`, 카드 흰 배경과 테두리,
+컴포넌트 표시용 보라 점선, 카드의 drop-shadow 필터).
+그래서 아이콘 그룹(`icon/safe` 등)만 남기고 조상 래퍼와 참조되지 않는 `defs`를 제거했습니다.
+**path 데이터와 색·그라디언트는 Figma가 내보낸 그대로이며 손대지 않았습니다.**
+
+`bone`, `boneless`는 벡터 레이어가 2개(그라디언트 본체 + `#FF5A1F` 뼈)라
+레이어 단위 에셋만으로는 한 파일로 합칠 수 없어 위 방식으로 만들었습니다.
+
+## 확인한 것
+
+10개 모두 `<svg`로 시작하고 크기가 0이 아니며, `rsvg-convert`로 렌더링해서
+Figma 디자인의 아이콘과 같은 그림이 나오는 것을 눈으로 확인했습니다.
+
+## 쓸 때 주의
+
+- 아이콘 7종은 53×53(`hot`만 54×54), `chevron-left`/`radio`는 24×24 기준입니다.
+  크기는 `width`/`height`로 지정해서 쓰세요.
+- `chevron-left.svg`는 루트에 `fill="none"`이 있고 획으로만 그려집니다.
+  이 속성을 지우면 획이 검정으로 채워지니 그대로 두세요. 선 색은 `#212121`로 고정되어 있습니다.
+- `safe`와 `danger`는 방패 모양이 같고 안쪽 기호(체크 / X)만 다릅니다.
+  둘 다 같은 주황 그라디언트라서 초록·빨강이 아닙니다.

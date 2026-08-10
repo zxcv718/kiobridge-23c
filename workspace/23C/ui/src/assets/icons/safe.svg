@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="53" height="53" viewBox="0 0 53 53" fill="none">
+<g id="icon/safe">
+<g id="Shield">
+<path id="Subtract" opacity="0.3" d="M25.4271 5.0127C26.0941 4.64216 26.9057 4.64216 27.5726 5.0127L43.0306 13.6006C43.7316 13.99 44.1662 14.7284 44.1664 15.5303V25.7744C44.1664 33.7944 39.8187 41.1843 32.808 45.0791L27.5726 47.9873C26.9057 48.3578 26.0941 48.3578 25.4271 47.9873L20.1918 45.0791C13.1811 41.1843 8.83337 33.7943 8.83337 25.7744V15.5303C8.83353 14.7285 9.2683 13.99 9.96912 13.6006L25.4271 5.0127Z" fill="url(#paint0_linear_56_704)" />
+<path id="Line" d="M20.9792 26.4998L25.3959 30.9165L34.2292 22.0832" stroke="#FF5A1F" stroke-width="3.3125" stroke-linecap="round" stroke-linejoin="round" />
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_56_704" x1="26.4999" y1="4.73437" x2="26.4999" y2="48.2648" gradientUnits="userSpaceOnUse">
+<stop offset="0.15" stop-color="#FA520F" />
+<stop offset="0.5" stop-color="#FFA110" />
+<stop offset="0.75" stop-color="#FFAD27" />
+<stop offset="1" stop-color="#FFF8E0" />
+</linearGradient>
+</defs>
+</svg>
