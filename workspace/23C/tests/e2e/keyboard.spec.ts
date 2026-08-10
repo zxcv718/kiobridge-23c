@@ -8,13 +8,18 @@
  * 전제: 데모 UI가 http://localhost:5173 에서 떠 있어야 한다.
  */
 import { expect, test, type Page } from "@playwright/test";
+import { enterWizard, enterWizardByKeyboard } from "./nav";
 
 /** 마우스를 쓰지 않는다. Tab 으로 이동해 라벨이 맞는 요소에서 Enter 를 누른다. */
 async function tabTo(page: Page, name: RegExp | string, limit = 60): Promise<void> {
   for (let i = 0; i < limit; i++) {
     const label = await page.evaluate(() => {
       const el = document.activeElement as HTMLElement | null;
-      return el ? (el.innerText || el.getAttribute("aria-label") || "").trim() : "";
+      /* 화면이 바뀌면 포커스가 <body> 로 돌아가는데, body 의 innerText 는 **페이지 전체 글자**다.
+         그대로 비교하면 아직 누르지도 않은 버튼의 이름이 거기 들어 있어 «찾았다»가 되고,
+         결국 body 에 Enter 를 눌러 아무 일도 일어나지 않는다. 컨테이너는 후보에서 뺀다. */
+      if (!el || el === document.body || el === document.documentElement) return "";
+      return (el.innerText || el.getAttribute("aria-label") || "").trim();
     });
     if (typeof name === "string" ? label.includes(name) : name.test(label)) return;
     await page.keyboard.press("Tab");
@@ -35,9 +40,10 @@ test.describe("접근성 실측", () => {
 
   test("마우스 없이 시작→질문→추천→최종확인까지 완주한다", async ({ page }) => {
     await page.keyboard.press("Tab"); // 문서 진입
-    await pressOn(page, /시작하기/);
+    // 홈에서 질문까지 네 걸음이 늘었다 — 그 길도 마우스 없이 지나야 한다
+    await enterWizardByKeyboard(page, pressOn);
 
-    // 질문 수는 답에 따라 달라진다(조기 종료) — 개수나 순서를 고정하지 않고,
+    // 질문은 7개 고정이다. 개수를 여기서 다시 세지는 않고(그건 아래 전용 검사가 한다)
     // 마법사 화면이 남아 있는 동안만 답한다.
     for (let q = 0; q < 7; q++) {
       if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
@@ -54,6 +60,9 @@ test.describe("접근성 실측", () => {
     if (await approve.isVisible()) {
       await approve.focus();
       await page.keyboard.press("Enter");
+      // 메뉴 확인이 한 걸음 들어간다 — 여기도 마우스 없이 지나야 한다
+      await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
+      await pressOn(page, /^이대로 담기$/);
       await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
     }
   });
@@ -67,7 +76,7 @@ test.describe("접근성 실측", () => {
    * 무엇을 주문할지는 사용자가 정한다.
    */
   test("답이 충분해 보여도 7문항을 전부 묻는다", async ({ page }) => {
-    await page.getByRole("button", { name: /시작하기/ }).click();
+    await enterWizard(page);
 
     // 예전에 3문항 만에 종료되던 조합
     await page.getByRole("button", { name: "땅콩", exact: true }).click();
@@ -140,8 +149,17 @@ test.describe("접근성 실측", () => {
   });
 
   test("모든 화면에서 직원 도움에 닿는다", async ({ page }) => {
-    await expect(page.getByRole("button", { name: "직원 도움" })).toBeVisible();
-    await page.getByRole("button", { name: /시작하기/ }).click();
-    await expect(page.getByRole("button", { name: "직원 도움" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "직원 도움", exact: true })).toBeVisible();
+    // 늘어난 네 걸음에서도 매 화면에 있어야 한다 — 한 걸음씩 확인한다
+    await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
+    for (let i = 0; i < 3; i++) {
+      await expect(page.getByRole("button", { name: "직원 도움", exact: true }), `프로필 ${i + 1}/3 단계`).toBeVisible();
+      await page.getByRole("button", { name: "다음", exact: true }).click();
+    }
+    await expect(page.getByRole("button", { name: "직원 도움", exact: true }), "저장 방식").toBeVisible();
+    await page.getByRole("button", { name: "매장 QR 없이 계속하기" }).click();
+    await expect(page.getByRole("button", { name: "직원 도움", exact: true }), "세션 시작").toBeVisible();
+    await page.getByRole("button", { name: /^(주문 시작하기|아니오, 새로 고를게요)$/ }).click();
+    await expect(page.getByRole("button", { name: "직원 도움", exact: true }), "질문").toBeVisible();
   });
 });

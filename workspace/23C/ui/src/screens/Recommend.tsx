@@ -43,7 +43,10 @@ export function Recommend() {
             <div className="btnrow">
               <button type="button" className="btn primary"
                 disabled={uiRec.rec.requiresReconfirmation}
-                onClick={() => setStep("confirm")}>네, 좋아요</button>
+                /* 곧바로 장바구니 확인으로 가지 않는다. 이 화면은 «왜 이것인가»(이유·대안·제외)를
+                   한꺼번에 보여주느라 빽빽하다. 메뉴 확인(신규)이 그것을 한 문장으로 정리하고
+                   «이 메뉴가 맞습니까» 하나만 묻는다. */
+                onClick={() => setStep("menuConfirm")}>네, 좋아요</button>
               <button type="button" className="btn ghost" onClick={openEdit}>조건 수정</button>
               <button type="button" className="btn danger" onClick={() => setStep("start")}>추천 거절</button>
               {staffBtn()}

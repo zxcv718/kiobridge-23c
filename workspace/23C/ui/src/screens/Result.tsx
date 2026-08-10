@@ -1,11 +1,13 @@
 import React from "react";
 import type { Evidence } from "@kiobridge/participant-sdk";
 import { useFlow } from "../flow";
-import { INJECTIONS, STOP_KO } from "../model";
+import { Card, type CardRow } from "../components";
+import { INJECTIONS, STOP_KO, answerLabel } from "../model";
 import { candidateName, candidatePrice, downloadSubmission, injectError, summarizeOrderPlan } from "../logic";
+import "./cart.css";
 
 /**
- * 결과 화면 (+ 화면목록 S15 «안내·저장 유도»).
+ * 결과 화면 (+ 화면목록 S15 «안내·저장» · Figma 99:1830).
  *
  * 공식 판정(PASS/stopType)은 키트 서버만 낼 수 있는 값이라, 서버가 없는 체험
  * 모드에서는 **쓰지 않는다.** 화면에 임의로 쓰면 가짜 판정이 되기 때문이다.
@@ -13,11 +15,21 @@ import { candidateName, candidatePrice, downloadSubmission, injectError, summari
  */
 export function Result() {
   const {
-    live, ev, outcome, runError, submitted, uiRec, fixture, setStep,
+    live, ev, outcome, runError, submitted, uiRec, fixture, setStep, answers, saved,
     storeToggle, toggleStore, t, errResults, setErrResults, staffBtn,
   } = useFlow();
 
   const plainFinish = !live && !ev && !runError && !(outcome && !outcome.valid);
+
+  /* 저장된(또는 저장되지 않은) 내용 — 디자인의 RecentOrderCard(185:227) 다섯 줄.
+     값은 이번 세션의 답변에서 그대로 읽는다. */
+  const savedRows: CardRow[] = [
+    { label: "메뉴명", value: fixture ? candidateName(fixture, uiRec?.rec.recommendedCandidateId ?? saved?.lastCandidateId ?? null) : "(없음)" },
+    { label: "알레르기", value: answerLabel("allergies", answers.allergies) },
+    { label: "맵기 선호", value: answerLabel("spicyLevel", answers.spicyLevel) },
+    { label: "뼈/순살 선택", value: answerLabel("boneType", answers.boneType) },
+    { label: "수량", value: answerLabel("quantity", answers.quantity) },
+  ];
 
   return (
     <section>
@@ -25,6 +37,9 @@ export function Result() {
         <h2>{plainFinish
           ? "주문이 완성되었습니다"
           : <>실행 결과 {ev ? (String(ev.result) === "PASS" ? <span className="pass">PASS</span> : <span className="fail">{String(ev.result)}</span>) : outcome && !outcome.valid ? <span className="fail">검증 거부</span> : runError ? <span className="fail">오류</span> : null}</>}</h2>
+        {/* 이 화면은 길다. 직원 도움을 아래 버튼 줄에만 두면, 실행이 실패한 경우처럼
+            아래 블록이 통째로 안 그려질 때 도움이 화면에서 사라진다 — 위에도 둔다. */}
+        <div className="btnrow" style={{ marginTop: 10, marginBottom: 4 }}>{staffBtn()}</div>
         {runError && <div className="banner danger" role="alert">{runError}</div>}
         {outcome && !outcome.valid && (
           <div>
@@ -118,25 +133,40 @@ export function Result() {
         })()}
       </div>
 
-      {/* 화면목록 S15 «안내·저장 유도» — 주문이 끝난 뒤에 한 번만 묻는다.
+      {/* 화면목록 S15 «안내·저장» — **묻는 곳이 아니라 알리는 곳이다.**
        *
-       * 결제 직전 확인 화면에 두었더니, 뒷사람 눈치가 최고조인 순간에 다음 방문에 관한
-       * 판단을 시키는 꼴이었다. 우리 컨셉이 «눈치 볼 틈과 이유를 없애기»인데 정반대다.
-       * 무엇을 저장할지는 묻지 않는다 — 켜면 전부, 끄면 즉시 삭제. */}
-      <section className="card savebox" aria-label="다음 방문을 위한 저장">
-        <h2>다음에도 쓰시게 저장할까요?</h2>
+       * 저장 여부는 프로필 단계에서 이미 여쭤봤고, 저장 자체는 주문이 확정되는 순간
+       * finishOrder() 가 끝냈다. 여기서 또 물으면 같은 결정을 두 번 시키는 것이고,
+       * 이미 저장된 사람에게는 «아직 저장되지 않았다»는 오해까지 준다.
+       *
+       * 그래서 여기서는 셋만 한다 — 어떻게 됐는지 사실로 알리고, 무엇이 남았는지
+       * 보여주고, 마음이 바뀌었을 때 뒤집을 길을 하나 남긴다. */}
+      <section className="card savebox" aria-label="이 기기 저장 안내">
+        <h2>{storeToggle ? "이 기기에 저장했습니다" : "저장하지 않았습니다"}</h2>
         <p className="hint">
-          {t(
-            "저장하면 다음에 오실 때 한 번만 누르면 됩니다.",
-            "알레르기·맛 선호·화면 설정과 이번에 고르신 메뉴를 이 기기에 저장합니다. 다음에 오시면 «지난번과 똑같이 주문하기» 한 번으로 끝납니다.",
-          )}
+          {storeToggle
+            ? t(
+              "다음에 오시면 한 번만 누르면 됩니다.",
+              "아래 내용을 이 기기에 남겼습니다. 다음에 오시면 «지난번과 똑같이 주문하기» 한 번으로 끝납니다.",
+            )
+            : t(
+              "이번 주문에만 쓰고 지웠습니다.",
+              "아래 내용은 이번 주문에만 쓰고 지웠습니다. 이 기기에도 남아 있지 않습니다.",
+            )}
         </p>
-        <button type="button" className="toggle" aria-pressed={storeToggle} onClick={toggleStore}>
-          이 기기에 저장 {storeToggle ? "— 저장됨 ✓" : "— 저장 안 함 (기본)"}
-        </button>
-        <p className="hint" style={{ marginTop: 10 }}>
-          끄면 저장본이 즉시 삭제되며, 시작 화면에서도 지울 수 있습니다.
-          공용 기기에서는 꺼 두세요. <b>서버·계정에는 아무것도 저장되지 않습니다.</b>
+
+        <Card label={storeToggle ? "이 기기에 남은 내용" : "저장하지 않은 내용"} rows={savedRows} />
+
+        <div className="btnrow">
+          <button type="button" className="btn ghost" onClick={toggleStore}>
+            {storeToggle ? "저장 지우기" : "이 기기에 저장하기"}
+          </button>
+        </div>
+        <p className="savenote">
+          {storeToggle
+            ? "지우면 즉시 삭제되며, 시작 화면에서도 지울 수 있습니다."
+            : "공용 기기에서는 저장하지 않는 편이 안전합니다."}
+          {" "}<b>서버·계정에는 어느 쪽이든 아무것도 저장되지 않습니다.</b>
         </p>
       </section>
 

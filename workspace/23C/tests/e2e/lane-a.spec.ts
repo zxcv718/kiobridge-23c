@@ -199,6 +199,7 @@ test.describe("A계열 — 프로필 흐름", () => {
       await page.getByRole("button", { name: /다음|추천 보기/ }).click();
     }
     await page.getByRole("button", { name: "네, 좋아요" }).click();
+    await page.getByRole("button", { name: "이대로 담기" }).click();   // 메뉴 확인 한 걸음
     await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
 
     const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });

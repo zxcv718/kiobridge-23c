@@ -21,8 +21,6 @@ import "./qr.css";
  * 세 경우 모두에서 ① 왜 안 되는지 한 문장으로 말하고 ② 직접 입력 ③ 직원 요청
  * ④ 건너뛰기가 같은 화면에 있어야 한다. tests/e2e/lane-b.spec.ts 가 그것을 눌러 본다.
  */
-export const PLACEHOLDER = true;
-
 /** 5단계 중 QR은 4번째다 (Figma StepIndicator 181:230). */
 const STEP_LABELS = ["홈", "프로필 생성", "저장 방식", "QR 연동", "세션 시작"];
 

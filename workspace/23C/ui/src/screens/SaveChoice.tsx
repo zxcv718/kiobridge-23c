@@ -21,8 +21,6 @@ import "./profile.css";
  * 버튼이 셋이 되는데, 그러면 «저장을 정하는 일»과 «어디로 가는 일»이 한 줄에 섞여
  * 무엇을 고른 상태인지 화면에 남지 않는다. 라디오는 고른 것이 계속 보인다.
  */
-export const PLACEHOLDER = true;
-
 export function SaveChoice() {
   const { a11y, storeToggle, setStoreIntent, setProfileStep, setStep, staffBtn } = useFlow();
 

@@ -9,18 +9,16 @@
  * 단위 테스트로는 잡히지 않는 회귀(저장본 마이그레이션·재확인 카운터·선언 일치)가 대상이다.
  */
 import { expect, test, type Page } from "@playwright/test";
+import { approveToCartReview, enterWizard, openHome } from "./nav";
 
-const start = async (page: Page) => {
-  await page.goto("http://localhost:5173/");
-  await expect(page.getByRole("heading", { name: /닭강정 가게 주문/ })).toBeVisible();
-};
+const start = openHome;
 
 /**
  * 7문항을 끝까지 답한다 (알레르기 땅콩·콩 → 매운맛 → 뼈 → 나머지는 첫 선택지).
  * 질문은 고정이므로 어떤 조합이든 추천 화면에 닿으려면 전부 답해야 한다.
  */
 async function answerAll(page: Page) {
-  await page.getByRole("button", { name: /시작하기/ }).click();
+  await enterWizard(page);
   await page.getByRole("button", { name: "땅콩", exact: true }).click();
   await page.getByRole("button", { name: "콩(대두)" }).click();
   await page.getByRole("button", { name: /다음/ }).click();
@@ -44,15 +42,14 @@ test.describe("B계열 — 신규 동작", () => {
     await expect(page.getByText(/여쭤보지 않았습니다/)).toHaveCount(0);
     await expect(page.locator("#qtitle")).toHaveCount(0);
 
-    await page.getByRole("button", { name: "네, 좋아요" }).click();
-    await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+    await approveToCartReview(page);
     // 안 물어본 항목이 없으므로 그 사유 문구도 없다
     await expect(page.getByText(/여쭤보지 않아서/)).toHaveCount(0);
   });
 
   test("B2 전부 '상관없어요'면 끝까지 묻고 사유는 '상관없다고 하셔서'", async ({ page }) => {
     await start(page);
-    await page.getByRole("button", { name: /시작하기/ }).click();
+    await enterWizard(page);
     await page.getByRole("button", { name: "없어요", exact: true }).click(); // 알레르기 없음
     await page.getByRole("button", { name: /다음/ }).click();
 
@@ -71,12 +68,13 @@ test.describe("B계열 — 신규 동작", () => {
     // 전부 답했으므로 생략 고지가 없어야 한다
     await expect(page.getByText(/여쭤보지 않았습니다/)).toHaveCount(0);
     await page.getByRole("button", { name: "네, 좋아요" }).click();
+    await page.getByRole("button", { name: "이대로 담기" }).click();
     await expect(page.getByText(/상관없다고 하셔서 이 메뉴의 값으로 정했습니다/).first()).toBeVisible();
   });
 
   test("B4 재확인 2회째에 안전 중단 전용 화면", async ({ page }) => {
     await start(page);
-    await page.getByRole("button", { name: /시작하기/ }).click();
+    await enterWizard(page);
     await page.getByRole("button", { name: "잘 모르겠어요" }).click();
     await page.getByRole("button", { name: /다음/ }).click();
 
@@ -138,15 +136,14 @@ test.describe("B계열 — 신규 동작", () => {
   test("B8 기기 간 인계 기능이 없으므로 관련 표현도 없다", async ({ page }) => {
     await start(page);
     await answerAll(page);
-    await page.getByRole("button", { name: "네, 좋아요" }).click();
-    await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+    await approveToCartReview(page);
     const body = await page.locator("body").innerText();
     expect(body).not.toMatch(/넘기기|다른 기기/);
   });
 
   test("B3 첫 질문은 항상 알레르기다 — 하드제약을 가장 먼저 확정한다", async ({ page }) => {
     await start(page);
-    await page.getByRole("button", { name: /시작하기/ }).click();
+    await enterWizard(page);
     await expect(page.locator("#qtitle")).toHaveText(/알레르기/);
   });
 
@@ -155,13 +152,13 @@ test.describe("B계열 — 신규 동작", () => {
     await page.evaluate(() => localStorage.clear());
     await page.reload();
 
-    await page.getByRole("button", { name: /시작하기/ }).click();
+    await enterWizard(page);
     for (let i = 0; i < 7; i++) {
       if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
       await page.locator(".choices .choice").first().click();
       await page.getByRole("button", { name: /다음|추천 보기/ }).click();
     }
-    await page.getByRole("button", { name: "네, 좋아요" }).click();
+    await approveToCartReview(page);
 
     // 확인 화면에는 저장 얘기가 없다 — 결제 직전에 다음 방문 판단을 시키지 않는다
     await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
@@ -171,10 +168,18 @@ test.describe("B계열 — 신규 동작", () => {
     const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });
     await ((await live.count()) > 0 ? live : page.getByRole("button", { name: /주문 확정하기/ })).click();
 
-    // 주문이 끝난 뒤 결과 화면에서 한 번만 묻는다 (화면목록 S15)
-    await expect(page.getByRole("heading", { name: /다음에도 쓰시게 저장할까요/ })).toBeVisible();
+    /* 결과 화면(S15)은 저장을 **다시 묻지 않는다.** 저장 여부는 프로필 단계(S03)에서
+       이미 한 번 물었고, 같은 결정을 두 번 묻는 것은 통제권이 아니라 부담만 늘린다.
+       여기서는 어떻게 됐는지 사실로 알리고, 마음을 바꿀 길만 남긴다. */
+    await expect(page.getByRole("heading", { name: /^(이 기기에 저장했습니다|저장하지 않았습니다)$/ })).toBeVisible();
+    await expect(page.getByText(/다음에도 쓰시게 저장할까요/)).toHaveCount(0);
     await expect(page.getByRole("group", { name: "저장 범위" })).toHaveCount(0); // 범위는 묻지 않는다
+
+    // 이 흐름은 S03 에서 기본값(이번만 사용)으로 지나왔으므로 «저장 안 함»이어야 한다
+    await expect(page.getByRole("heading", { name: "저장하지 않았습니다" })).toBeVisible();
+    // 마음을 바꿀 길은 남아 있다 — 뒤집으면 그 자리에서 저장된다
     await page.getByRole("button", { name: /이 기기에 저장/ }).click();
+    await expect(page.getByRole("heading", { name: "이 기기에 저장했습니다" })).toBeVisible();
 
     await page.getByRole("button", { name: "처음으로" }).first().click();
     await expect(page.getByRole("heading", { name: /지난번 기록이 있어요/ })).toBeVisible();
@@ -222,10 +227,33 @@ test.describe("B계열 — 신규 동작", () => {
     await expect(page.getByText(/소리 안내를 사용하지 않습니다/)).toBeVisible(); // HEARING_SUPPORT
   });
 
-  test("C3 QR 기능이 없으므로 화면에 QR 표현이 없다", async ({ page }) => {
+  /**
+   * 이 검사는 뒤집혔다.
+   *
+   * 예전에는 «QR 기능이 없으므로 화면에 QR 표현이 없다»를 검사했다 — 링크 인계를
+   * 걷어낸 뒤로 QR 이 정말 없었기 때문이다. 지금은 매장 QR 을 **읽는** 화면이 있다.
+   * 우리가 QR 을 만드는 것이 아니라 카메라로 읽기만 하므로 브라우저 내장 기능으로
+   * 충분했고, 새 의존성도 서버도 필요하지 않았다.
+   *
+   * 그래서 검사할 것도 바뀐다. «있다/없다»가 아니라 **하지 않은 일을 한 것처럼
+   * 말하지 않는가**를 본다. 서버가 없으므로 세션을 발급받을 수는 없고, 여기서 하는
+   * 일은 QR 에 적힌 매장 코드를 우리가 가진 환경과 맞춰 보는 것까지다.
+   */
+  test("C3 QR 은 읽기만 하며, 하지 않은 일을 한 것처럼 말하지 않는다", async ({ page }) => {
     await start(page);
+    await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
+    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
+    await page.getByRole("button", { name: "다음", exact: true }).click(); // S03 → QR
+
+    await expect(page.getByRole("heading", { name: /매장 QR|QR을 읽을 수 없습니다/ })).toBeVisible();
+
     const body = await page.locator("body").innerText();
-    expect(body).not.toMatch(/QR|큐알/i);
+    // 세션 발급·서버 연결처럼 우리가 하지 않는 일을 했다고 쓰지 않는다
+    expect(body).not.toMatch(/세션이? (발급|생성)|서버에 (연결|등록)|로그인/);
+    // 카메라를 못 쓰는 사람에게도 앞으로 갈 길이 같은 화면에 있어야 한다
+    await expect(page.getByRole("button", { name: /QR 없이 계속하기/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "직원 도움" })).toBeVisible();
+    await expect(page.getByRole("textbox")).toBeVisible(); // 매장 코드 직접 입력
   });
 
   test("B9 조건 수정의 메뉴 목록에 제외된 후보가 없다", async ({ page }) => {

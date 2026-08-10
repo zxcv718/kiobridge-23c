@@ -211,11 +211,9 @@ describe("공통 컴포넌트 규약 — 네 갈래로 나눠 만들어도 어�
  * 여기서 걸린다 — 자리를 새로 뚫고 명단에 안 적어도, 다 만들어 놓고 명단에서
  * 안 지워도 실패한다. **마지막에는 이 명단이 비어 있어야 한다.**
  */
-const PLACEHOLDER_SCREENS = [
-  "MenuConfirm.tsx",   // 레인 D — 메뉴 확인(신규)
-  "QrConnect.tsx",     // 레인 B — S04a·S04b QR 연동
-  "SaveChoice.tsx",    // 레인 A — S03 저장 방식
-  "SessionStart.tsx",  // 레인 A — S05 세션 시작
+const PLACEHOLDER_SCREENS: string[] = [
+  // 비어 있다. 화면 열여섯이 전부 만들어졌고 흐름에 끼워졌다.
+  // 다시 채워야 할 일이 생기면 «왜 아직 미완성인지»를 옆에 적을 것.
 ];
 
 describe("미완성 화면은 명단에 적힌 것뿐이다", () => {

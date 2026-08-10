@@ -1,28 +1,106 @@
 import React from "react";
 import { useFlow } from "../flow";
+import { Badge, Header } from "../components";
+import { OPTION_KO } from "../model";
+import { candidateName, candidatePrice } from "../logic";
+import { ALLERGEN_KO, josa } from "./CartReview";
+import "./cart.css";
 
 /**
- * 메뉴 확인 (신규) — **아직 만들지 않았다.**
+ * 메뉴 확인 (신규 · Figma 99:1762).
  *
- * 자리만 뚫어 둔 것이다. 화면을 파일로 나눠 동시에 만들 참인데, 자리가 없으면
- * 사람마다 App.tsx 를 고쳐야 하고 그러면 한 파일에서 다시 줄을 서게 된다.
- * 담당: 레인 D
+ * 추천과 장바구니 확인 사이의 한 단계다. 추천 화면은 «왜 이것인가»(이유·대안·제외)를
+ * 말하는 곳이고, 장바구니 확인은 «키오스크에서 무엇을 누르는가»를 말하는 곳이다.
+ * 그 사이에서 이 화면이 하는 일은 하나뿐이다 — **고른 것이 이것이 맞는지** 묻는다.
  *
- * 만들 것: 추천과 장바구니 확인 사이의 한 단계.
+ * 디자인의 값(매운맛 닭강정 / 17,800원)은 목업이라 쓰지 않는다. 메뉴·가격은 fixture 에서,
+ * 조건 문장은 이번 세션의 정규화된 선호·하드제약에서 그대로 읽는다 —
+ * 화면이 자기 값을 따로 적으면 계획과 어긋날 수 있다.
  *
- * 이 화면은 아직 어디에서도 갈 수 없다(라우팅 표에는 있지만 가는 길이 없다).
- * 미완성 명단은 tests/a11y.test.ts 의 PLACEHOLDER 가 들고 있고, 명단과 코드가
- * 어긋나면 테스트가 먼저 알려준다. 마지막에는 이 명단이 비어 있어야 한다.
  */
-export const PLACEHOLDER = true;
+/** 조건 절 하나 — «앞말 + 강조할 값 + 뒷말». 문장 조립은 화면이, 값은 코어가 준다. */
+interface Clause { pre?: string; em: string; post: string }
+
+/** 사용자가 고른 조건을 한 문장으로 — 값은 전부 정규화된 선호에서 읽는다. */
+function whyClauses(
+  prefs: Record<string, unknown>, allergens: string[],
+): { lead: Clause | null; tail: Clause[] } {
+  const ko = (v: unknown) => OPTION_KO[String(v)] ?? String(v);
+  // NO_PREFERENCE·UNKNOWN 은 «말하지 않은 것»이라 문장에 넣지 않는다 (core/plan.ts definite 와 같은 기준)
+  const definite = (v: unknown) => typeof v === "string" && v !== "NO_PREFERENCE" && v !== "UNKNOWN";
+
+  const named = allergens.map((a) => ALLERGEN_KO[a]).filter(Boolean);
+  const joined = named.join(", ");
+  const lead: Clause | null = named.length > 0
+    ? { em: joined, post: `${josa(joined, "이", "가")} 없는 메뉴 중 ` }
+    : null;
+
+  const tail: Clause[] = [];
+  const add = (em: string, post: string, pre?: string) => tail.push({ pre, em, post });
+  if (definite(prefs.spicyLevel)) add(ko(prefs.spicyLevel), "이고", "맵기는 ");
+  if (definite(prefs.boneType)) add(ko(prefs.boneType), `${josa(ko(prefs.boneType), "이", "가")} 가능하며`);
+  if (definite(prefs.serviceType)) add(ko(prefs.serviceType), `${josa(ko(prefs.serviceType), "이", "가")} 가능한`);
+  return { lead, tail };
+}
 
 export function MenuConfirm() {
-  const { setStep, staffBtn } = useFlow();
+  const { uiRec, fixture, setStep, staffBtn, simple } = useFlow();
+  if (!uiRec || !fixture) return null;
+
+  const id = uiRec.rec.recommendedCandidateId;
+  const blocked = uiRec.rec.requiresReconfirmation;
+  const { lead, tail } = whyClauses(
+    uiRec.engineCtx.preferences as unknown as Record<string, unknown>,
+    uiRec.engineCtx.hardConstraints.allergenIds ?? [],
+  );
+
   return (
-    <section className="card" aria-label="메뉴 확인 (신규)">
-      <h2>메뉴 확인 (신규)</h2>
-      <p className="hint">이 화면은 아직 만들고 있습니다.</p>
+    <section className="card" aria-labelledby="mcask">
+      <Header onBack={() => setStep("recommend")} backLabel="뒤로" />
+
+      {/* 확실하지 않은 정보가 남아 있으면 여기서도 승인할 수 없다 —
+          추천 화면과 같은 계약이며, 이 화면만 빠져나가는 길이 되면 안 된다. */}
+      {blocked && (
+        <div className="banner warn" role="alert">
+          확실하지 않은 정보가 있어요. 임의로 판단하지 않습니다 — 조건을 다시 확인해 주시거나, 직원 도움을 이용해 주세요.
+        </div>
+      )}
+
+      <Badge>✓ 추천해요</Badge>
+      {(lead || tail.length > 0) && (
+        <p className="mc-why">
+          {lead && <><b>{lead.em}</b>{lead.post}</>}
+          {tail.map((c, i) => (
+            <React.Fragment key={i}>
+              {c.pre}<b>{c.em}</b>{c.post}{i < tail.length - 1 ? ", " : " "}
+            </React.Fragment>
+          ))}
+          메뉴를 추천드려요.
+        </p>
+      )}
+
+      <div className="cart-box">
+        <p className="cart-cap">추천 메뉴</p>
+        <div className="cart-menuline">
+          <span className="cart-name">{candidateName(fixture, id)}</span>
+          <span className="cart-price">{candidatePrice(fixture, id)?.toLocaleString()}원</span>
+        </div>
+      </div>
+
+      <h2 className="mc-ask" id="mcask">이 메뉴를 선택하시겠어요?</h2>
+      {!simple && (
+        <p className="hint">
+          담아도 결제는 일어나지 않습니다. 다음 화면에서 무엇을 주문하게 되는지 전부 보여드립니다.
+        </p>
+      )}
+
       <div className="btnrow">
+        {/* 디자인은 «네 / 아니요» 두 버튼이다. 무엇에 대한 예인지가 버튼에 없으면
+            화면을 처음부터 읽지 않은 사람에게 뜻이 서지 않아, 하는 일을 라벨에 적었다. */}
+        <button type="button" className="btn primary" disabled={blocked} onClick={() => setStep("confirm")}>
+          이대로 담기
+        </button>
+        <button type="button" className="btn ghost" onClick={() => setStep("recommend")}>다른 메뉴 볼게요</button>
         <button type="button" className="btn ghost" onClick={() => setStep("start")}>처음으로</button>
         {staffBtn()}
       </div>

@@ -16,8 +16,6 @@ import "./profile.css";
  * 되살릴 주문이 없으므로, 그때는 방금 정한 화면 설정을 확인시키고 한 갈래로만 보낸다.
  * 없는 «지난 주문» 카드를 빈 채로 그리지 않는다.
  */
-export const PLACEHOLDER = true;
-
 export function SessionStart() {
   const {
     saved, fixture, a11y, storeToggle, setStoreToggle, startWizard, startFromSaved, setStep, staffBtn,
