@@ -176,6 +176,8 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
   border: 2px solid var(--line); border-radius: 10px; background: var(--card); color: var(--fg);
 }
 .srline { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+/* 눈에는 안 보이고 화면 낭독기에만 읽히는 글자. 기호(«−»·«+»)만 있는 버튼을 만들지 않기 위해 쓴다. */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ───────── 접근성 설정이 실제로 바꾸는 것 ─────────
  * 토글마다 눈에 보이는 변화가 있어야 한다. 선언만 하는 설정은 만들지 않는다. */

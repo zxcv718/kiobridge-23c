@@ -2,7 +2,8 @@ import React from "react";
 import { useFlow } from "../flow";
 import { Card, Cta, Emphasize, Screen, type CardRow } from "../components";
 import { ChoiceGrid } from "../components/ChoiceGrid";
-import { EDIT_LABELS, QUESTIONS, answerLabel } from "../model";
+import { Stepper } from "../components/Stepper";
+import { EDIT_LABELS, QUANTITY_MAX, QUESTIONS, answerLabel } from "../model";
 import { candidateName, candidatePrice, withManualSelection } from "../logic";
 import "./cart.css";
 
@@ -122,8 +123,20 @@ export function CartEdit() {
             {open && (
               <div className="editbody">
                 {qq.hint && !simple && <p className="hint">{qq.hint}</p>}
-                <ChoiceGrid q={qq} answers={answers} setAnswers={setAnswers}
-                  onPicked={() => setEditOpen(null)} showIcons={a11y.visualGuidance} />
+                {/* 수량은 질문 화면과 같은 부품으로 고친다. 여기만 선택지 버튼으로 두면
+                    같은 값을 두 가지 방법으로 고르게 되고, 고칠 수 있는 범위도 달라진다. */}
+                {qq.key === "quantity" ? (
+                  <Stepper
+                    label="수량"
+                    value={typeof answers.quantity === "number" ? answers.quantity : undefined}
+                    onChange={(n) => setAnswers((p) => ({ ...p, quantity: n }))}
+                    max={QUANTITY_MAX}
+                    atMaxNote={<>한 번에 {QUANTITY_MAX}개까지 고르실 수 있어요.</>}
+                  />
+                ) : (
+                  <ChoiceGrid q={qq} answers={answers} setAnswers={setAnswers}
+                    onPicked={() => setEditOpen(null)} showIcons={a11y.visualGuidance} />
+                )}
               </div>
             )}
           </div>

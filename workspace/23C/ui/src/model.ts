@@ -161,8 +161,11 @@ export const QUESTIONS: Question[] = [
     { value: "순살", label: "순살" }, { value: "뼈", label: "뼈" }, { value: "상관없음", label: "상관없어요" } ] },
   { key: "serviceType", title: "어떻게 이용하시겠어요?", options: [
     { value: "포장", label: "포장하기" }, { value: "매장", label: "먹고 가기" }, { value: "상관없음", label: "상관없어요" } ] },
-  { key: "quantity", title: "몇 개 주문하시겠어요?", options: [
-    { value: 1, label: "1개", icon: "1️⃣" }, { value: 2, label: "2개", icon: "2️⃣" }, { value: 3, label: "3개", icon: "3️⃣" } ] },
+  /* 수량은 선택지가 아니라 «− 1 +» 증감으로 묻는다 (디자인 S10 99:1292). 계약이
+     `integer, minimum 1` 이라 상한이 없는데 버튼 셋으로 두면 화면이 계약을 좁힌다.
+     아래 options 는 남겨 둔다 — 「1개」 같은 라벨과 시연 프리셋이 참조한다. */
+  { key: "quantity", title: "얼마나 드실 건가요?", options: [
+    { value: 1, label: "1개" }, { value: 2, label: "2개" }, { value: 3, label: "3개" } ] },
   { key: "cupOption", title: "컵이 필요하세요?", hint: "메뉴에 따라 선택할 수 있는 컵이 다릅니다.", options: [
     { value: "종이컵", label: "종이컵", icon: "🥤" }, { value: "일반컵", label: "일반컵", icon: "🥛" },
     { value: "없음", label: "필요 없어요", icon: "🚫" }, { value: "상관없음", label: "상관없어요" } ] },
@@ -192,6 +195,16 @@ export const QUESTIONS: Question[] = [
  * 안전 중단)의 입구가 여기다. 다만 타일 두 장과 나란히 두지는 않는다 — 시안의 «둘 중
  * 하나»를 흐리지 않으면서, 해당하는 사람은 반드시 닿게 아래 한 줄로 둔다.
  */
+/**
+ * 한 번에 고를 수 있는 최대 수량.
+ *
+ * 계약에는 상한이 없다(`integer, minimum 1`). 그래도 «+»를 끝없이 누르게 두지 않는 이유는,
+ * 실수로 눌린 40개를 사용자가 다시 40번 눌러 되돌려야 하기 때문이다. 대신 여기서 막고
+ * 끝내지는 않는다 — 왜 더 못 누르는지 말하고 직원 도움으로 잇는다. 우리가 정한 수라는
+ * 사실을 화면에서 숨기지 않는다.
+ */
+export const QUANTITY_MAX = 10;
+
 export const ALLERGY_GATE = [
   { value: "없음", label: "없어요" },
   { value: "있음", label: "있어요" },

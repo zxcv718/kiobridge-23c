@@ -8,7 +8,7 @@
  * 전제: 데모 UI가 http://localhost:5173 에서 떠 있어야 한다.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { enterWizard, enterWizardByKeyboard } from "./nav";
+import { 아무거나답하고다음, enterWizard, enterWizardByKeyboard } from "./nav";
 
 /** 마우스를 쓰지 않는다. Tab 으로 이동해 라벨이 맞는 요소에서 Enter 를 누른다. */
 async function tabTo(page: Page, name: RegExp | string, limit = 60): Promise<void> {
@@ -47,9 +47,13 @@ test.describe("접근성 실측", () => {
     // 마법사 화면이 남아 있는 동안만 답한다.
     for (let q = 0; q < 7; q++) {
       if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
-      const first = page.locator(".choices .choice").first();
-      await first.focus();
-      await page.keyboard.press("Enter");
+      /* 수량은 «− 1 +» 증감이라 고를 선택지가 없다. 화면에 1이 떠 있고 그것이 곧
+         답이므로, 마우스 없이도 아무것도 고르지 않고 다음으로 갈 수 있어야 한다. */
+      if (!(await page.locator(".stepper").count())) {
+        const first = page.locator(".choices .choice").first();
+        await first.focus();
+        await page.keyboard.press("Enter");
+      }
       await pressOn(page, /다음|추천 보기/);
     }
 
@@ -107,8 +111,7 @@ test.describe("접근성 실측", () => {
     // 끝까지 답한다 — 총 7문항
     for (let i = 4; i <= 7; i++) {
       await expect(qcount).toContainText(`질문 ${i} / 7`);
-      await page.locator(".choices .choice").first().click();
-      await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+      await 아무거나답하고다음(page);
     }
 
     await expect(page.locator("#qtitle")).toHaveCount(0);

@@ -176,3 +176,31 @@
 }
 /* 화면 아래 버튼은 한 줄을 다 쓴다 (Figma 354px CTA) */
 .kb-actions .btn { width: 100%; }
+
+/* ───────── Stepper — 수량 증감 (Figma S10 99:1292) ─────────
+ * 시안은 «−»와 «+»를 흐린 테두리의 알약으로, 값은 브랜드색 큰 숫자로 가운데 둔다.
+ * 시안의 «−»·«+»는 작지만 여기서는 키운다 — 스테퍼는 같은 자리를 여러 번 정확히
+ * 눌러야 하는 입력이라, 표적이 작으면 손이 떨리는 분에게 가장 먼저 무너진다. */
+.stepper-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: clamp(8px, 4vh, 40px) 0; }
+.stepper {
+  display: flex; align-items: center; justify-content: center; gap: clamp(12px, 5vw, 28px);
+  border-radius: var(--kb-radius-lg);
+}
+.stepbtn {
+  min-width: 72px; min-height: 64px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6em; font-weight: 700; line-height: 1;
+  color: var(--fg); background: var(--card);
+  border: 1.5px solid var(--line); border-radius: 999px;
+  cursor: pointer;
+}
+/* 더 못 누르는 것을 색만으로 말하지 않는다 — 커서와 테두리도 함께 바뀐다 */
+.stepbtn:disabled { color: var(--muted); background: var(--sunken); border-style: dashed; cursor: not-allowed; }
+.stepval {
+  min-width: 2.6em; text-align: center;
+  font-size: 2em; font-weight: 800; color: var(--brand-strong); line-height: 1.1;
+}
+.stepunit { font-size: 0.5em; font-weight: 700; margin-left: 2px; }
+.stepnote { text-align: center; max-width: 30ch; }
+/* 스테퍼 자체가 초점을 받는다(버튼 셋이 아니라 수 입력 하나로 읽힌다) */
+.stepper:focus-visible { outline: 3px solid var(--brand-strong); outline-offset: 6px; }

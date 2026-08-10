@@ -11,6 +11,7 @@
  *   ③ S03 에서 정한 저장 의사가 세션 시작(startWizard)에서 지워지지 않는다
  */
 import { expect, test, type Page } from "@playwright/test";
+import { 아무거나답하고다음 } from "./nav";
 
 const STORAGE_KEY = "kb23c-saved-settings-v4";
 
@@ -243,8 +244,7 @@ test.describe("A계열 — 프로필 흐름", () => {
     // 7문항을 첫 선택지로 답한다
     for (let i = 0; i < 7; i++) {
       if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
-      await page.locator(".choices .choice").first().click();
-      await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+      await 아무거나답하고다음(page);
     }
     await page.getByRole("button", { name: "네, 좋아요" }).click();
     await page.getByRole("button", { name: "이대로 담기" }).click();   // 메뉴 확인 한 걸음

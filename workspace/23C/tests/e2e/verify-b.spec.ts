@@ -9,7 +9,7 @@
  * 단위 테스트로는 잡히지 않는 회귀(저장본 마이그레이션·재확인 카운터·선언 일치)가 대상이다.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { approveToCartReview, enterWizard, openHome } from "./nav";
+import { 아무거나답하고다음, approveToCartReview, enterWizard, openHome } from "./nav";
 
 const start = openHome;
 
@@ -30,8 +30,7 @@ async function answerAll(page: Page) {
   await page.getByRole("button", { name: /다음/ }).click();
   for (let i = 0; i < 4; i++) {
     if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
-    await page.locator(".choices .choice").first().click();
-    await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+    await 아무거나답하고다음(page);
   }
 }
 
@@ -60,7 +59,7 @@ test.describe("B계열 — 신규 동작", () => {
       await page.getByRole("button", { name: "상관없어요" }).click();
       await page.getByRole("button", { name: /다음/ }).click();
     }
-    await page.getByRole("button", { name: "1개" }).click();
+    // 수량은 증감이고 1이 이미 떠 있다 — 그 값이 곧 답이므로 누를 것이 없다
     await page.getByRole("button", { name: /다음/ }).click();
     await page.getByRole("button", { name: "상관없어요" }).click(); // 컵
     await page.getByRole("button", { name: /다음/ }).click();
@@ -83,8 +82,7 @@ test.describe("B계열 — 신규 동작", () => {
     // 남은 질문을 끝까지 답한다 (질문은 7개 고정)
     for (let i = 0; i < 6; i++) {
       if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
-      await page.locator(".choices .choice").first().click();
-      await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+      await 아무거나답하고다음(page);
     }
 
     // 1회차 — 경고는 뜨지만 중단 화면은 아니다
@@ -168,8 +166,7 @@ test.describe("B계열 — 신규 동작", () => {
     await enterWizard(page);
     for (let i = 0; i < 7; i++) {
       if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
-      await page.locator(".choices .choice").first().click();
-      await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+      await 아무거나답하고다음(page);
     }
     await approveToCartReview(page);
 

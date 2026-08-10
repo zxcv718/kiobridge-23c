@@ -25,6 +25,25 @@ export const HOME = "http://localhost:5173/";
 const ALLERGY_ITEMS = ["땅콩", "콩(대두)", "우유", "계란", "밀", "새우"];
 
 /**
+ * 지금 질문에 «아무 답이나» 하고 다음으로 넘어간다.
+ *
+ * 질문 화면은 세 가지 모양이 있다 — 선택지 버튼, 알레르기 첫 걸음(있다/없다),
+ * 그리고 수량 증감(«− 1 +»). 스펙마다 `.choices .choice` 를 눌러 왔는데, 수량이
+ * 증감으로 바뀌자 그 자리에 누를 것이 없어 여덟 개 스펙이 한꺼번에 멈췄다.
+ * «다음 질문으로 간다»는 한 가지 일이므로 아는 곳도 한 곳이어야 한다.
+ */
+export async function 아무거나답하고다음(page: Page): Promise<void> {
+  if (await page.locator(".stepper").count()) {
+    // 증감은 이미 1이 떠 있고 그 값이 곧 답이다 — 누를 것이 없다
+  } else if (await page.getByRole("button", { name: "있어요", exact: true }).count()) {
+    await page.getByRole("button", { name: "없어요", exact: true }).click();
+  } else {
+    await page.locator(".choices .choice").first().click();
+  }
+  await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+}
+
+/**
  * 라벨로 선택지를 찾는다. 정확히 일치하는 것이 없으면 «그 말로 시작하는» 것을 쓴다.
  *
  * 선택지 중에는 설명을 함께 읽어 주는 것이 있다 — 「잘 모르겠어요」에는 «확실하지 않으면
@@ -116,6 +135,18 @@ export async function answerWizard(page: Page, picks: (string | string[] | null)
   for (let i = 0; i < 7; i++) {
     if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
     const pick = picks[i] ?? null;
+    /* 수량은 선택지가 아니라 «− 1 +» 증감이다(디자인 S10). 고를 버튼이 없으므로
+       «N개» 라벨을 수로 읽어 1에서부터 그만큼 올린다. 답을 지정하지 않으면(null)
+       화면에 이미 1이 떠 있고 그것이 곧 기록되는 값이라 아무것도 누르지 않는다. */
+    if (await page.locator(".stepper").count()) {
+      const 목표 = typeof pick === "string" ? Number(pick.replace(/[^0-9]/g, "")) : NaN;
+      for (let n = 1; Number.isFinite(목표) && n < 목표; n++) {
+        await page.getByRole("button", { name: "하나 늘리기" }).click();
+      }
+      await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+      continue;
+    }
+
     if (pick === null) {
       await page.locator(".choices .choice").first().click();
     } else {

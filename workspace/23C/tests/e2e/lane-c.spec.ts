@@ -44,8 +44,15 @@ const openWizard = async (page: Page, a11y: Record<string, boolean> = {}) => {
   await expect(page.locator("#qtitle")).toBeVisible();
 };
 
-/** 지금 질문의 n번째(1부터) 선택지를 고르고 다음으로 넘어간다. */
+/**
+ * 지금 질문의 n번째(1부터) 선택지를 고르고 다음으로 넘어간다.
+ * 수량 질문에는 고를 선택지가 없다(«− 1 +» 증감) — 이미 1이 답이므로 그냥 넘어간다.
+ */
 const pick = async (page: Page, nth: number) => {
+  if (await page.locator(".stepper").count()) {
+    await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+    return;
+  }
   await page.locator(".choices .choice").nth(nth - 1).click();
   await page.getByRole("button", { name: /다음|추천 보기/ }).click();
 };
@@ -163,6 +170,19 @@ test.describe("레인 C — 질문 화면", () => {
 
     for (let i = 0; i < 7; i++) {
       await expect(page.locator("#qtitle")).toBeVisible();
+
+      /* 수량은 선택지가 아니라 «− 1 +» 증감이다(디자인 S10). 고를 것이 없으니 라벨을
+         셀 수도 없다 — 대신 여기서 지키려던 것(«그림만 있고 글자가 없는 조작 요소를
+         만들지 않는다»)을 증감 버튼에 대해 잰다. 검사를 건너뛰지 않고 옮긴다. */
+      if (await page.locator(".stepper").count()) {
+        const 이름 = await page.locator(".stepper button").evaluateAll((els) =>
+          els.map((e) => (e.getAttribute("aria-label") ?? (e as HTMLElement).innerText).trim()));
+        expect(이름.length, "증감 버튼을 못 찾았습니다").toBe(2);
+        for (const n of 이름) expect(n.length, "글자 없는 증감 버튼이 있습니다").toBeGreaterThan(0);
+        await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+        continue;
+      }
+
       const labels = await page.locator(".choices .choice").allInnerTexts();
       expect(labels.length, `${i + 1}번째 질문에 선택지가 없습니다`).toBeGreaterThan(1);
       for (const l of labels) {

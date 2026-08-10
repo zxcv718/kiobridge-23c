@@ -1,7 +1,7 @@
 import React from "react";
 import { useFlow } from "../flow";
-import { ChoiceGrid, Cta, Emphasize, Screen } from "../components";
-import { ALLERGY_GATE, ALLERGY_ITEMS, ALLERGY_UNKNOWN, EDIT_LABELS, QUESTIONS, answerLabel } from "../model";
+import { ChoiceGrid, Cta, Emphasize, Screen, Stepper } from "../components";
+import { ALLERGY_GATE, ALLERGY_ITEMS, ALLERGY_UNKNOWN, EDIT_LABELS, QUANTITY_MAX, QUESTIONS, answerLabel } from "../model";
 import hotIcon from "../assets/icons/hot.svg";
 import "./question.css";
 
@@ -59,7 +59,7 @@ const EMPHASIS: Record<string, string> = {
   spicyLevel: "맵기",
   boneType: "뼈와 순살",
   serviceType: "어떻게",
-  quantity: "몇 개",
+  quantity: "얼마나",
   cupOption: "컵",
   budgetKrw: "예산",
 };
@@ -188,6 +188,14 @@ export function QuestionScreen() {
             <small>확실하지 않으면 이걸 골라 주세요. 임의로 판단하지 않고 다시 확인합니다.</small>
           </button>
         </>
+      ) : q.key === "quantity" ? (
+        <Stepper
+          label="수량"
+          value={typeof answers.quantity === "number" ? answers.quantity : undefined}
+          onChange={(n) => setAnswers((p) => ({ ...p, quantity: n }))}
+          max={QUANTITY_MAX}
+          atMaxNote={<>한 번에 {QUANTITY_MAX}개까지 고르실 수 있어요. 더 필요하시면 «직원 도움»을 눌러 주세요.</>}
+        />
       ) : (
         <div className={`q-choices q-${알레르기목록 ? "rows" : shape}`}>
           {/* 목록 걸음에서는 「없어요」·「잘 모르겠어요」를 뺀 6종만 남긴다. 라벨과 이모지는

@@ -12,3 +12,4 @@ export { Card, type CardRow } from "./Card";
 export { Badge } from "./Badge";
 export { RadioCard } from "./RadioCard";
 export { ChoiceGrid } from "./ChoiceGrid";
+export { Stepper } from "./Stepper";
