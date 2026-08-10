@@ -1,15 +1,37 @@
 /**
- * CSS 를 읽어 «실제로 화면에 나오는 색쌍»을 뽑아내는 도구 (테스트 전용).
+ * `ui/src` 전체를 읽어 검사 대상으로 넘겨주는 도구 (테스트 전용).
  *
- * 대비 검사를 사람이 적은 표로 하면 표와 CSS 가 어긋난다 — 색을 바꾼 사람이
- * 표를 같이 고칠 이유가 없기 때문이다. 그래서 표를 쓰지 않고 **CSS 에서 직접**
- * `color` 와 `background` 를 함께 선언한 규칙을 찾아 그 쌍을 검사한다.
- * 새 색을 넣으면 검사도 저절로 늘어난다.
+ * 두 가지 원칙이 있다.
+ *
+ * **하나 — 목록을 손으로 적지 않는다.** 파일 이름을 테스트에 하드코딩하면
+ * 새로 만든 파일이 조용히 검사 밖에 남는다. 화면을 11개에서 16개로 늘리는
+ * 지금은 그게 곧 «검사받지 않는 화면 5개»를 뜻한다. 그래서 재귀로 훑는다.
+ *
+ * **둘 — 대비 검사에 사람이 적은 표를 쓰지 않는다.** 표와 CSS 는 반드시
+ * 어긋난다. 색을 바꾼 사람이 표를 같이 고칠 이유가 없기 때문이다. 대신
+ * `color` 와 `background` 를 같은 규칙에서 선언한 곳을 CSS 에서 직접 찾아
+ * 그 쌍을 잰다. 새 색을 넣으면 검사도 저절로 늘어난다.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const CSS_DIR = fileURLToPath(new URL("../ui/src/", import.meta.url));
+const UI_DIR = fileURLToPath(new URL("../ui/src/", import.meta.url));
+
+/** ui/src 아래를 재귀로 훑어 확장자가 맞는 파일을 모은다. */
+function walk(ext: string, dir = UI_DIR, prefix = ""): { name: string; text: string }[] {
+  const out: { name: string; text: string }[] = [];
+  for (const e of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+    if (e.isDirectory()) out.push(...walk(ext, `${dir}${e.name}/`, `${prefix}${e.name}/`));
+    else if (e.name.endsWith(ext)) out.push({ name: prefix + e.name, text: readFileSync(dir + e.name, "utf-8") });
+  }
+  return out;
+}
+
+/** ui/src 아래 모든 .tsx — 화면을 파일로 쪼개도 검사 범위가 줄지 않는다. */
+export const uiSources = (): { name: string; text: string }[] => walk(".tsx");
+
+/** 전부 이어 붙인 소스. «어딘가에 있으면 된다» 류의 검사에 쓴다. */
+export const allTsx = (): string => uiSources().map((f) => f.text).join("\n");
 
 /**
  * 주석을 지운다. 지우지 않으면 두 가지가 깨진다 —
@@ -20,10 +42,7 @@ export const stripComments = (css: string): string => css.replace(/\/\*[\s\S]*?\
 
 /** ui/src 아래 모든 .css — 파일이 늘어도 검사 밖에 남지 않는다 (하드코딩 금지). */
 export function cssFiles(): { name: string; text: string }[] {
-  return readdirSync(CSS_DIR)
-    .filter((f) => f.endsWith(".css"))
-    .sort()
-    .map((name) => ({ name, text: stripComments(readFileSync(CSS_DIR + name, "utf-8")) }));
+  return walk(".css").map((f) => ({ name: f.name, text: stripComments(f.text) }));
 }
 
 export const allCss = (): string => cssFiles().map((f) => f.text).join("\n");

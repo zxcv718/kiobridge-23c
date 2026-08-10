@@ -11,7 +11,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { contrastRatio, AA_TEXT, AA_NON_TEXT } from "../src/core/contrast";
-import { allCss, cssFiles, colorPairs, paletteOf, varsIn } from "./css";
+import { allCss, cssFiles, colorPairs, paletteOf, varsIn } from "./ui-source";
 
 const BASE = paletteOf(":root");
 const CONTRAST = { ...BASE, ...paletteOf(".app.contrast") };

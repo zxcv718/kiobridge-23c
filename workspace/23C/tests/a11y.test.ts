@@ -6,13 +6,13 @@
  * 그래서 그 선언을 여기서 **소스로 검사한다.** 선언을 바꾸려면 코드가 먼저 바뀌어야 한다.
  */
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import { UI_GUARANTEES, SUPPORT_MODES_OFFERED, buildAccessibilityEvidence } from "../src/core/submission-meta";
+import { allCss, allTsx, cssFiles, uiSources } from "./ui-source";
 
-const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf-8");
-const CSS = read("../ui/src/styles.css");
-const APP = read("../ui/src/App.tsx");
+/* 한 파일만 읽던 것을 ui/src 전체로 넓혔다.
+ * 화면을 파일로 쪼개는 순간, 이름을 하드코딩한 검사는 «검사받지 않는 화면»을 만든다. */
+const CSS = allCss();
+const APP = allTsx();
 
 /** `min-height: 64px;` 같은 선언에서 픽셀값을 전부 뽑는다. */
 function minHeights(selector: string): number[] {
@@ -23,6 +23,17 @@ function minHeights(selector: string): number[] {
   }
   return out;
 }
+
+describe("검사망 자체를 먼저 확인한다", () => {
+  it("ui/src 의 CSS 와 소스를 실제로 읽고 있다", () => {
+    // glob 이 고장나 빈 문자열이 되면 아래 «…가 없다» 류 단정이 전부 공짜로 통과한다.
+    // 그래서 읽은 양을 먼저 확인한다 — 검사가 무너진 것을 검사한다.
+    expect(cssFiles().length, "ui/src 에서 .css 를 하나도 못 읽었습니다").toBeGreaterThan(0);
+    expect(uiSources().length, "ui/src 에서 .tsx 를 하나도 못 읽었습니다").toBeGreaterThan(0);
+    expect(CSS.length).toBeGreaterThan(1000);
+    expect(APP.length).toBeGreaterThan(1000);
+  });
+});
 
 describe("접근성 — 선언한 보증이 실제로 코드에 있는가", () => {
   it("모든 조작 요소가 최소 터치 타깃(48px) 이상이다", () => {
