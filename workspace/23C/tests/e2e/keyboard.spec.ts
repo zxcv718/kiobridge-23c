@@ -59,13 +59,17 @@ test.describe("접근성 실측", () => {
   });
 
   /**
-   * 화면목록 포인트 2 — 답이 충분해지면 남은 질문을 건너뛴다.
-   * 단위 테스트(ask.test.ts)는 판정만 검사한다. 실제로 화면이 넘어가고,
-   * 무엇을 안 물었는지 사용자에게 밝히는지는 여기서만 확인된다.
+   * 질문은 7개 고정이다 — 시스템이 먼저 끝내지 않는다.
+   *
+   * 답이 충분해 보여도(추천 신뢰도가 높아도) 남은 질문을 생략하지 않는다.
+   * confidence 가 재는 것은 "1위 메뉴가 더 안 바뀐다"이지 "남은 질문이 무의미하다"가
+   * 아니기 때문이다 — 이용방식·수량·컵은 답에 따라 실행계획이 실제로 달라진다.
+   * 무엇을 주문할지는 사용자가 정한다.
    */
-  test("답이 충분해지면 남은 질문을 건너뛰고 무엇을 안 물었는지 밝힌다", async ({ page }) => {
+  test("답이 충분해 보여도 7문항을 전부 묻는다", async ({ page }) => {
     await page.getByRole("button", { name: /시작하기/ }).click();
 
+    // 예전에 3문항 만에 종료되던 조합
     await page.getByRole("button", { name: "땅콩", exact: true }).click();
     await page.getByRole("button", { name: "콩(대두)" }).click();
     await page.getByRole("button", { name: /다음/ }).click();
@@ -76,9 +80,20 @@ test.describe("접근성 실측", () => {
     await page.getByRole("button", { name: "뼈", exact: true }).click();
     await page.getByRole("button", { name: /다음/ }).click();
 
-    // 이용 방식·수량·컵·예산을 더 묻지 않고 추천으로 넘어간다
-    await expect(page.getByText(/여쭤보지 않았습니다/)).toBeVisible();
+    // 4번째 질문(이용 방식)이 그대로 나와야 한다
+    await expect(page.locator("#qtitle")).toBeVisible();
+    await expect(page.locator(".stepmeta")).toContainText("4 / 7");
+
+    // 끝까지 답한다 — 총 7문항
+    for (let i = 4; i <= 7; i++) {
+      await expect(page.locator(".stepmeta")).toContainText(`${i} / 7`);
+      await page.locator(".choices .choice").first().click();
+      await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+    }
+
     await expect(page.locator("#qtitle")).toHaveCount(0);
+    // 생략한 것이 없으므로 생략 고지도 없다
+    await expect(page.getByText(/여쭤보지 않았습니다/)).toHaveCount(0);
   });
 
   test("포커스가 항상 눈에 보인다 (outline 이 none 이 아니다)", async ({ page }) => {

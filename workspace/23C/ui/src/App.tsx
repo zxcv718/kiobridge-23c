@@ -12,7 +12,7 @@ import {
 } from "./logic";
 import { TIME_SLOT_KO, timeSlotOf } from "../../src/core/context";
 import { buildExecutionPlanCore, explainSelections } from "../../src/core/plan";
-import { canStopAsking, shouldSafetyStop, isUnresolved } from "../../src/core/ask";
+import { shouldSafetyStop, isUnresolved } from "../../src/core/ask";
 import {
   migrateSaved, SAVED_VERSION,
   type SavedSettings as CoreSaved,
@@ -48,11 +48,6 @@ const PROBE_RESULT: Partial<A11y>[] = [
   { largeText: true, highContrast: true, visualGuidance: true },
 ];
 
-/** 실행계획의 옵션 그룹 ↔ 마법사 질문 key — "왜 이 값이 됐는지" 문구를 가르는 데 쓴다. */
-const GROUP_TO_KEY: Record<string, string> = {
-  SERVICE_TYPE: "serviceType", SPICY_LEVEL: "spicyLevel", BONE_TYPE: "boneType",
-  CUP: "cupOption", QUANTITY: "quantity",
-};
 
 /** 오류 주입 시연 — 공식 7종 전부(API_CONTRACT). 한국어 제목이 기본, 코드는 참조용 병기. */
 const INJECTIONS: { code: string; label: string; desc: string }[] = [
@@ -352,8 +347,6 @@ export function App() {
   /** 저장본에서 불러온 항목의 key — 마법사에서 건너뛰고, 무엇이 불러와졌는지 화면에 밝힌다 */
   const [carried, setCarried] = useState<string[]>([]);
   const [demoHour, setDemoHour] = useState<number | null>(null); // 프리셋의 시간대 시연용
-  /** 조기 종료로 여쭤보지 않은 질문 key — 추천 화면에서 무엇을 안 물었는지 밝힌다 */
-  const [skipped, setSkipped] = useState<string[]>([]);
   /** 확정되지 않은 추천을 몇 번 만났는가 — 2회째면 안전 중단(S12) */
   const [reconfirmCount, setReconfirmCount] = useState(0);
   /** S02 화면 맞춤 문답 — null 이면 안 하는 중, 0~2 는 지금 보여주는 크기 단계 */
@@ -391,26 +384,21 @@ export function App() {
 
   const startWizard = () => {
     setAnswers({}); setQIndex(0); setManual(false); setFromSaved(false); setCarried([]);
-    setStoreToggle(false); setDemoHour(null); setSkipped([]); setReconfirmCount(0);
+    setStoreToggle(false); setDemoHour(null); setReconfirmCount(0);
     resetRun(); setStep("wizard");
   };
 
-  /** 아직 답하지 않은 질문 — 조기 종료 시 "여쭤보지 않은 항목"으로 알린다. */
-  const unansweredIn = (a: Record<string, unknown>): string[] =>
-    QUESTIONS.filter((q) => a[q.key] === undefined).map((q) => q.key);
-
   /**
-   * 추천 화면으로 — 모든 경로(마법사 종료·조기 종료·조건 수정·시연 프리셋)가 여기를 지난다.
+   * 추천 화면으로 — 모든 경로(마법사 종료·조건 수정·저장본 시작·시연 프리셋)가 여기를 지난다.
    * 미확정 추천이 반복되면 여기서 안전 중단으로 보낸다(화면목록 S12).
    */
   const goRecommend = (
-    u: UiRecommendation, skippedKeys: string[], priorAttempts = reconfirmCount, manualPick = false,
+    u: UiRecommendation, priorAttempts = reconfirmCount, manualPick = false,
   ) => {
     // priorAttempts 를 인자로 받는 이유: 새 흐름을 시작하는 경로(시연 프리셋·저장본 시작)는
     // setReconfirmCount(0) 을 호출해도 이 렌더의 클로저에는 옛 값이 잡혀 있다. 0 을 명시해 넘긴다.
     const attempts = isUnresolved(u.rec) ? priorAttempts + 1 : 0;
     setReconfirmCount(attempts);
-    setSkipped(skippedKeys);
     setUiRec(u);
     setManual(manualPick);
 
@@ -429,7 +417,7 @@ export function App() {
 
   const finishWizard = () => {
     if (!fixture) return;
-    goRecommend(computeRecommendation(rawInput, fixture, now), unansweredIn(answers));
+    goRecommend(computeRecommendation(rawInput, fixture, now));
   };
 
   /** 저장본에서 불러온 항목은 마법사에서 건너뛴다 — 저장해 놓고 또 묻지 않는다. */
@@ -451,9 +439,6 @@ export function App() {
   const advance = () => {
     const n = nextToAsk(qIndex + 1);
     if (n >= QUESTIONS.length) { finishWizard(); return; }
-    if (!fixture) return;
-    const u = computeRecommendation(rawInput, fixture, now);
-    if (canStopAsking(u.rec, u.engineCtx)) { goRecommend(u, unansweredIn(answers)); return; }
     setQIndex(n);
   };
 
@@ -466,7 +451,7 @@ export function App() {
     setA11y(saved.a11y);
     setCarried(QUESTIONS.map((q) => q.key).filter((k) => next[k] !== undefined));
     setFromSaved(true); setStoreToggle(true);
-    setManual(false); setDemoHour(null); setSkipped([]); resetRun();
+    setManual(false); setDemoHour(null); resetRun();
     const loaded = QUESTIONS.map((qq) => qq.key).filter((k) => next[k] !== undefined);
     const start = nextToAsk(0, loaded);
     if (start >= QUESTIONS.length) {
@@ -482,7 +467,6 @@ export function App() {
         && u.rec.recommendedCandidateId !== wanted;
       goRecommend(
         pinned ? withManualSelection(u, fixture, wanted) : u,
-        unansweredIn(next),
         0, // 저장본으로 시작하는 것도 새 흐름이다
         pinned,
       );
@@ -502,7 +486,6 @@ export function App() {
     setFromSaved(false); setStoreToggle(false); setManual(false); resetRun();
     goRecommend(
       computeRecommendation(buildRawInput(p.answers, nextA11y, false, false), fixture, nextHour === null ? new Date() : d),
-      unansweredIn(p.answers),
       0, // 시연 프리셋은 새 흐름이다 — 이전 시도 횟수를 물려받지 않는다
     );
   };
@@ -519,10 +502,7 @@ export function App() {
     if (!fixture) return;
     if (storeToggle) persist();
     // 고쳐서 다시 받는 경로 — 여기서도 미확정이면 시도 횟수가 올라가고, 2회째면 안전 중단이다
-    goRecommend(
-      computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle), fixture, now),
-      unansweredIn(answers),
-    );
+    goRecommend(computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle), fixture, now));
   };
 
   /**
@@ -749,11 +729,7 @@ export function App() {
 
         {step === "wizard" && q && (
           <section className="card" aria-labelledby="qtitle">
-            {/* 분모를 확정으로 쓰지 않는다 — 조기 종료가 있으므로 "최대"가 정직하다 */}
-            <p className="stepmeta">
-              질문 {askPos + 1} / 최대 {askTotal}
-              {!simple && " · 답이 충분해지면 남은 질문은 건너뜁니다"}
-            </p>
+            <p className="stepmeta">질문 {askPos + 1} / {askTotal}</p>
             <h2 id="qtitle">{q.title}</h2>
             {q.hint && !simple && <p className="hint">{q.hint}</p>}
             {carried.includes(q.key) && (
@@ -803,14 +779,6 @@ export function App() {
             {uiRec.rec.requiresReconfirmation && (
               <div className="banner warn" role="alert">
                 확실하지 않은 정보가 있어요. 임의로 판단하지 않습니다 — 알레르기 항목을 다시 확인해 주시거나, 직원 도움을 이용해 주세요.
-              </div>
-            )}
-            {/* 생략은 숨기지 않는다 — 무엇을 안 물었는지, 그 값이 어디서 보이는지 함께 밝힌다 */}
-            {skipped.length > 0 && (
-              <div className="banner ok" role="note">
-                답해 주신 내용만으로 충분해서 <b>{skipped.length}가지는 여쭤보지 않았습니다</b>
-                {" "}({skipped.map((k) => EDIT_LABELS[k] ?? k).join(" · ")}).
-                {" "}이 항목들이 어떻게 정해졌는지는 다음 확인 화면에서 보실 수 있습니다.
               </div>
             )}
             {uiRec.rec.recommendedCandidateId === null ? (
@@ -966,11 +934,7 @@ export function App() {
                         <span className="sv">{OPTION_KO[x.id] ?? x.id}</span>
                         <span className="so">
                           {x.origin === "USER" && "고르신 대로"}
-                          {/* 같은 AUTO 라도 원인이 다르다 — 조기 종료로 안 물어본 것과
-                              "상관없어요"라고 답하신 것을 뭉뚱그리지 않는다. */}
-                          {x.origin === "AUTO" && (skipped.includes(GROUP_TO_KEY[x.groupId] ?? "")
-                            ? "여쭤보지 않아서 이 메뉴의 값으로 정했습니다"
-                            : "상관없다고 하셔서 이 메뉴의 값으로 정했습니다")}
+                          {x.origin === "AUTO" && "상관없다고 하셔서 이 메뉴의 값으로 정했습니다"}
                           {x.origin === "SUBSTITUTED" &&
                             `원하신 ${OPTION_KO[x.wanted!] ?? x.wanted}는 이 메뉴에 없어 바꿨습니다`}
                         </span>

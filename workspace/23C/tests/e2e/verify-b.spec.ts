@@ -6,7 +6,7 @@
  *
  * keyboard.spec.ts 가 접근성 실측을 맡고, 여기서는 **여러 화면이 상태로 얽히는 경로**와
  * **participant-ux.json 선언이 화면에서 실제로 동작하는지**를 본다.
- * 단위 테스트로는 잡히지 않는 회귀(저장본 마이그레이션·링크 인계·재확인 카운터)가 대상이다.
+ * 단위 테스트로는 잡히지 않는 회귀(저장본 마이그레이션·재확인 카운터·선언 일치)가 대상이다.
  */
 import { expect, test, type Page } from "@playwright/test";
 
@@ -15,8 +15,11 @@ const start = async (page: Page) => {
   await expect(page.getByRole("heading", { name: /닭강정 가게 주문/ })).toBeVisible();
 };
 
-/** 알레르기 → 맵기 → 형태 순으로 답한다 (조기 종료가 걸리는 조합) */
-async function answerEarlyStopPath(page: Page) {
+/**
+ * 7문항을 끝까지 답한다 (알레르기 땅콩·콩 → 매운맛 → 뼈 → 나머지는 첫 선택지).
+ * 질문은 고정이므로 어떤 조합이든 추천 화면에 닿으려면 전부 답해야 한다.
+ */
+async function answerAll(page: Page) {
   await page.getByRole("button", { name: /시작하기/ }).click();
   await page.getByRole("button", { name: "땅콩", exact: true }).click();
   await page.getByRole("button", { name: "콩(대두)" }).click();
@@ -25,19 +28,26 @@ async function answerEarlyStopPath(page: Page) {
   await page.getByRole("button", { name: /다음/ }).click();
   await page.getByRole("button", { name: "뼈", exact: true }).click();
   await page.getByRole("button", { name: /다음/ }).click();
+  for (let i = 0; i < 4; i++) {
+    if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
+    await page.locator(".choices .choice").first().click();
+    await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+  }
 }
 
 test.describe("B계열 — 신규 동작", () => {
-  test("B1 조기 종료 + 생략 고지 + AUTO 사유가 '여쭤보지 않아서'", async ({ page }) => {
+  test("B1 질문은 7개 고정이고 생략 고지가 없다", async ({ page }) => {
     await start(page);
-    await answerEarlyStopPath(page);
+    await answerAll(page);
 
-    await expect(page.getByText(/여쭤보지 않았습니다/)).toBeVisible();
+    // 시스템이 먼저 끝내지 않으므로 "여쭤보지 않았습니다"가 나올 일이 없다
+    await expect(page.getByText(/여쭤보지 않았습니다/)).toHaveCount(0);
     await expect(page.locator("#qtitle")).toHaveCount(0);
 
     await page.getByRole("button", { name: "네, 좋아요" }).click();
     await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
-    await expect(page.getByText(/여쭤보지 않아서 이 메뉴의 값으로 정했습니다/).first()).toBeVisible();
+    // 안 물어본 항목이 없으므로 그 사유 문구도 없다
+    await expect(page.getByText(/여쭤보지 않아서/)).toHaveCount(0);
   });
 
   test("B2 전부 '상관없어요'면 끝까지 묻고 사유는 '상관없다고 하셔서'", async ({ page }) => {
@@ -70,8 +80,7 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: "잘 모르겠어요" }).click();
     await page.getByRole("button", { name: /다음/ }).click();
 
-    /* 알레르기가 UNKNOWN 이면 requiresReconfirmation 이 걸려 조기 종료가 막힌다.
-       그래서 남은 질문을 끝까지 묻는다 — 게이트가 의도대로 동작한다는 뜻이다. */
+    // 남은 질문을 끝까지 답한다 (질문은 7개 고정)
     for (let i = 0; i < 6; i++) {
       if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
       await page.locator(".choices .choice").first().click();
@@ -128,14 +137,14 @@ test.describe("B계열 — 신규 동작", () => {
 
   test("B8 기기 간 인계 기능이 없으므로 관련 표현도 없다", async ({ page }) => {
     await start(page);
-    await answerEarlyStopPath(page);
+    await answerAll(page);
     await page.getByRole("button", { name: "네, 좋아요" }).click();
     await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
     const body = await page.locator("body").innerText();
     expect(body).not.toMatch(/넘기기|다른 기기/);
   });
 
-  test("B3 첫 질문은 항상 알레르기다 (조기 종료가 그 앞에서 발동할 수 없게)", async ({ page }) => {
+  test("B3 첫 질문은 항상 알레르기다 — 하드제약을 가장 먼저 확정한다", async ({ page }) => {
     await start(page);
     await page.getByRole("button", { name: /시작하기/ }).click();
     await expect(page.locator("#qtitle")).toHaveText(/알레르기/);
@@ -221,7 +230,7 @@ test.describe("B계열 — 신규 동작", () => {
 
   test("B9 조건 수정의 메뉴 목록에 제외된 후보가 없다", async ({ page }) => {
     await start(page);
-    await answerEarlyStopPath(page); // 땅콩·콩 알레르기 → 해당 후보 제외됨
+    await answerAll(page); // 땅콩·콩 알레르기 → 해당 후보 제외됨
     await page.getByRole("button", { name: "조건 수정" }).click();
     await page.getByRole("button", { name: /^메뉴/ }).click();
 
