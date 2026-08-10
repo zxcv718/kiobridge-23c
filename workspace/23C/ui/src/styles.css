@@ -4,6 +4,7 @@
  * 화면 코드는 계속 --fg/--card 같은 의미 이름만 보므로, 토큰이 바뀌어도 화면은 안 바뀐다.
  * 어떤 배선이 실제로 읽히는지는 tests/tokens.test.ts 가 CSS 를 파싱해 전수로 잰다. */
 @import "./tokens.css";
+@import "./components.css";
 
 :root {
   --bg: var(--kb-color-bg-canvas);
@@ -18,6 +19,12 @@
   --brand-strong: var(--kb-color-accent-strong);
   --brand-weak: var(--kb-color-accent-weak);
   --on-brand: var(--kb-color-text-inverse);
+  /* 고른 것의 바탕 — 디자인은 강조 바탕(연노랑)을 쓴다. 주황 테두리와 색이 겹치지 않아
+     «선택됨»이 테두리로 또렷하게 읽힌다. */
+  --selected: var(--kb-color-bg-surface-accent);
+  /* 살짝 가라앉은 바탕. 원시 토큰(--kb-…)을 화면에서 직접 쓰면 고대비 모드가
+     그것만 못 갈아끼워 흰 글씨가 밝은 회색 위에 남는다. 반드시 의미 이름을 거친다. */
+  --sunken: var(--kb-color-bg-surface-sunken);
   --danger: #b73e33; --danger-weak: #f9e9e7;
   /* #a56a12 는 제 옅은 바탕 위에서 3.94:1 이라 본문 기준 미달이었다 → 4.62:1 로 낮춘다 */
   --warn: #96600f; --warn-weak: #f8efdd;
@@ -27,7 +34,7 @@
 .app.contrast {
   --bg: #000000; --card: #101010; --fg: #ffffff; --muted: #d8d8d8;
   --line: #9a9a9a; --line-soft: #6b6b6b;
-  --brand: #ffd400; --brand-strong: #ffd400; --brand-weak: #333000;
+  --brand: #ffd400; --brand-strong: #ffd400; --brand-weak: #333000; --selected: #3a3300; --sunken: #1c1c1c;
   --on-brand: #000000;
   --danger: #ff7b6e; --danger-weak: #3a1512; --warn: #ffc861; --warn-weak: #332711;
 }
@@ -57,7 +64,7 @@ body { margin: 0; }
   min-height: 48px; padding: 8px 16px; font-size: 0.85em; font-weight: 700;
   border: 2px solid var(--line); background: var(--card); color: var(--fg); border-radius: 10px; cursor: pointer;
 }
-.toggle[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-weak); color: var(--fg); }
+.toggle[aria-pressed="true"] { border-color: var(--brand); border-width: 2px; background: var(--selected); color: var(--fg); }
 
 .card { background: var(--card); border: 1.5px solid var(--line-soft); border-radius: var(--kb-radius-lg); padding: 22px; margin: 14px 0; box-shadow: var(--kb-shadow-card); }
 h2 { font-size: 1.25em; margin: 0 0 6px; }
@@ -70,7 +77,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
   border: 2px solid var(--line); border-radius: 12px; background: var(--card); color: var(--fg);
   word-break: keep-all; overflow-wrap: anywhere; /* 한국어는 어절 유지, 긴 영문 코드는 안전하게 줄바꿈 */
 }
-.choice[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-weak); }
+.choice[aria-pressed="true"] { border-color: var(--brand); background: var(--selected); }
 .choice small { display: block; font-weight: 500; color: var(--muted); font-size: 0.75em; line-height: 1.45; margin-top: 4px; }
 .choice .code { display: block; font-family: ui-monospace, monospace; font-size: 0.62em; font-weight: 600; color: var(--muted); margin-top: 6px; }
 .choice .verdict { display: block; font-size: 0.78em; font-weight: 800; color: var(--danger); margin-top: 6px; }
@@ -83,6 +90,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 .btn.primary { background: var(--brand-strong); color: var(--on-brand); box-shadow: var(--kb-shadow-cta-glow); }
 .btn.ghost { background: var(--card); color: var(--fg); border-color: var(--line); }
 .btn.danger { background: var(--danger-weak); color: var(--danger); border-color: var(--danger); }
+.btn.full { width: 100%; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .recwrap { border: 2.5px solid var(--brand); }
@@ -179,7 +187,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
   border: 2px solid var(--line); border-radius: 12px; background: var(--card); color: var(--fg);
   font-size: 1em; font-family: inherit;
 }
-.a11yrow[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-weak); }
+.a11yrow[aria-pressed="true"] { border-color: var(--brand); background: var(--selected); }
 .alabel { font-weight: 800; }
 .aeffect { color: var(--muted); font-size: 0.82em; }
 .astate { font-weight: 800; color: var(--muted); min-width: 2.2em; text-align: right; }

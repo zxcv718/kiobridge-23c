@@ -1,0 +1,94 @@
+/* 공통 컴포넌트 — Figma Design System(150:1267) «컴포넌트 11» 에서 옮긴 것.
+ *
+ * 디자인이 준 코드는 React+Tailwind 지만 우리는 일반 CSS 클래스를 쓴다. Tailwind 를
+ * 의존성으로 들이지 않는다 — 키트 루트 package.json 은 플랫폼 파일이라 손대지 않는다.
+ *
+ * 그대로 옮기지 않은 것 셋:
+ *
+ * ① **Cta 의 Yellow·Dark 변형을 만들지 않는다.**
+ *    디자이너는 고대비 상태를 변형 두 개로 그렸다. 우리는 `.app.contrast` 가 팔레트를
+ *    통째로 갈아끼우므로 같은 버튼이 저절로 노랑/검정이 된다. 변형을 따로 두면 «고대비를
+ *    켰는데 어떤 버튼만 안 바뀌는» 길이 열린다.
+ *
+ * ② **터치 타깃은 44px 이 아니라 48px 이다.**
+ *    디자인의 TopBar 아이콘 박스가 44px 인데, 우리가 제출물에 선언한 보증이 48px 이고
+ *    tests/a11y.test.ts 가 그것을 검사한다. 선언을 낮추는 대신 타깃을 키운다.
+ *
+ * ③ **선택 상태 바탕은 디자인 값을 따른다.**
+ *    지금까지 우리 선택 상태는 연주황(--brand-weak)이었는데, 디자인은 연노랑
+ *    (surface-accent #fbf3d8)에 2px 주황 테두리다. 디자인 쪽이 더 낫다 — 주황 테두리와
+ *    주황 바탕이 겹치지 않아 «선택됨»이 테두리로 또렷하게 읽힌다.
+ */
+
+/* ───────── Header — 뒤로가기 + 제목 (Figma TopBar 114:2792) ───────── */
+.kb-header {
+  display: flex; align-items: center; gap: var(--kb-spacing-md);
+  min-height: 48px; margin: 0 0 var(--kb-spacing-md);
+}
+.kb-back {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-width: 48px; min-height: 48px; padding: 0 14px; cursor: pointer;
+  border: 2px solid var(--line); border-radius: var(--kb-radius-full);
+  background: var(--sunken); color: var(--fg);
+  font: inherit; font-size: 0.86em; font-weight: 700;
+}
+/* Figma 에서 내보낸 SVG 는 획 색이 #212121 로 박혀 있다. 고대비 모드에서 검은 배경에
+   검은 아이콘이 되므로 뒤집는다. 단색 UI 아이콘(.kb-ico)에만 적용한다 — 알레르기·맛
+   그림 아이콘은 여러 색이라 뒤집으면 엉뚱해진다. */
+.kb-back .kb-ico { width: 20px; height: 20px; flex: 0 0 auto; }
+.app.contrast .kb-ico { filter: invert(1); }
+.kb-header h2 { flex: 1; margin: 0; }
+
+/* ───────── StepIndicator — 진행 단계 (Figma 180:173 / 181:177 / 183:205) ─────────
+ * 라벨을 주면 5단계 큰 표시, 안 주면 점만 찍는 작은 표시가 된다.
+ * 색만으로 현재 위치를 말하지 않는다 — 완료는 ✓, 현재는 번호, 그리고 화면 낭독기용
+ * 문장이 따로 붙는다(«5단계 중 2단계»). */
+.kb-steps { display: flex; align-items: flex-start; margin: 0 0 var(--kb-spacing-md); }
+.kb-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+.kb-step + .kb-step::before {
+  content: ""; position: absolute; height: 2px; top: 10px;
+  left: calc(-50% + 11px); width: calc(100% - 22px);
+  background: var(--line-soft);
+}
+.kb-step.done + .kb-step::before,
+.kb-step.now + .kb-step::before { background: var(--brand); }
+.kb-dot {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: var(--kb-radius-full);
+  border: 1.5px solid var(--line-soft); background: var(--card);
+  font-size: 11px; font-weight: 700; color: var(--muted); line-height: 1;
+}
+.kb-step.done .kb-dot, .kb-step.now .kb-dot {
+  background: var(--brand-strong); border-color: var(--brand-strong); color: var(--on-brand);
+}
+.kb-step.now .kb-dot { box-shadow: 0 0 0 3px var(--brand-weak); }
+.kb-steplabel { margin-top: 6px; font-size: 0.55em; line-height: 1.3; text-align: center; color: var(--muted); }
+.kb-step.now .kb-steplabel { color: var(--fg); font-weight: 700; }
+.kb-steps.mini { max-width: 220px; }
+.kb-steps.mini .kb-dot { width: 16px; height: 16px; font-size: 9px; }
+.kb-steps.mini .kb-step + .kb-step::before { top: 7px; }
+
+/* ───────── Badge — 상태 알약 (Figma 의 pill) ─────────
+ * 강조색 글씨를 강조색 바탕에 얹지 않는다(어떤 조합으로도 4.5:1 이 안 나온다).
+ * 글씨는 본문색, 강조는 바탕과 테두리가 맡는다. */
+.kb-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: var(--kb-radius-full);
+  font-size: 0.72em; font-weight: 700; color: var(--fg);
+  background: var(--brand-weak); border: 1px solid var(--brand);
+}
+.kb-badge.warn { background: var(--warn-weak); border-color: var(--warn); }
+.kb-badge.danger { background: var(--danger-weak); border-color: var(--danger); }
+
+/* ───────── Card 안의 라벨/값 목록 (Figma SummaryCard 185:209 · RecentOrderCard 185:227) ─────────
+ * 두 컴포넌트가 «왼쪽 라벨 · 오른쪽 값 · 사이에 구분선» 으로 똑같아 하나로 묶었다. */
+.kb-rows { margin: var(--kb-spacing-sm) 0 0; }
+.kb-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 45px; font-size: 0.82em;
+  border-top: 1px solid var(--line-soft);
+}
+.kb-row:first-child { border-top: 0; }
+.kb-rowlabel { color: var(--muted); margin: 0; }
+.kb-rowvalue { margin: 0; font-weight: 700; text-align: right; word-break: keep-all; display: flex; align-items: center; gap: 10px; }

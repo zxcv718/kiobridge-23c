@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { UI_GUARANTEES, SUPPORT_MODES_OFFERED, buildAccessibilityEvidence } from "../src/core/submission-meta";
-import { allCss, allTsx, cssFiles, uiSources } from "./ui-source";
+import { allCss, allTsx, cssFiles, rules, uiSources } from "./ui-source";
 
 /* 한 파일만 읽던 것을 ui/src 전체로 넓혔다.
  * 화면을 파일로 쪼개는 순간, 이름을 하드코딩한 검사는 «검사받지 않는 화면»을 만든다. */
@@ -54,6 +54,24 @@ describe("접근성 — 선언한 보증이 실제로 코드에 있는가", () =
           .toBeGreaterThanOrEqual(UI_GUARANTEES.minTouchTargetPx);
       }
     }
+  });
+
+  it("누를 수 있다고 선언한 것은 예외 없이 48px 이상이다", () => {
+    /* 위 검사는 선택자 목록이 하드코딩이라 새 컴포넌트를 놓친다. 이건 반대로 간다 —
+       `cursor: pointer` 를 쓴 규칙은 «여기 눌러도 됩니다»라고 말한 것이므로,
+       그 말을 한 모든 자리가 타깃 기준을 지켜야 한다. 목록을 늘릴 필요가 없다. */
+    const bad: string[] = [];
+    for (const f of cssFiles()) {
+      for (const r of rules(f.text, f.name)) {
+        if (!/cursor:\s*pointer/.test(r.body)) continue;
+        const h = /min-height:\s*(\d+)px/.exec(r.body);
+        if (!h) { bad.push(`${f.name} ${r.selector} — min-height 선언 없음`); continue; }
+        if (Number(h[1]) < UI_GUARANTEES.minTouchTargetPx) {
+          bad.push(`${f.name} ${r.selector} — ${h[1]}px < ${UI_GUARANTEES.minTouchTargetPx}px`);
+        }
+      }
+    }
+    expect(bad, `누를 수 있는데 작은 것:\n  ${bad.join("\n  ")}`).toEqual([]);
   });
 
   it("키보드 포커스가 선언한 굵기로 보인다", () => {
@@ -151,5 +169,37 @@ describe("접근성 증거 — 켠 것만 보고한다", () => {
     for (const m of buildAccessibilityEvidence({}).supportModesOfferedByService as string[]) {
       expect(official.has(m as (typeof SUPPORT_MODES_OFFERED)[number])).toBe(true);
     }
+  });
+});
+
+describe("공통 컴포넌트 규약 — 네 갈래로 나눠 만들어도 어긋나지 않게", () => {
+  const parts = () => uiSources().filter((f) => f.name.startsWith("components/") && f.name.endsWith(".tsx"));
+
+  it("components/ 의 부품이 전부 배럴(index.ts)에서 내보내진다", () => {
+    // 등록되지 않은 부품은 다른 사람 눈에 안 보이고, 결국 같은 것이 두 번 만들어진다
+    const barrel = uiSources().find((f) => f.name === "components/index.ts");
+    expect(barrel, "components/index.ts 가 없습니다").toBeDefined();
+    for (const f of parts()) {
+      const name = f.name.slice("components/".length).replace(/\.tsx$/, "");
+      expect(barrel!.text, `${name} 가 배럴에 없습니다`).toContain(`./${name}`);
+    }
+  });
+
+  it("진행 표시는 색만으로 현재 위치를 말하지 않는다", () => {
+    const step = parts().find((f) => f.name.endsWith("StepIndicator.tsx"));
+    expect(step, "StepIndicator 를 못 찾았습니다").toBeDefined();
+    // 완료 표식(✓)과 낭독기용 문장이 둘 다 있어야 한다 — 주황 점과 회색 점의 차이는
+    // 색각 이상·저시력 사용자에게 신호가 되지 못한다
+    expect(step!.text).toContain("✓");
+    expect(step!.text).toMatch(/단계 중/);
+    expect(step!.text).toMatch(/srline/);
+  });
+
+  it("버튼 부품은 글자 없이 만들 수 없다", () => {
+    const cta = parts().find((f) => f.name.endsWith("Cta.tsx"));
+    expect(cta, "Cta 를 못 찾았습니다").toBeDefined();
+    // label 이 선택(`label?:`)이 되는 순간 아이콘만 있는 버튼을 만들 수 있게 된다
+    expect(cta!.text).toMatch(/label:\s*React\.ReactNode;/);
+    expect(cta!.text).not.toMatch(/label\?:/);
   });
 });
