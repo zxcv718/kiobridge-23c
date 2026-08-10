@@ -87,6 +87,9 @@ describe("선택 옵션 — 못 맞추면 대체하고 알린다", () => {
   const rec = (id: string) => ({
     recommendedCandidateId: id, alternativeCandidateIds: [], excludedCandidates: [],
     recommendationReasons: [], confidence: 0.9, requiresReconfirmation: false,
+    // 스키마상 필수다. 빠져 있어도 실행계획 생성에는 안 쓰여 테스트가 통과했지만,
+    // 그건 타입 검사가 이 폴더를 아예 안 보고 있었기 때문이다.
+    scoreBreakdown: { [id]: 1 },
   });
   const cupOf = (plan: { actions: { target: { groupId?: string; id: string } }[] }) =>
     plan.actions.find((a) => a.target?.groupId === "CUP")?.target.id;
@@ -138,6 +141,7 @@ describe("대체는 특정 옵션에 한정되지 않는다 (전 그룹 공통)"
   const rec = (id: string) => ({
     recommendedCandidateId: id, alternativeCandidateIds: [], excludedCandidates: [],
     recommendationReasons: [], confidence: 0.9, requiresReconfirmation: false,
+    scoreBreakdown: { [id]: 1 },
   });
 
   /** 각 옵션 그룹마다 "후보가 지원하지 않는 값"을 골라 넣고 대체되는지 본다 */
@@ -196,6 +200,7 @@ describe('"상관없어요" 가 필수/선택 그룹에서 어떻게 끝나는�
   const rec = (id: string) => ({
     recommendedCandidateId: id, alternativeCandidateIds: [], excludedCandidates: [],
     recommendationReasons: [], confidence: 0.9, requiresReconfirmation: false,
+    scoreBreakdown: { [id]: 1 },
   });
   /** 맵기 HOT · 형태 BONE · 컵 PAPER 만 지원하는 후보 */
   const c3 = fixture.candidates.find((c) => c.candidateId === "CHICKEN-003")!;

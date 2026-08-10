@@ -17,7 +17,7 @@ import { buildRecommendation, explainCore, alternativesFromRecommendation } from
 import { buildExecutionPlanCore } from "./src/core/plan";
 import { buildContextSignals } from "./src/core/context";
 import { buildAccessibilityEvidence, buildTeamExtensions, buildTeamMetadata } from "./src/core/submission-meta";
-import { canStopAsking, allergensAnswered, preferenceAxisAsked } from "./src/core/ask";
+import { allergensAnswered } from "./src/core/ask";
 
 const API = "http://localhost:4000";
 const TEAM = "23C";
@@ -107,8 +107,13 @@ const FULL: Answers = {
   allergies: ["없음"], spicyLevel: "매운맛", boneType: "순살",
   serviceType: "포장", quantity: 1, cupOption: "종이컵", budgetKrw: "없음",
 };
-/** 조기 종료 시점의 답변 — 이용방식·수량·컵·예산을 아예 묻지 않은 상태 */
-const EARLY: Answers = { allergies: ["땅콩", "콩"], spicyLevel: "매운맛", boneType: "뼈" };
+/* 답변이 일부만 들어온 상태 — 이용방식·수량·컵·예산이 비어 있다.
+ *
+ * 질문이 7개 고정이 된 뒤로 이 상태는 **화면에서 나올 수 없다.** 그래도 남겨 둔다.
+ * 조기 종료를 걷어낸 것은 «생략해도 괜찮은가»에 아니라고 답한 것이지, 부분 입력이
+ * 들어왔을 때 계약이 깨져도 된다는 뜻이 아니다. 저장본 이관·프리셋·외부 호출처럼
+ * 답이 덜 찬 채로 들어오는 길은 앞으로도 생긴다. */
+const PARTIAL: Answers = { allergies: ["땅콩", "콩"], spicyLevel: "매운맛", boneType: "뼈" };
 const UNKNOWN_ALLERGY: Answers = { allergies: ["모름"], spicyLevel: "매운맛" };
 
 const INJECTIONS = [
@@ -128,12 +133,11 @@ async function main() {
     console.log(`     ${verdict(r.evidence)}\n`);
   }
 
-  // ── A2 조기 종료로 만든 계획  ★ 이번 작업 최대 리스크
+  // ── A2 답변이 덜 찬 상태로 만든 계획 (화면에서는 나올 수 없는 경로)
   {
-    const { submission, rec, engineCtx } = buildFor(EARLY, fixture, true);
-    console.log(`[A2] 조기 종료 계획 — 게이트 통과 여부 ${canStopAsking(rec, engineCtx)} ` +
-      `(알레르기답변=${allergensAnswered(engineCtx)} 선호축=${preferenceAxisAsked(engineCtx)} conf=${rec.confidence})`);
-    console.log(`     안 물어본 항목: 이용방식·수량·컵·예산 → 계획 ${submission.executionPlan.actions.length}단계`);
+    const { submission, rec, engineCtx } = buildFor(PARTIAL, fixture, true);
+    console.log(`[A2] 부분 답변 계획 — 알레르기답변=${allergensAnswered(engineCtx)} conf=${rec.confidence}`);
+    console.log(`     비어 있는 항목: 이용방식·수량·컵·예산 → 계획 ${submission.executionPlan.actions.length}단계`);
     const r = await runOnServer(submission);
     console.log(`     ${verdict(r.evidence)}`);
     if (!r.valid) console.log(`     검증 거부: ${r.errors.map((e) => `${e.code}@${e.path}`).join(", ")}`);

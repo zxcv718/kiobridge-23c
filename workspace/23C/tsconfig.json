@@ -1,0 +1,38 @@
+{
+  // 팀 23C 전용 타입 검사 설정.
+  //
+  // 이게 없으면 `npx tsc --noEmit` 이 루트 tsconfig 를 잡는데, 루트의 include 는
+  // packages/·apps/·examples/·tests/ 만 나열하고 workspace/ 는 없다. 그래서
+  // 이 폴더의 코드가 **한 줄도 검사되지 않은 채** "tsc 통과"가 나왔다.
+  // (vitest·vite 는 esbuild 로 타입을 지워 버리고 컴파일하므로 대신 잡아주지 않는다.)
+  //
+  // 루트 tsconfig.json 은 플랫폼 파일이라 손대지 않고, 여기에 우리 것만 만든다.
+  // 실행: cd workspace/23C && npx tsc --noEmit
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    // vite/client 가 `*.svg` 같은 에셋 import 의 타입을 준다 (Header 가 아이콘을 가져온다)
+    "types": ["node", "vite/client"],
+    "baseUrl": "../..",
+    "paths": {
+      "@kiobridge/contracts": ["packages/contracts/src/index.ts"],
+      "@kiobridge/state-engine": ["packages/state-engine/src/index.ts"],
+      "@kiobridge/safety-engine": ["packages/safety-engine/src/index.ts"],
+      "@kiobridge/evaluator": ["packages/evaluator/src/index.ts"],
+      "@kiobridge/participant-sdk": ["packages/participant-sdk/src/index.ts"],
+      "@kiobridge/profile-contract": ["packages/profile-contract/src/index.ts"],
+      "@kiobridge/kiosk-driver-contract": ["packages/kiosk-driver-contract/src/index.ts"],
+      "@kiobridge/simulation-driver": ["packages/simulation-driver/src/index.ts"],
+      "@kiobridge/uprlite-driver-contract": ["packages/uprlite-driver-contract/src/index.ts"]
+    }
+  },
+  "include": [
+    "src/**/*.ts",
+    "ui/src/**/*.ts",
+    "ui/src/**/*.tsx",
+    "tests/**/*.ts",
+    "*.ts"
+  ],
+  "exclude": ["node_modules", "ui/dist", "output"]
+}
