@@ -1,12 +1,12 @@
 {
   "evidenceVersion": "1.2",
-  "runId": "RUN-chicken-store-20260810152702-i7sldl",
-  "sessionId": "SIM-20260810-242",
+  "runId": "RUN-chicken-store-20260810172711-13a4tn",
+  "sessionId": "SIM-20260810-446",
   "teamId": "23C",
   "environmentId": "chicken-store",
   "fixtureVersion": "chicken-store@0.2.0",
-  "submissionHash": "sha-fnv1a-3126305c",
-  "createdAt": "2026-08-10T15:27:02.114Z",
+  "submissionHash": "sha-fnv1a-acda90dd",
+  "createdAt": "2026-08-10T17:27:11.342Z",
   "driverId": "SIMULATION",
   "driverStatus": "READY",
   "dataClassification": {
@@ -23,11 +23,11 @@
     "accessibility": {
       "largeText": true,
       "simpleSteps": true,
-      "visualGuidance": true,
+      "visualGuidance": false,
       "hearingSupport": false,
       "mobilitySupport": false,
       "highContrast": false,
-      "staffAssistancePreferred": true
+      "staffAssistancePreferred": false
     },
     "language": "ko-KR"
   },
@@ -39,7 +39,7 @@
       "allergenIds": [
         "PEANUT"
       ],
-      "maxPriceKrw": 10000
+      "maxPriceKrw": 7000
     }
   },
   "recommendation": {
@@ -76,7 +76,7 @@
       "포장을 원하셔서 포장이 가능한 메뉴 중에서 골랐습니다.",
       "매운맛을 선호하셔서 매운맛 메뉴를 먼저 보여드립니다.",
       "순살을 선호하셔서 순살 메뉴를 골랐습니다.",
-      "예산 10,000원 이내의 메뉴만 추천 대상에 두었습니다.",
+      "예산 7,000원 이내의 메뉴만 추천 대상에 두었습니다.",
       "등록하신 알레르기와 겹치는 메뉴 1개를 제외했습니다.",
       "품절된 메뉴 1개를 제외했습니다.",
       "원하시는 이용 방식이 불가능한 메뉴 1개를 제외했습니다.",
@@ -89,7 +89,7 @@
   "userDecision": {
     "approved": true,
     "decision": "APPROVE",
-    "confirmedAt": "2026-08-10T15:27:01.897Z"
+    "confirmedAt": "2026-08-10T17:26:49.004Z"
   },
   "executionPlan": [
     {
@@ -415,7 +415,7 @@
         {
           "ruleId": "CHICKEN_PRICE_LIMIT",
           "result": "PASS",
-          "sourceValue": 10000,
+          "sourceValue": 7000,
           "candidateValues": 6000,
           "targetValue": 6000,
           "severity": "BLOCK",
@@ -579,7 +579,7 @@
       {
         "ruleId": "CHICKEN_PRICE_LIMIT",
         "result": "PASS",
-        "sourceValue": 10000,
+        "sourceValue": 7000,
         "candidateValues": 6000,
         "targetValue": 6000,
         "severity": "BLOCK",
