@@ -25,6 +25,16 @@ import "./profile.css";
 export function Home() {
   const { saved, fixture, savedCoversAll, startFromSaved, deleteSaved, editSaved, setStep, t } = useFlow();
 
+  /**
+   * «처음부터 새로 시작하기»를 누르면 기록이 지워진다 — 되돌릴 수 없으므로 한 번 되묻는다.
+   *
+   * `window.confirm` 을 쓰지 않는다. 브라우저가 그리는 창이라 큰 글씨·고대비가 적용되지
+   * 않고, 화면 낭독기가 읽는 방식도 제각각이며, 그 순간 화면 전체가 멈춘다. 이 서비스에서
+   * 되묻기는 «화면이 하는 일»이지 브라우저에 맡길 일이 아니다.
+   */
+  const [asking, setAsking] = React.useState(false);
+  const 새로시작 = () => { deleteSaved(); setStep("profile"); };
+
   /* 저장본 요약 — **들어 있는 것을 전부** 줄로 만든다.
    *
    * 한때 알레르기와 맵기 둘만 보여줬다. 실제로는 답변 일곱 개가 전부 저장되는데,
@@ -56,17 +66,24 @@ export function Home() {
         ? "이 기기에 지난번 기록이 있어요. 자동으로 적용하지 않으니 확인하고 골라 주세요."
         : "몇 가지만 여쭤보고 화면을 맞춰 드릴게요."}
       actions={saved
-        ? <>
-          <Cta tone="primary" disabled={!fixture} onClick={startFromSaved}
-            label={savedCoversAll ? "지난번과 똑같이 주문하기" : "저장된 설정으로 시작하기"} />
-          {/* «처음부터 새로 시작»은 이름 그대로 **지난 기록을 버리고** 시작하는 것이다.
-              한때 이 버튼은 지우지 않고 화면만 옮겼고, 지우기는 따로 한 장 더 있었다.
-              두 버튼이 같은 뜻으로 읽힌다는 지적이 맞았다 — 이름이 하는 말과 코드가 하는
-              일이 달랐던 것이고, 그럴 때는 코드를 이름에 맞춘다.
-              이번에 저장할지는 바로 다음 걸음(S03)에서 다시 정한다. */}
-          <Cta label="처음부터 새로 시작하기" disabled={!fixture}
-            onClick={() => { deleteSaved(); setStep("profile"); }} />
-        </>
+        ? asking
+          /* 되묻는 중 — 아래 버튼 자리를 그대로 쓴다. 새 창을 띄우거나 버튼을 늘리는 대신
+             같은 자리에서 «무엇을 물어보는지»만 바뀐다. 되돌릴 수 없는 쪽을 주 버튼으로
+             두지 않는다 — 습관적으로 첫 버튼을 누르는 사람에게 삭제가 걸리면 안 된다. */
+          ? <>
+            <Cta tone="primary" label="아니요, 그대로 둘게요" onClick={() => setAsking(false)} />
+            <Cta tone="danger" label="네, 지우고 새로 시작할게요" onClick={새로시작} />
+          </>
+          : <>
+            <Cta tone="primary" disabled={!fixture} onClick={startFromSaved}
+              label={savedCoversAll ? "지난번과 똑같이 주문하기" : "저장된 설정으로 시작하기"} />
+            {/* «처음부터 새로 시작»은 이름 그대로 **지난 기록을 버리고** 시작하는 것이다.
+                한때 이 버튼은 지우지 않고 화면만 옮겼고, 지우기는 따로 한 장 더 있었다.
+                두 버튼이 같은 뜻으로 읽힌다는 지적이 맞았다 — 이름이 하는 말과 코드가 하는
+                일이 달랐던 것이고, 그럴 때는 코드를 이름에 맞춘다.
+                이번에 저장할지는 바로 다음 걸음(S03)에서 다시 정한다. */}
+            <Cta label="처음부터 새로 시작하기" disabled={!fixture} onClick={() => setAsking(true)} />
+          </>
         : <>
           <Cta tone="primary" disabled={!fixture} onClick={() => setStep("profile")} label="시작하기" />
         </>}
@@ -88,11 +105,14 @@ export function Home() {
             <small>지우지 않고 항목만 고칩니다.</small>
           </button>
 
-          {/* 아래 버튼 하나가 이 기록을 지운다는 사실을 **누르기 전에** 말한다.
-              되돌릴 수 없는 일은 누른 뒤에 알리는 것으로 부족하다. */}
-          <p className="home-warn">
-            «처음부터 새로 시작하기»를 누르면 <b>위 기록을 지웁니다.</b> 되돌릴 수 없습니다.
-          </p>
+          {/* 되묻는 중에만 이유를 말한다. 평소에 «지워집니다» 경고를 깔아 두면 지울
+              생각이 없는 사람까지 매번 읽어야 하고, 정작 지우는 순간에는 새로울 것이
+              없어 그냥 지나친다. 경고는 그 일이 일어나려는 자리에 있어야 한다. */}
+          {asking && (
+            <p className="home-ask" role="alert">
+              <b>위 기록을 지우고 처음부터 시작합니다.</b> 되돌릴 수 없습니다.
+            </p>
+          )}
         </>
       )}
 

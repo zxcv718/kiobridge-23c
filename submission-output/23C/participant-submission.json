@@ -9,7 +9,7 @@
     "source": {
       "collectionChannel": "WEB_FORM",
       "providerId": "23C",
-      "collectedAt": "2026-08-10T20:22:20.757Z"
+      "collectedAt": "2026-08-11T02:15:24.729Z"
     },
     "accessibility": {
       "largeText": true,
@@ -26,7 +26,7 @@
       "confirmationRequired": true
     },
     "consent": {
-      "personalization": true,
+      "personalization": false,
       "retentionPolicy": "SESSION_ONLY"
     }
   },
@@ -91,10 +91,10 @@
         {
           "type": "TIME_OF_DAY",
           "key": "slot",
-          "value": "LATE_NIGHT",
+          "value": "LUNCH_PEAK",
           "source": "DEVICE_CLOCK",
-          "observedAt": "2026-08-10T20:22:20.745Z",
-          "expiresAt": "2026-08-10T21:22:20.745Z",
+          "observedAt": "2026-08-11T02:15:24.717Z",
+          "expiresAt": "2026-08-11T03:15:24.717Z",
           "confidence": 1
         },
         {
@@ -102,8 +102,8 @@
           "key": "soldOutCount",
           "value": "1",
           "source": "FIXTURE",
-          "observedAt": "2026-08-10T20:22:20.745Z",
-          "expiresAt": "2026-08-10T21:22:20.745Z",
+          "observedAt": "2026-08-11T02:15:24.717Z",
+          "expiresAt": "2026-08-11T03:15:24.717Z",
           "confidence": 1
         }
       ]
@@ -147,7 +147,7 @@
       "등록하신 알레르기와 겹치는 메뉴 1개를 제외했습니다.",
       "품절된 메뉴 1개를 제외했습니다.",
       "원하시는 이용 방식이 불가능한 메뉴 1개를 제외했습니다.",
-      "이용 방식을 직접 골라 주셔서, 시간대(늦은 시간)는 순서에 반영하지 않았습니다."
+      "이용 방식을 직접 골라 주셔서, 시간대(점심 붐빔)는 순서에 반영하지 않았습니다."
     ],
     "unmetConditions": [],
     "confidence": 0.7,
@@ -156,7 +156,7 @@
   "userDecision": {
     "approved": true,
     "decision": "APPROVE",
-    "confirmedAt": "2026-08-10T20:22:20.757Z"
+    "confirmedAt": "2026-08-11T02:15:24.729Z"
   },
   "executionPlan": {
     "planId": "PLAN-23C-chicken-store",

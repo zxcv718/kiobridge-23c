@@ -59,15 +59,15 @@ export function Result() {
       ? <>실행 결과 {evResult === "PASS" ? <span className="pass">PASS</span> : <span className="fail">{evResult}</span>}</>
       : <Emphasize text="주문이 완성되었습니다" word="완성" />;
 
+  /* 성공한 주문에는 부제를 두지 않는다.
+   *
+   * «이 주문은 결제 직전에서 멈춥니다»를 여기서 또 말하고 있었다. 그 사실은 이미
+   * 장바구니 확인 화면에서 말했고, 결제 화면이 안 나온 것으로 사용자도 안다. 끝난
+   * 화면에서 규칙을 한 번 더 설명하는 것은 안내가 아니라 잔소리다.
+   * 실패한 경우에만 남긴다 — 그때는 «왜 멈췄는지»가 사용자가 지금 알아야 할 것이다. */
   const subtitle = failed
     ? "무엇이 막혔는지 아래에 그대로 적었습니다. 직원 도움을 이용하셔도 됩니다."
-    : plan
-      ? (plan.stopsAtReviewBoundary
-        ? <>이 주문은 <b>결제 직전 장바구니 확인 화면에서 멈춥니다.</b>{" "}
-          {plan.includesRequiredVerifier && "담긴 내용을 읽어서 확인하는 것까지가 끝이고, "}
-          결제는 사람이 직접 하도록 남겨 둡니다.</>
-        : <>이 주문은 <b>{plan.endsAtTitle}</b>에서 끝납니다.</>)
-      : undefined;
+    : undefined;
 
   return (
     <Screen
@@ -128,20 +128,20 @@ export function Result() {
             "아래 내용은 이번 주문에만 쓰고 지웠습니다. 이 기기에도 남아 있지 않습니다.",
           )}
       </p>
+      {/* 카드 아래 안내문을 걷어냈다. «지우면 즉시 삭제되며…»는 바로 위 버튼이 이미
+          «저장 지우기»라고 말하고 있어 같은 말을 두 번 하는 것이었고, 서버 저장 여부는
+          시작 화면과 저장 방식(S03)에서 이미 밝힌다. 끝난 화면에서 규칙을 다시 읽히지 않는다. */}
       <Card label={storeToggle ? "이 기기에 남은 내용" : "저장하지 않은 내용"} rows={savedRows} />
-      <p className="savenote">
-        {storeToggle
-          ? "지우면 즉시 삭제되며, 시작 화면에서도 지울 수 있습니다."
-          : "공용 기기에서는 저장하지 않는 편이 안전합니다."}
-        {" "}<b>서버·계정에는 어느 쪽이든 아무것도 저장되지 않습니다.</b>
-      </p>
 
-      {/* 기술적인 뒷받침 — 접어 둔다. 실제로 실행한 경우에만 펼친 채로 연다. */}
-      {(plan || ev) && (
-        <details className="resmore" open={!!ev}>
-          <summary>{ev ? "실행 증거와 내려받기" : "키오스크에서 가는 길 · 주문 계획 내려받기"}</summary>
+      {/* 실행 증거는 접어 둔다 — 심사·시연용이라 주문한 사람에게는 부차적이다.
+          반면 **주문 계획 내려받기는 접지 않는다.** 시뮬레이터가 없는 환경에서는 그 파일이
+          곧 결과물인데, «키오스크에서 가는 길 · 주문 계획 내려받기»라는 접힌 줄 뒤에
+          숨어 있었다. 무슨 뜻인지 알아야만 열어 볼 수 있는 자리에 결과물을 두지 않는다. */}
+      {ev && (
+        <details className="resmore" open>
+          <summary>실행 증거와 내려받기</summary>
           <div className="resbody">
-            {ev ? (
+            {(
               <>
                 <div className="evgrid">
                   <div className="evitem"><b>이 결과의 의미</b>형식·안전 검증 통과 (점수 아님)</div>
@@ -173,23 +173,27 @@ export function Result() {
                   }}>실행 증거(Evidence) 내려받기</button>
                 </div>
               </>
-            ) : plan && (
-              <>
-                <div className="evgrid">
-                  <div className="evitem"><b>주문 단계</b>{plan.stepCount}단계</div>
-                  <div className="evitem"><b>마지막 화면</b>{plan.endsAtTitle}</div>
-                  <div className="evitem"><b>결제 동작</b>{plan.paymentActionCount}건</div>
-                  <div className="evitem"><b>실제 기기로 간 명령</b>{plan.deviceCommandSent ? "있음(문제!)" : "없음"}</div>
-                </div>
-                <div className="btnrow">
-                  <button type="button" className="btn ghost" onClick={() => { if (submitted) downloadSubmission(submitted); }}>
-                    주문 계획(JSON) 내려받기
-                  </button>
-                </div>
-              </>
             )}
           </div>
         </details>
+      )}
+
+      {/* 시뮬레이터에 연결되지 않은 경우 — 내려받기가 곧 결과물이므로 접지 않고 바로 둔다 */}
+      {!ev && plan && (
+        <>
+          <h3 className="cart-cap">주문 계획</h3>
+          <div className="evgrid">
+            <div className="evitem"><b>주문 단계</b>{plan.stepCount}단계</div>
+            <div className="evitem"><b>마지막 화면</b>{plan.endsAtTitle}</div>
+            <div className="evitem"><b>결제 동작</b>{plan.paymentActionCount}건</div>
+            <div className="evitem"><b>실제 기기로 간 명령</b>{plan.deviceCommandSent ? "있음(문제!)" : "없음"}</div>
+          </div>
+          <div className="btnrow">
+            <button type="button" className="btn ghost" onClick={() => { if (submitted) downloadSubmission(submitted); }}>
+              주문 계획(JSON) 내려받기
+            </button>
+          </div>
+        </>
       )}
 
       {/* 오류 주입 7종 — 안전 시연의 핵심이라 없애지 않는다. 다만 «정상 결과»를 먼저

@@ -14,6 +14,12 @@ import { 아무거나답하고다음, HOME, approveToCartReview, enterWizard, fi
 
 test.use({ viewport: { width: 390, height: 844 } });
 
+/** «처음부터 새로 시작하기» → 되묻기 확인까지. 지우기는 되돌릴 수 없어 한 번 되묻는다. */
+async function 새로시작(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "처음부터 새로 시작하기" }).click();
+  await page.getByRole("button", { name: /네, 지우고 새로 시작할게요/ }).click();
+}
+
 const 저장본 = (page: Page) =>
   page.evaluate(() => {
     const raw = localStorage.getItem("kb23c-saved-settings-v4");
@@ -39,17 +45,29 @@ test("«처음부터 새로 시작하기»는 이름 그대로 지운다 — 그
   await 저장본만들기(page);
   /* 한때 이 버튼은 지우지 않고 화면만 옮겼고, 지우기는 따로 한 장 더 있었다. 두 버튼이
      같은 뜻으로 읽힌다는 지적이 맞았다 — 이름이 하는 말과 코드가 하는 일이 달랐다. */
-  await page.getByRole("button", { name: "처음부터 새로 시작하기" }).click();
+  await 새로시작(page);
 
   expect(await 저장본(page), "«처음부터 새로 시작»인데 지난 기록이 남아 있습니다").toBeNull();
   // 무로그인 가이드 6번 — 지웠다고 알려줘야 한다. 화면이 바뀐 것으로 추측하게 두지 않는다.
   await expect(page.getByRole("status")).toContainText("지웠습니다");
 });
 
-test("지운다는 사실을 누르기 전에 말한다 — 되돌릴 수 없는 일이다", async ({ page }) => {
+test("되돌릴 수 없는 일이므로 한 번 되묻고, 아니라고 하면 그대로 둔다", async ({ page }) => {
   await 저장본만들기(page);
-  await expect(page.locator(".home-warn")).toContainText("지웁니다");
-  await expect(page.locator(".home-warn")).toContainText("되돌릴 수 없습니다");
+  const 원래 = await 저장본(page);
+
+  await page.getByRole("button", { name: "처음부터 새로 시작하기" }).click();
+  /* 되묻는 자리에서만 이유를 말한다. 평소에 경고를 깔아 두면 지울 생각이 없는 사람까지
+     매번 읽고, 정작 지우는 순간에는 새로울 것이 없어 그냥 지나친다. */
+  await expect(page.getByRole("alert")).toContainText("되돌릴 수 없습니다");
+
+  // 되돌릴 수 없는 쪽이 주 버튼이면 안 된다 — 습관적으로 첫 버튼을 누르는 사람이 있다
+  const 아래 = await page.locator(".kb-actions button").allInnerTexts();
+  expect(아래[0], "삭제가 첫 버튼입니다").toMatch(/아니요/);
+
+  await page.getByRole("button", { name: /아니요/ }).click();
+  expect(await 저장본(page), "«아니요»라고 했는데 지워졌습니다").toEqual(원래);
+  await expect(page.getByRole("button", { name: "처음부터 새로 시작하기" })).toBeVisible();
 });
 
 test("저장된 내용을 지우지 않고 고칠 수 있다 — 가이드 4번의 «수정»", async ({ page }) => {
@@ -83,7 +101,7 @@ test("저장된 내용은 일부가 아니라 전부 보인다 — 가이드 4�
 
 test("«이번만 사용하기»는 지운다 — 그것이 사용자가 고른 뜻이다", async ({ page }) => {
   await 저장본만들기(page);
-  await page.getByRole("button", { name: "처음부터 새로 시작하기" }).click();
+  await 새로시작(page);
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "이번만 사용하기" }).click();
   expect(await 저장본(page), "«이번만 사용»인데 기기에 남아 있습니다").toBeNull();

@@ -45,8 +45,20 @@ export function buildProfile(raw: RawUserInput): UserProfile {
       language: typeof raw.language === "string" && raw.language.includes("-") ? raw.language : "ko-KR",
       confirmationRequired: true, // 승인 없는 실행은 이 서비스에 없다
     },
+    /* 동의 — docs/LOGINLESS_QR_PROFILE_GUIDE.md 7번의 표를 그대로 따른다.
+     *
+     *   이번만 사용  → SESSION_ONLY        · personalization: false
+     *   기기에 저장  → UNTIL_USER_DELETES  · personalization: true
+     *
+     * personalization 을 늘 true 로 두었던 자리다. 스키마는 boolean 이라고만 하므로
+     * 계약 위반은 아니었지만, 키트가 표로 못 박아 둔 매핑과 달랐다.
+     *
+     * 여기서 말하는 «개인화»는 **프로필을 남겨 다음에도 쓰는 것**이다. 이번 답변으로
+     * 이번 추천을 맞추는 일은 저장 여부와 무관하게 늘 하며, 그것까지 «동의 안 함»이라고
+     * 적는 뜻이 아니다. 두 값이 늘 같이 움직이는 이유이기도 하다 — 남기지 않기로 한
+     * 사람에게 남겨서 하는 개인화는 성립하지 않는다. */
     consent: {
-      personalization: true,
+      personalization: asBool(raw.storeProfile),
       // "이번 한 번만"이 기본값 — 저장을 원할 때만 UNTIL_USER_DELETES
       retentionPolicy: asBool(raw.storeProfile) ? "UNTIL_USER_DELETES" : "SESSION_ONLY",
     },

@@ -58,10 +58,10 @@ test("삭제와 수정 둘 다 닿는다 — 아래 버튼 자리를 쓰지 않�
   const 본문안 = await 수정.evaluate((el) => !!el.closest(".kb-screen-body") && !el.closest(".kb-actions"));
   expect(본문안, "수정 버튼이 아래 버튼 더미에 있습니다").toBe(true);
 
-  // 삭제는 아래 버튼이 겸한다 — 누르기 전에 그 사실을 말한다
-  await expect(page.locator(".home-warn")).toContainText("지웁니다");
-
+  // 삭제는 아래 버튼이 겸한다 — 되돌릴 수 없으므로 한 번 되묻는다
   await page.getByRole("button", { name: "처음부터 새로 시작하기" }).click();
+  await expect(page.getByRole("alert")).toContainText("되돌릴 수 없습니다");
+  await page.getByRole("button", { name: /네, 지우고 새로 시작할게요/ }).click();
   const 남았나 = await page.evaluate(() => localStorage.getItem("kb23c-saved-settings-v4"));
   expect(남았나, "«처음부터 새로 시작»인데 기록이 남아 있습니다").toBeNull();
 });
