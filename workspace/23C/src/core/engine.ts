@@ -51,8 +51,11 @@ export interface FilterResult {
   hardConstraintUnknown: boolean;
 }
 
+/* 표기는 시안 99:1246 을 따른다 — 「콩(대두)」가 아니라 「대두」다.
+   같은 표가 ui/src/screens/CartReview.tsx 에도 있다. 한쪽만 고치면 제외 사유와
+   장바구니가 서로 다른 이름으로 같은 알레르겐을 부른다. 둘을 함께 고친다. */
 const ALLERGEN_KO: Record<string, string> = {
-  PEANUT: "땅콩", SOY: "콩(대두)", MILK: "우유", EGG: "계란", WHEAT: "밀", SHRIMP: "새우",
+  PEANUT: "땅콩", SOY: "대두", MILK: "우유", EGG: "계란", WHEAT: "밀", SHRIMP: "새우",
 };
 const definite = (v: string | undefined): v is string =>
   v !== undefined && v !== SENTINEL.NO_PREFERENCE && v !== SENTINEL.UNKNOWN && v !== SENTINEL.NOT_APPLICABLE;

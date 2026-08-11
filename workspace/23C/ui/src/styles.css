@@ -137,10 +137,16 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 .stepmeta { color: var(--muted); font-size: 0.8em; font-weight: 700; letter-spacing: 0.06em; }
 
 .choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 8px 0; }
-/* 굵기는 시안 값이다 — 선택지 라벨은 Regular 다(99:1278 「뼈」 `font-normal` 18px).
-   한때 700 이었고, CTA 는 800 이었다. 화면에 가장 많이 나오는 것이 이 둘이라
-   «무엇을 골라도 전부 굵어 보인다»는 인상이 거기서 왔다. 강조는 굵기가 아니라
-   크기·색·테두리가 맡는다 — 다 굵으면 아무것도 굵지 않은 것과 같다. */
+/* 굵기는 시안 값이다. 한때 여기가 700, CTA 가 800 이었고 «무엇을 골라도 전부 굵어
+   보인다»는 인상이 거기서 왔다.
+
+   다만 «선택지는 다 Regular» 는 아니다 — 그건 아이콘 타일 하나(99:1278 「뼈」
+   `font-normal`)를 보고 선택지 전체로 넓힌 것이었고, 시안은 그렇게 말한 적이 없다.
+   시안의 문법은 **아이콘이 강조를 지면 라벨은 Regular, 아이콘이 없으면 라벨이 직접
+   Bold** 다(99:1268 「순한맛」·「보통맛」은 `Noto_Sans_KR:Bold` 18px).
+
+   여기 400 은 아이콘 타일 쪽 기본값이고, 글자만 있는 줄은 question.css 의
+   `.q-rows .choice` 가 700 으로 덮는다. */
 .choice {
   min-height: 64px; padding: 12px; font-size: 1em; font-weight: 400; cursor: pointer;
   border: 2px solid var(--line); border-radius: 12px; background: var(--card); color: var(--fg);

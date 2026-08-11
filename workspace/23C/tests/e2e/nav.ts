@@ -22,7 +22,7 @@ import { expect, type Page } from "@playwright/test";
 export const HOME = "http://localhost:5173/";
 
 /** 알레르기 «확장» 걸음에만 있는 항목들 — 첫 걸음에는 「없어요/있어요」 두 장뿐이다 */
-const ALLERGY_ITEMS = ["땅콩", "콩(대두)", "우유", "계란", "밀", "새우"];
+const ALLERGY_ITEMS = ["땅콩", "대두", "우유", "계란", "밀", "새우"];
 
 /**
  * 지금 질문에 «아무 답이나» 하고 다음으로 넘어간다.
