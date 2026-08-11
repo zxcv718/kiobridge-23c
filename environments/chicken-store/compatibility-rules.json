@@ -71,6 +71,40 @@
       "absentMeans": "NONE"
     },
     {
+      "ruleId": "CHICKEN_BONE_TYPE_PREFERENCE",
+      "description": "뼈 유형 선호",
+      "source": {
+        "section": "preferences",
+        "path": "boneType"
+      },
+      "candidate": {
+        "source": "supportedOptions",
+        "key": "BONE_TYPE"
+      },
+      "operator": "IN",
+      "severity": "WARN",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "BONE_TYPE_MISMATCH",
+      "absentMeans": "NONE"
+    },
+    {
+      "ruleId": "CHICKEN_CUP_OPTION_PREFERENCE",
+      "description": "컵 옵션 선호",
+      "source": {
+        "section": "preferences",
+        "path": "cupOption"
+      },
+      "candidate": {
+        "source": "supportedOptions",
+        "key": "CUP"
+      },
+      "operator": "IN",
+      "severity": "WARN",
+      "unknownPolicy": "IGNORE",
+      "errorCode": "CUP_OPTION_MISMATCH",
+      "absentMeans": "NONE"
+    },
+    {
       "ruleId": "CHICKEN_SELECTED_SERVICE_TYPE",
       "description": "실행계획이 선택한 이용방식",
       "evaluationScope": "EXECUTION_CHOICE",
