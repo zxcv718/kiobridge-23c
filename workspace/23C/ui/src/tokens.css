@@ -6,10 +6,11 @@
  * 이 제품의 핵심 주장이라 «디자인이 그래서»는 근거가 되지 못한다.
  * 판정은 src/core/contrast.ts 가 하고 tests/a11y.test.ts 가 지킨다.
  *
- * ① 보조 글씨색
- *    같은 파일에 두 값이 있었다 — `color/text/secondary` #8c8c8c 와
- *    `--kb-color-text-secondary` #45454d. 앞의 것은 흰 배경에서 3.36:1 로
- *    본문 기준(4.5) 미달이다. 뒤의 것(9.50:1)을 채택한다.
+ * ① 보조 글씨색 — **시안 값(#8c8c8c)으로 되돌렸다.**
+ *    흰 배경에서 3.36:1 이라 본문 기준(4.5) 미달이다. 한때 #45454d(9.50:1)로 올려
+ *    두었는데, 기획에서 «시안에 있는 것은 시안 그대로»를 요청해 되돌렸다.
+ *    **미달이라는 사실을 숨기지 않는다** — tests/contrast.test.ts 가 계산해 기록하고,
+ *    README 알려진 제한사항에도 적는다. 지킬 수 없는 것을 지킨다고 적지 않는다.
  *
  * ② 흰 글씨가 올라가는 주황
  *    브랜드 주황 #ff5a1f 위의 흰 글씨는 3.12:1 이다. CTA 라벨이 18px Medium 이라
@@ -34,13 +35,13 @@
 
 :root {
   /* ── 색: 글자 ── */
-  --kb-color-text-primary: #1b1b1f;    /* 흰 배경 17.17:1 */
-  --kb-color-text-secondary: #45454d;  /* 흰 배경  9.50:1 — ①  */
+  --kb-color-text-primary: #212121;    /* 시안 값 — 흰 배경 16.10:1 */
+  --kb-color-text-secondary: #8c8c8c;  /* 시안 값 — 흰 배경 3.36:1 (AA 미달, ① 참고) */
   --kb-color-text-tertiary: #464c53;   /* 흰 배경  8.68:1 */
   --kb-color-text-inverse: #ffffff;
 
   /* ── 색: 바탕 ── */
-  --kb-color-bg-canvas: #f7f7f8;
+  --kb-color-bg-canvas: #ffffff;       /* 시안 화면 바탕은 surface(흰색)다 */
   --kb-color-bg-surface: #ffffff;
   --kb-color-bg-surface-sunken: #f2f2f2;
   --kb-color-bg-surface-accent: #fbf3d8;

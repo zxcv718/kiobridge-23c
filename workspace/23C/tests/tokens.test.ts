@@ -34,14 +34,20 @@ describe("토큰 정의", () => {
     }
   });
 
-  it("대비 미달로 버린 값이 되돌아오지 않는다", () => {
-    // #8c8c8c(3.36:1) 는 Figma 에 있지만 채택하지 않았다. 누가 다시 가져오면 여기서 걸린다.
-    expect(allCss()).not.toMatch(/#8c8c8c/i);
-  });
-
-  it("보조 글씨색은 Figma 의 두 값 중 통과하는 쪽이다", () => {
-    expect(BASE["--kb-color-text-secondary"]).toBe("#45454d");
-    expect(contrastRatio("#45454d", "#ffffff")).toBeGreaterThanOrEqual(AA_TEXT);
+  /**
+   * 보조 글씨색은 **시안 값(#8c8c8c)을 쓴다.** 기획이 «시안에 있는 것은 시안 그대로»를
+   * 요청했고, 그 판단은 우리 것이 아니다.
+   *
+   * 다만 미달이라는 사실은 숨기지 않는다. 한때 이 자리에 «#8c8c8c 가 되돌아오면 실패»
+   * 하는 검사가 있었는데, 그건 우리가 내린 결정을 지키는 검사였다. 결정이 바뀌었으니
+   * 검사가 지킬 것도 바뀐다 — **얼마나 미달인지를 숫자로 못 박는다.** 값이 조용히
+   * 더 나빠지면 여기서 걸리고, README 알려진 제한사항의 숫자와도 어긋나지 않는다.
+   */
+  it("보조 글씨색은 시안 값이고, 미달 폭을 숫자로 기록한다", () => {
+    expect(BASE["--kb-color-text-secondary"]).toBe("#8c8c8c");
+    const ratio = contrastRatio("#8c8c8c", "#ffffff");
+    expect(Math.round(ratio * 100) / 100, "README 에 적은 3.36:1 과 달라졌습니다").toBe(3.36);
+    expect(ratio, "본문 기준을 넘었다면 이 검사와 README 를 같이 고쳐야 합니다").toBeLessThan(AA_TEXT);
   });
 
   it("흰 글씨를 얹는 강조색이 따로 있고, 그 위에서 본문 기준을 넘는다", () => {
@@ -70,14 +76,25 @@ describe("토큰 정의", () => {
 
 describe("화면에 실제로 나오는 색쌍 — CSS 에서 뽑아 전수 검사", () => {
   for (const [modeName, palette] of [["기본", BASE], ["고대비", CONTRAST]] as const) {
-    it(`${modeName} 팔레트의 모든 글씨/바탕 쌍이 4.5:1 이상이다`, () => {
+    it(`${modeName} 팔레트의 글씨/바탕 쌍 — 시안이 정한 보조색 말고는 4.5:1 이상이다`, () => {
       const pairs = colorPairs(palette);
       expect(pairs.length, "색쌍을 하나도 못 찾았습니다 — 파서가 고장났을 수 있습니다").toBeGreaterThan(5);
       const bad = pairs
         .map((p) => ({ ...p, ratio: contrastRatio(p.fg, p.bg) }))
-        .filter((p) => p.ratio < AA_TEXT)
+        .filter((p) => p.ratio < AA_TEXT);
+
+      /* 예외는 **하나뿐이다** — 시안이 정한 보조 글씨색(#8c8c8c, 3.36:1).
+         기획이 «시안에 있는 것은 시안 그대로»를 요청해 받아들인 값이고, README 알려진
+         제한사항에 적혀 있다. 그 하나를 통째로 눈감아 주면 다른 미달까지 같이 숨으므로,
+         **«보조색이 글씨인 경우»만** 빼고 나머지는 그대로 잡는다. */
+      const 시안보조색 = (p: { fg: string }) => p.fg.toLowerCase() === "#8c8c8c";
+      const 그밖에 = bad.filter((p) => !(modeName === "기본" && 시안보조색(p)))
         .map((p) => `${p.file} ${p.selector} — ${p.fg} on ${p.bg} = ${p.ratio.toFixed(2)}:1`);
-      expect(bad, `대비 미달:\n  ${bad.join("\n  ")}`).toEqual([]);
+      expect(그밖에, `대비 미달:\n  ${그밖에.join("\n  ")}`).toEqual([]);
+
+      if (modeName === "고대비") {
+        expect(bad, "고대비 모드에는 예외가 없어야 합니다").toEqual([]);
+      }
     });
   }
 

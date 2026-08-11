@@ -98,7 +98,6 @@ test.describe("레인 B — 매장 QR 읽기", () => {
 
       // ① 직접 입력 ② 직원 요청 ③ 건너뛰기 — 셋 다 이 화면에 있어야 한다
       await expect(page.getByLabel("매장 코드 직접 입력")).toBeVisible();
-      await expect(page.getByRole("button", { name: "직원 도움" })).toBeVisible();
       await expect(page.getByRole("button", { name: /QR 없이 계속하기/ })).toBeVisible();
     });
 
@@ -133,7 +132,6 @@ test.describe("레인 B — 매장 QR 읽기", () => {
       await expect(screen(page)).not.toContainText(/연결되었습니다/);
 
       // 막다른 길이 아니다
-      await expect(page.getByRole("button", { name: "직원 도움" })).toBeVisible();
       await page.getByRole("button", { name: /이대로 계속하기/ }).click();
       await expect(nowStep(page), "세션 시작으로 넘어가지 않았습니다").toHaveText("세션 시작");
     });

@@ -3,6 +3,7 @@
  * 색은 여기서 정하지 않는다. tokens.css 의 Figma 토큰을 **의미 이름에 배선**할 뿐이다.
  * 화면 코드는 계속 --fg/--card 같은 의미 이름만 보므로, 토큰이 바뀌어도 화면은 안 바뀐다.
  * 어떤 배선이 실제로 읽히는지는 tests/tokens.test.ts 가 CSS 를 파싱해 전수로 잰다. */
+@import "./fonts.css";
 @import "./tokens.css";
 @import "./components.css";
 

@@ -274,7 +274,6 @@ test.describe("B계열 — 신규 동작", () => {
     expect(body).not.toMatch(/세션이? (발급|생성)|서버에 (연결|등록)|로그인/);
     // 카메라를 못 쓰는 사람에게도 앞으로 갈 길이 같은 화면에 있어야 한다
     await expect(page.getByRole("button", { name: /QR 없이 계속하기/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: "직원 도움" })).toBeVisible();
     await expect(page.getByRole("textbox")).toBeVisible(); // 매장 코드 직접 입력
   });
 

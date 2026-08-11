@@ -70,7 +70,7 @@ test.describe("A계열 — 프로필 흐름", () => {
        lane-d.spec.ts 의 CASE 표가 그 길이다.) */
     await expect(page.locator("section[aria-label='시연 사례']")).toHaveCount(0);
     await expect(page.locator(".presetrow")).toHaveCount(0);
-    // 홈의 조작 요소는 [시작하기]·[직원 도움] 둘뿐이다 — 시작 결정이 두 곳으로 갈리지 않는다
+    // 홈의 조작 요소는 [시작하기] 하나뿐이다 — 시안 150:162 가 그렇다
     await expect(page.getByRole("button", { name: /시작/ })).toHaveCount(1);
   });
 
@@ -273,7 +273,8 @@ test.describe("A계열 — 프로필 흐름", () => {
         .map((e) => ({ h: e.getBoundingClientRect().height, t: (e as HTMLElement).innerText.slice(0, 24) })));
     const check = async (where: string) => {
       const boxes = await heights();
-      expect(boxes.length, `${where} 에 조작 요소가 없습니다`).toBeGreaterThan(1);
+      // S01 은 시안대로 [시작하기] 하나뿐이다 — 적은 것이 목표였지 사고가 아니다
+      expect(boxes.length, `${where} 에 조작 요소가 없습니다`).toBeGreaterThanOrEqual(1);
       for (const b of boxes) expect(b.h, `${where} "${b.t}" 높이 ${b.h}px`).toBeGreaterThanOrEqual(48);
     };
 
@@ -297,17 +298,5 @@ test.describe("A계열 — 프로필 흐름", () => {
     for (let i = 0; i < 5; i++) await page.getByRole("button", { name: "뒤로" }).click();
     await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요/ })).toBeVisible();
     await check("S01");
-  });
-
-  test("A11 네 화면 모두에서 직원 도움에 닿는다", async ({ page }) => {
-    const staff = page.getByRole("button", { name: "직원 도움" }).first();
-    await home(page);
-    await expect(staff).toBeVisible();
-    await page.getByRole("button", { name: "시작하기" }).click();
-    await expect(staff).toBeVisible();
-    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
-    await expect(staff).toBeVisible();                                   // S03
-    await chooseAndSkipQr(page);
-    await expect(staff).toBeVisible();                                   // S05
   });
 });

@@ -192,7 +192,7 @@ export function QuestionScreen() {
           value={typeof answers.quantity === "number" ? answers.quantity : undefined}
           onChange={(n) => setAnswers((p) => ({ ...p, quantity: n }))}
           max={QUANTITY_MAX}
-          atMaxNote={<>한 번에 {QUANTITY_MAX}개까지 고르실 수 있어요. 더 필요하시면 «직원 도움»을 눌러 주세요.</>}
+          atMaxNote={<>한 번에 {QUANTITY_MAX}개까지 고르실 수 있어요. 더 필요하시면 매장 직원에게 말씀해 주세요.</>}
         />
       ) : (
         <div className={`q-choices q-${알레르기목록 ? "rows" : shape}`}>

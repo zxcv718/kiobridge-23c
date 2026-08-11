@@ -140,9 +140,9 @@ test.describe("접근성 실측", () => {
         .map((e) => ({ h: e.getBoundingClientRect().height, t: (e as HTMLElement).innerText.slice(0, 20) })),
     );
     /* 화면이 비어 있지 않은지만 본다. 디자인대로 재배치한 뒤 홈의 조작 요소는
-       [시작하기]·[직원 도움] 둘뿐이다 — 적은 것이 목표였지 사고가 아니다.
+       [시작하기] 하나뿐이다 — 시안 150:162 가 그렇고, 직원 도움을 걷어내며 더 줄었다.
        이 가드는 «아무것도 못 찾았는데 통과»를 막으려는 것이다. */
-    expect(boxes.length, "조작 요소를 하나도 못 찾았습니다").toBeGreaterThan(1);
+    expect(boxes.length, "조작 요소를 하나도 못 찾았습니다").toBeGreaterThanOrEqual(1);
     for (const b of boxes) expect(b.h, `"${b.t}" 높이 ${b.h}px`).toBeGreaterThanOrEqual(48);
   });
 
@@ -169,23 +169,5 @@ test.describe("접근성 실측", () => {
     // 선택 상태가 aria-pressed 로도 노출된다 (색 의존 아님)
     const pressed = await page.locator(".a11yrow[aria-pressed]").count();
     expect(pressed).toBeGreaterThan(4);
-  });
-
-  test("모든 화면에서 직원 도움에 닿는다", async ({ page }) => {
-    await expect(page.getByRole("button", { name: "직원 도움", exact: true })).toBeVisible();
-    // 늘어난 네 걸음에서도 매 화면에 있어야 한다 — 한 걸음씩 확인한다
-    await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
-    for (let i = 0; i < 3; i++) {
-      await expect(page.getByRole("button", { name: "직원 도움", exact: true }), `프로필 ${i + 1}/3 단계`).toBeVisible();
-      await page.getByRole("button", { name: "다음", exact: true }).click();
-    }
-    await expect(page.getByRole("button", { name: "직원 도움", exact: true }), "저장 방식").toBeVisible();
-    // S03 은 «다음»이 아니라 저장 방식 CTA 를 고르는 순간 QR 로 간다
-    await page.getByRole("button", { name: "이번만 사용하기" }).click();
-    await expect(page.getByRole("button", { name: "직원 도움", exact: true }), "매장 QR").toBeVisible();
-    await page.getByRole("button", { name: "QR 없이 계속하기" }).click();
-    await expect(page.getByRole("button", { name: "직원 도움", exact: true }), "세션 시작").toBeVisible();
-    await page.getByRole("button", { name: /^(주문 시작하기|아니오, 새로 고를게요)$/ }).click();
-    await expect(page.getByRole("button", { name: "직원 도움", exact: true }), "질문").toBeVisible();
   });
 });

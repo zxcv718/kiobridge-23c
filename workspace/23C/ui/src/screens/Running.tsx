@@ -18,7 +18,6 @@ export function Running() {
   return (
     <Screen
       label="가상 키오스크 실행 중"
-      noStaff="1초 남짓 지나가는 진행 표시이며 조작 요소가 없다"
       busy
       eyebrow="잠시만 기다려 주세요"
       title={<Emphasize text="가상 키오스크에서 실행 중입니다" word="실행 중" />}

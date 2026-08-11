@@ -74,8 +74,7 @@ test("위끝에서 막다른 길을 만들지 않는다 — 왜 못 누르는지
     await 늘리기.click();
   }
   expect(await 지금값(page)).toContain("10");
-  await expect(page.locator(".stepnote")).toContainText("직원 도움");
-  await expect(page.getByRole("button", { name: "직원 도움" }).first()).toBeVisible();
+  await expect(page.locator(".stepnote")).toContainText("매장 직원에게 말씀해 주세요");
 });
 
 test("누르는 자리가 48px 이상이고, 낭독기에는 수 입력 하나로 읽힌다", async ({ page }) => {

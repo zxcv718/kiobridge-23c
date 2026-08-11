@@ -32,22 +32,24 @@ import "./cart.css";
  *    디자인과 다른 것이 된다. 그 자리는 «무슨 일이 일어났는가»를 말하는 알림이 쓴다.
  */
 export function SafetyStop() {
-  const { t, staffBtn, setReconfirmCount, setEditOpen, setStep } = useFlow();
+  const { t, setReconfirmCount, setEditOpen, setStep } = useFlow();
 
   return (
     <Screen
       label="안전 중단"
-      noStaff="이 화면에서는 직원 도움이 «비상구»가 아니라 **주 동작**이다 — 머리 줄의 작은 버튼이 아니라 아래 첫 버튼으로 둔다"
       eyebrow={<span className="stoplabel">진행 중단</span>}
       title="확인이 어려워 진행을 멈췄어요"
       subtitle={t(
-        "두 번 여쭤봤는데도 확실하지 않았습니다. 어려우시면 직원을 불러주세요.",
-        "두 번 확인을 요청드렸는데도 조건이 확실해지지 않았습니다. 임의로 판단해서 진행하지 않습니다 — 어려우시면 직원을 불러주세요.",
+        "두 번 여쭤봤는데도 확실하지 않았습니다. 매장 직원에게 말씀해 주세요.",
+        "두 번 확인을 요청드렸는데도 조건이 확실해지지 않았습니다. 임의로 판단해서 진행하지 않습니다 — 매장 직원에게 말씀해 주세요.",
       )}
       actions={(
         <>
-          {staffBtn("btn primary")}
-          <Cta label="조건 다시 보기"
+          {/* 시안 99:1337 은 «매장 직원에게 말씀해 주세요»를 **문장**으로 두고 버튼은
+              [처음으로 돌아가기] 하나다. 직원 호출 버튼을 두지 않는다.
+              «조건 다시 보기»는 시안에 없지만 남긴다 — 없으면 조건을 고쳐 빠져나올 길이
+              사라져 이 화면이 막다른 길이 된다. 시안이 다루지 않은 자리다. */}
+          <Cta tone="primary" label="조건 다시 보기"
             onClick={() => { setReconfirmCount(0); setEditOpen("allergies"); setStep("edit"); }} />
           <Cta label="처음으로 돌아가기" onClick={() => setStep("start")} />
         </>

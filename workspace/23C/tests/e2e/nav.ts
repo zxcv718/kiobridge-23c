@@ -181,6 +181,8 @@ export async function approveToCartReview(page: Page): Promise<void> {
 export async function finishOrder(page: Page): Promise<void> {
   const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });
   await ((await live.count()) > 0 ? live : page.getByRole("button", { name: /주문 확정하기/ })).click();
-  await expect(page.getByRole("heading", { name: /실행 결과|주문이 완성되었습니다|실행하지 못했습니다/ }))
+  /* level 2 를 지정한다 — 결과 화면 본문에 «주문 계획» 소제목(h3)이 생겨
+     이름만으로 찾으면 둘이 걸린다. 화면 제목은 언제나 h2 하나뿐이다. */
+  await expect(page.getByRole("heading", { level: 2, name: /실행 결과|주문이 완성되었습니다|실행하지 못했습니다/ }))
     .toBeVisible({ timeout: 20_000 });
 }

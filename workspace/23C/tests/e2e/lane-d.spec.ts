@@ -61,12 +61,11 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
   });
 
-  test("D2 메뉴 확인에는 되돌아갈 길과 직원 도움이 있다", async ({ page }) => {
+  test("D2 메뉴 확인에는 되돌아갈 길이 있다", async ({ page }) => {
     await start(page);
     await toCartReview(page);
     await page.getByRole("button", { name: "뒤로" }).click();
 
-    await expect(page.getByRole("button", { name: "직원 도움" }).first()).toBeVisible();
     await page.getByRole("button", { name: "다른 메뉴 볼게요" }).click();
     await expect(page.getByRole("button", { name: "네, 좋아요" })).toBeVisible();
   });
@@ -135,7 +134,6 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await start(page);
     await toCartReview(page);
     await expect(page.getByText(/실제 결제·주문은 일어나지 않습니다/)).toBeVisible();
-    await expect(page.getByRole("button", { name: "직원 도움" }).first()).toBeVisible();
   });
 
   /* ───────── S14 수정 (Figma 114:2008) ───────── */
@@ -204,40 +202,6 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(box.getByText("수량")).toBeVisible();
   });
 
-  test("D10 결과 화면의 직원 도움이 화면 끝까지 내려가지 않아도 닿는다", async ({ page }) => {
-    await start(page);
-    await toCartReview(page);
-    await finishOrder(page);
-
-    /* 예전에는 «저장 안내 카드(section.savebox)보다 위인가»로 쟀다. 결과 화면이 카드를
-       쌓지 않게 되면서 그 기준점 자체가 없어졌다 — 저장 결과는 이제 본문에 한 줄로
-       녹아 있다. 지키려던 것은 «어느 카드보다 위»가 아니라 **끝까지 내려가지 않아도
-       닿는다**였으므로, 이제 그것을 직접 잰다. 직원 도움은 화면 아래 CTA(.kb-actions)에
-       있고 그 바깥에서 본문만 스크롤하므로, 내용이 아무리 길어도 첫 화면 안에 남는다.
-
-       재는 대상이 문서에서 **본문(.kb-screen-body)**으로 바뀌었다. 문서 전체를 스크롤
-       시키면 내용이 CTA 밑으로 지나가 «보이는데 안 눌리는» 버튼이 생겨서, 높이를 화면에
-       못 박고 본문만 스크롤하도록 바꿨다(tap-target.spec.ts). 그래서 문서 스크롤은 늘 0
-       이고, 여기서 «내용이 한 화면을 넘는가»는 본문 상자에게 물어야 한다. */
-    const view = page.viewportSize()!;
-    const scroll = await page.evaluate(() => {
-      const body = document.querySelector(".kb-screen-body");
-      return {
-        over: body ? body.scrollHeight - body.clientHeight : -1,
-        y: body ? body.scrollTop : -1,
-      };
-    });
-    expect(scroll.y, "이 검사는 스크롤하지 않은 상태에서 재야 합니다").toBe(0);
-    expect(scroll.over, "결과 화면이 한 화면에 들어와 이 검사가 무의미합니다").toBeGreaterThan(0);
-
-    const staff = page.getByRole("button", { name: "직원 도움" }).first();
-    await expect(staff).toBeVisible();
-    const s = await staff.boundingBox();
-    expect(s).not.toBeNull();
-    expect(s!.y, "직원 도움이 첫 화면 위로 넘어갔습니다").toBeGreaterThanOrEqual(0);
-    expect(s!.y + s!.height, `직원 도움이 첫 화면(${view.height}px) 밖으로 밀렸습니다 — 끝까지 내려가야 닿습니다`)
-      .toBeLessThanOrEqual(view.height);
-  });
 
   test("D11 내려받기 두 파일의 방향 안내와 오류 주입 7종이 그대로 있다", async ({ page }) => {
     await start(page);
@@ -268,23 +232,19 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
   /* ───────── S12 안전 중단 (Figma 99:1337) ───────── */
 
-  test("D12 안전 중단 화면은 직원 도움이 첫 번째 버튼이다", async ({ page }) => {
+  test("D12 안전 중단은 직원에게 말하라고 «글로» 알리고, 빠져나갈 길을 남긴다", async ({ page }) => {
     await start(page);
     await toRecommend(page, CASE.unknown);
-    await expect(page.getByText(/확실하지 않은 정보가 있어요/)).toBeVisible();
-
     await page.getByRole("button", { name: "조건 수정" }).click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
-
     await expect(page.getByRole("heading", { name: /확인이 어려워/ })).toBeVisible();
-    /* «아무 준비도 시작되지 않았다»를 두 군데서 두 번 하던 말이 한 덩어리(.stopalert)로
-       합쳐졌다. 문구가 옮겨 간 자리에서 같은 사실을 잰다. */
-    await expect(page.locator(".stopalert"))
-      .toContainText("실행 계획이 만들어지지 않았고, 장바구니에도 아무것도 담기지 않았습니다");
 
-    /* 버튼은 .btnrow 가 아니라 화면 아래 붙는 CTA(.kb-actions)에 있다 — 자리만 옮겼을 뿐
-       «직원 도움이 첫 번째»라는 이 화면의 존재 이유는 그대로 검사한다. */
+    /* 시안 99:1337 은 «매장 직원에게 말씀해 주세요»를 문장으로 두고 버튼은 하나뿐이다.
+       직원 호출 버튼을 두지 않는다 — 그러면 이 화면이 막다른 길이 되므로, 조건을 고쳐
+       빠져나갈 길만 남긴다(시안이 다루지 않은 자리다). */
+    await expect(page.getByText(/매장 직원에게 말씀해 주세요/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "직원 도움" })).toHaveCount(0);
     const first = page.locator(".kb-actions button").first();
-    await expect(first).toHaveText("직원 도움");
+    await expect(first).toHaveText("조건 다시 보기");
   });
 });

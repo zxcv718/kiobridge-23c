@@ -108,42 +108,24 @@ describe("접근성 — 선언한 보증이 실제로 코드에 있는가", () =
     expect(APP, "그림을 CSS 배경으로 깔면 라벨을 지워도 티가 안 난다").not.toMatch(/\.ico\s*\{[^}]*background-image/);
   });
 
-  it("직원 도움이 모든 화면에서 닿는다 — 화면 목록을 손으로 적지 않는다", () => {
-    expect(UI_GUARANTEES.staffHelpReachableFromEveryStep).toBe(true);
+  it("직원 도움은 «직원 도움 먼저»를 켠 사람에게 따라온다 — 그리고 선언이 그 사실과 같다", () => {
+    /* 화면마다 상시로 두던 직원 도움을 걷어냈다. 시안 어느 화면에도 없는 요소였고,
+       기획이 «시안에 있는 화면은 시안 그대로»를 요청했다.
+       **선언을 같이 내렸다** — 지키지 않는 것을 지킨다고 적지 않는다. 대신 사용자가
+       «직원 도움 먼저»를 켜면 상단 띠로 따라오고, 그 사실을 새 선언이 말한다. */
+    expect(UI_GUARANTEES.staffHelpReachableFromEveryStep,
+      "화면마다 상시로 두지 않기로 했는데 선언이 그대로입니다").toBe(false);
+    expect((UI_GUARANTEES as Record<string, unknown>).staffHelpShownWhenUserOptsIn).toBe(true);
 
-    /* 예전에는 화면마다 `staffBtn()` 을 부르게 하고 그 호출을 셌다. 화면 아래 버튼 더미가
-       비상구 때문에 매번 한 칸씩 길어지자 비상구를 **화면 골격(Screen)**의 머리 줄로
-       옮겼고, 그러면서 «화면 파일에 staffBtn 이 있는가»는 잴 수 있는 것이 아니게 됐다.
-       재는 것을 바꾼다 — 약하게가 아니라 **한 단계 위에서**:
-         ① 골격이 실제로 직원 도움을 그리는가
-         ② 모든 화면이 그 골격을 쓰는가
-         ③ 끄는 곳은 이유를 적었는가, 그리고 «끄고 대신 자기가 두는» 곳은 정말 두었는가
-       화면마다 한 줄씩 반복하지 않게 됐으니, 새 화면은 아무것도 안 해도 비상구를 갖는다. */
-    const screen = uiSources().find((f) => f.name === "components/Screen.tsx");
-    expect(screen, "components/Screen.tsx 를 못 찾았습니다").toBeDefined();
-    expect(screen!.text, "화면 골격이 직원 도움을 그리지 않습니다").toMatch(/직원 도움/);
-    expect(screen!.text, "직원 도움이 «staff» 화면으로 가지 않습니다").toMatch(/setStep\("staff"\)/);
-    /* 이유 없이 끌 수 없어야 한다 — boolean 이면 `noStaff` 한 단어로 비상구가 사라진다 */
-    expect(screen!.text, "noStaff 가 문자열(이유)이 아닙니다").toMatch(/noStaff\?:\s*string/);
+    // 켠 사람에게 나오는 길이 실제로 있는가 — 선언만 하고 끊어 두지 않는다
+    const app = uiSources().find((f) => f.name === "App.tsx");
+    expect(app, "ui/src/App.tsx 를 못 찾았습니다").toBeDefined();
+    expect(app!.text, "«직원 도움 먼저»를 켜도 나오는 곳이 없습니다").toMatch(/staffAssistancePreferred/);
+    expect(app!.text).toMatch(/staffBtn\(/);
 
-    const screens = uiSources().filter((f) => f.name.startsWith("screens/"));
-    expect(screens.length, "screens/ 에서 화면 파일을 찾지 못했습니다").toBeGreaterThan(5);
-    for (const s of screens) {
-      const base = s.name.slice("screens/".length);
-      expect(/<Screen[\s>]/.test(s.text), `${base} 가 화면 골격(Screen)을 쓰지 않아 비상구가 없습니다`).toBe(true);
-
-      const 껐나 = /noStaff=/.test(s.text);
-      const reason = STAFF_EXEMPT[base];
-      expect(껐나, 껐나
-        ? `${base} 가 직원 도움을 껐는데 면제 목록에 없습니다 — 이유와 함께 적어 주세요`
-        : `${base} 는 면제(${reason})인데 끄지 않았습니다 — 면제 목록에서 빼 주세요`)
-        .toBe(Boolean(reason));
-
-      // 끄고 «대신 자기가 두기로 한» 화면은 정말로 두어야 한다
-      if (STAFF_IN_ACTIONS.includes(base)) {
-        expect(/staffBtn\(/.test(s.text), `${base} 는 직원 도움을 스스로 두기로 한 화면인데 없습니다`).toBe(true);
-      }
-    }
+    // 그리고 그 화면 자체는 살아 있어야 한다 — 닿을 길이 있는데 화면이 없으면 안 된다
+    const screen = uiSources().find((f) => f.name === "screens/StaffHelp.tsx");
+    expect(screen, "직원 도움 화면이 없습니다").toBeDefined();
   });
 
   it("모든 Step 이 라우팅 표에 있고, 표에만 있는 화면도 없다", () => {

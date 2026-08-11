@@ -26,7 +26,11 @@ export const UI_GUARANTEES = {
   keyboardOnlyFlowSupported: true,
   focusVisibleOutlinePx: 3,
   respectsPrefersReducedMotion: true,
-  staffHelpReachableFromEveryStep: true,
+  /* 화면마다 상시로 두던 직원 도움을 시안대로 걷어냈다(시안 어느 화면에도 없다).
+     지금은 «직원 도움 먼저»를 켠 사람에게만 상단 띠로 따라다닌다. 사실이 바뀌었으므로
+     선언도 바꾼다 — 지키지 않는 것을 지킨다고 적지 않는다. */
+  staffHelpReachableFromEveryStep: false,
+  staffHelpShownWhenUserOptsIn: true,
   iconsAlwaysPairedWithText: true,
 } as const;
 

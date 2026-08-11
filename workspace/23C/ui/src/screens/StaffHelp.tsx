@@ -21,7 +21,6 @@ export function StaffHelp() {
   return (
     <Screen
       label="직원 호출"
-      noStaff="직원 도움 화면 자체다 — 여기서 자기 자신으로 가는 길을 또 둘 이유가 없다"
       eyebrow="고객님,"
       title={<Emphasize text="직원을 불러 드릴게요" word="직원" />}
       subtitle="막히는 단계가 있으면 언제든 이 버튼으로 나올 수 있습니다 — 막다른 길을 만들지 않습니다."

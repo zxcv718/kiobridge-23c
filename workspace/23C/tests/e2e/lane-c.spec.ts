@@ -218,15 +218,13 @@ test.describe("레인 C — 질문 화면", () => {
     await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요|다시 오셨네요/ })).toBeVisible();
   });
 
-  test("C-L8 계산 화면에 진행 표시와 직원 도움이 함께 있다", async ({ page }) => {
+  test("C-L8 계산 화면에도 진행 표시가 남는다", async ({ page }) => {
     await openWizard(page);
     for (let i = 0; i < 7; i++) await pick(page, 1);
 
     // 결과는 이미 계산돼 있고 화면만 거친다 — 짧게 지나가므로 바로 잡는다
     await expect(page.locator(".calcspin")).toBeVisible();
     await expect(page.getByRole("heading", { name: /메뉴를 찾고 있어요/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: "직원 도움" })).toBeVisible();
-
     const anim = await page.locator(".calcspin").evaluate((el) => getComputedStyle(el).animationName);
     expect(anim, "진행 표시가 돌지 않습니다").not.toBe("none");
   });
