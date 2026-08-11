@@ -45,5 +45,9 @@
     "typescript": "^5.6.2",
     "vite": "^5.4.8",
     "vitest": "^2.1.2"
+  },
+  "_comment_optionalDependencies": "rollup 은 플랫폼별 네이티브를 optionalDependencies 27개로 선언하는데, npm 11 은 락파일에 **설치한 플랫폼 것만** 기록한다. 맥에서 만든 락파일로 리눅스 러너가 npm ci 를 하면 rollup/dist/native.js 가 MODULE_NOT_FOUND 로 죽는다. 그래서 리눅스 바이너리만 명시적으로 선언해 락파일에 남긴다 — 맥에서는 optional 이라 그냥 건너뛴다.",
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "^4.62.4"
   }
 }
