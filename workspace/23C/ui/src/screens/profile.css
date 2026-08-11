@@ -85,3 +85,12 @@
   width: 100%; margin-top: 10px; text-align: left;
 }
 .home-erase small { font-size: 0.76em; font-weight: 500; color: var(--muted); }
+
+/* «지웠습니다» — 색만으로 말하지 않는다. 성공을 초록으로 칠하는 대신 글자로 적고,
+   테두리로 «방금 일어난 일»이라는 것만 표시한다. */
+.home-erased {
+  margin: 12px 0 0; padding: 12px 16px;
+  border: 1.5px solid var(--line); border-left: 4px solid var(--brand-strong);
+  border-radius: 10px; background: var(--sunken);
+  font-weight: 700;
+}

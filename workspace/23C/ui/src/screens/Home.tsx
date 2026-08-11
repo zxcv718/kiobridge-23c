@@ -23,7 +23,11 @@ import "./profile.css";
  * 놓이면 처음 온 사람이 무엇을 눌러야 하는지부터 고르게 된다.
  */
 export function Home() {
-  const { saved, fixture, savedCoversAll, startFromSaved, deleteSaved, setStep, t } = useFlow();
+  const { saved, fixture, savedCoversAll, startFromSaved, deleteSaved, setStep, t, erased, setErased } = useFlow();
+
+  /* «지웠습니다»는 홈에 머무는 동안만 남긴다. 화면을 벗어나면 스스로 끈다 —
+     직원 도움에 다녀왔더니 지난번 알림이 그대로 있는 것은 사실을 말하는 게 아니다. */
+  React.useEffect(() => () => setErased(false), [setErased]);
 
   /* 저장본 요약 — 실제로 들어 있는 것만 줄로 만든다. 비어 있는 항목을 «아직 선택 안 함»
      으로 채우면 저장된 것보다 저장 안 된 것이 더 눈에 띈다. */
@@ -78,6 +82,15 @@ export function Home() {
             <small>이 기기에서 지웁니다. 되돌릴 수 없습니다.</small>
           </button>
         </>
+      )}
+
+      {/* 지웠다는 사실을 말한다 — LOGINLESS_QR_PROFILE_GUIDE 6번.
+          화면이 첫 방문 상태로 바뀐 것만으로는 «지워진 건가»를 추측하게 만든다.
+          role="status" 로 두어 화면 낭독기에도 그 자리에서 읽힌다. */}
+      {erased && (
+        <p className="home-erased" role="status">
+          이 기기에 저장된 설정을 지웠습니다.
+        </p>
       )}
 
       {!saved && (

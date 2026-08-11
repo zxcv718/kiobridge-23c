@@ -57,6 +57,8 @@ export function useFlowState() {
    * 진행 표시·저장본 되살리기·조건 수정이 전부 어긋난다.
    */
   const [allergyOpen, setAllergyOpen] = useState(false);
+  /** 방금 저장본을 지웠는가 — 홈이 «지웠습니다»를 알린다. 홈을 벗어나면 스스로 꺼진다. */
+  const [erased, setErased] = useState(false);
   /** S02 화면 맞춤 문답 — null 이면 안 하는 중, 0~2 는 지금 보여주는 크기 단계 */
   const [probeStep, setProbeStep] = useState<number | null>(null);
   /** 문답으로 정해진 단계 — 결과를 화면에 밝혀 준다 */
@@ -215,7 +217,19 @@ export function useFlowState() {
     );
   };
 
-  const deleteSaved = () => { try { localStorage.removeItem(STORAGE_KEY); } catch { /* 무시 */ } setSaved(null); };
+  /**
+   * 저장본을 지운다.
+   *
+   * 지운 뒤 «지웠다»고 말해야 한다 — LOGINLESS_QR_PROFILE_GUIDE 6번. 지금까지는 조용히
+   * 지우고 화면만 첫 방문 상태로 바뀌었는데, 그러면 사용자는 «지워진 건가, 눌리긴 한
+   * 건가»를 화면이 달라진 것으로 **추측**해야 한다. 지우기는 되돌릴 수 없는 일이라
+   * 추측하게 두면 안 된다.
+   */
+  const deleteSaved = () => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* 무시 */ }
+    setSaved(null);
+    setErased(true);
+  };
 
   /** 추천 화면 → 조건 수정: 재확인 사유(알레르기)가 있으면 그 행을 바로 열어 준다 */
   const openEdit = () => {
@@ -319,13 +333,13 @@ export function useFlowState() {
     // 상태
     step, a11y, fixture, live, qIndex, answers, uiRec, manual, sessionInput, runLog,
     outcome, submitted, runError, errResults, saved, fromSaved, storeToggle, editOpen,
-    carried, demoHour, reconfirmCount, probeStep, probeResult, profileStep, allergyOpen,
+    carried, demoHour, reconfirmCount, probeStep, probeResult, profileStep, allergyOpen, erased,
     // 파생값
     now, simple, rawInput, savedCoversAll, q, answered, ev, askTotal, askPos,
     // 조작
     setStep, setA11y, setFlag, setQIndex, setAnswers, setUiRec, setManual, setSessionInput,
     setSubmitted, setErrResults, setStoreToggle, setEditOpen, setReconfirmCount,
-    setProbeStep, setProbeResult, setProfileStep, setAllergyOpen,
+    setProbeStep, setProbeResult, setProfileStep, setAllergyOpen, setErased,
     t, staffBtn, nextToAsk, advance, startWizard, startFromSaved, applyPreset, deleteSaved,
     openEdit, applyEditAndRecommend, toggleStore, setStoreIntent, finishOrder,
     confirmOffline, runSimulation, goRecommend,
