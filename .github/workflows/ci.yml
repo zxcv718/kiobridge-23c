@@ -32,22 +32,22 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 22
+          node-version: 22   # 키트 지원 범위 20.x || 22.x — 24 는 쓰지 않는다
           cache: npm
 
       - name: 의존성
         run: npm ci
 
       - name: 타입
-        run: npx tsc --noEmit -p workspace/23C/tsconfig.json
+        run: npm run typecheck
 
       # 파이프로 넘기지 않는다 — tail 로 넘기면 종료 코드가 tail 것이 되어 실패가 통과로 보인다.
       - name: 단위 (색 대비·터치 타깃·토큰 전수 검사 포함)
-        run: npx vitest run --config workspace/23C/vitest.config.ts
+        run: npm test
 
       # 배포되는 물건이 실제로 만들어지는지부터 본다. 여기서 깨지면 뒤는 볼 것도 없다.
       - name: 화면 빌드
-        run: npx vite build --config workspace/23C/ui/vite.config.ts
+        run: npm run build
 
       - name: 브라우저
         run: npx playwright install --with-deps chromium
@@ -57,7 +57,7 @@ jobs:
       # 통과한 검사가 배포된 화면에 대해 아무것도 보증하지 못한다.
       - name: 화면 서버 (:5173 · API 없음 = 배포본과 같은 조건)
         run: |
-          npx vite --config workspace/23C/ui/vite.config.ts > "$RUNNER_TEMP/web.log" 2>&1 &
+          npm run dev > "$RUNNER_TEMP/web.log" 2>&1 &
           for _ in $(seq 1 60); do
             curl -sf -m 2 http://localhost:5173 > /dev/null && exit 0
             sleep 1
@@ -68,8 +68,7 @@ jobs:
       # 나온다. 배포본에 없는 기능이므로 여기서 제외한다 — 로컬 게이트가 계속 지킨다.
       # (제목이 바뀌면 -invert 가 안 맞아 D11 이 그냥 돌고 실패한다. 조용히 빠지지 않는다.)
       - name: 화면 e2e
-        working-directory: workspace/23C
-        run: npx playwright test --config tests/e2e/playwright.config.ts --grep-invert "D11"
+        run: npm run test:e2e -- --grep-invert "D11"
 
       - name: 실패했을 때 볼 것
         if: failure()

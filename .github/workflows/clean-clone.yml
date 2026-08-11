@@ -1,0 +1,68 @@
+# 추적된 파일만으로 저장소가 서는지 확인한다.
+#
+# 저장소에서 키트를 걷어내는 동안 같은 실패를 **세 번** 겪었다:
+#
+#   1. @kiobridge/evaluator            packages/participant-sdk 가 import
+#   2. @kiobridge/uprlite-driver-contract   packages/contracts 가 import
+#   3. examples/public-canonical-input  tests/scenarios.test.ts 가 읽는다
+#
+# 셋 다 **로컬에서는 통과했다.** 추적을 해제해도 파일은 디스크에 남아 있으니 tsc 와
+# vitest 가 그대로 찾아냈다. 깨끗한 러너에서만 드러났고, 그때마다 CI 가 빨간불이 됐다.
+#
+# 평소 CI(`gate`)는 이것을 잡지 못한다 — actions/checkout 이 추적된 파일만 가져오므로
+# 원리상 잡아야 하는데, 실제로 잡은 것은 «우연히 그 코드를 건드린 PR» 뿐이었다.
+# 그래서 여기서 **명시적으로** 확인한다: git archive 로 추적된 것만 꺼내 다른 자리에
+# 풀고, 거기서 npm ci 부터 다시 한다.
+#
+# 이 검사가 실패하면 뜻은 하나다 — 누군가의 로컬에서는 되는데 **새로 clone 한 사람에게는
+# 안 되는** 상태가 됐다는 것. 기여자가 셋인 저장소에서 가장 늦게 발견되는 종류의 고장이다.
+name: Clean clone
+
+on:
+  push:
+    branches: [main]
+  # 브랜치마다 돌리지는 않는다 — gate 와 겹치고 느리다. main 에 들어온 뒤 한 번 본다.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  clean:
+    name: clean-clone
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22   # 키트 지원 범위 20.x || 22.x — 24 는 쓰지 않는다
+
+      # 추적된 것만 꺼낸다. 작업 폴더를 그대로 쓰면 .gitignore 된 파일이 함께 있어
+      # 이 검사가 무의미해진다 — 그것이 애초에 세 번을 놓친 이유다.
+      - name: 추적된 파일만 다른 자리에 푼다
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/clean"
+          git archive HEAD | tar -x -C "$RUNNER_TEMP/clean"
+          echo "파일 $(find "$RUNNER_TEMP/clean" -type f | wc -l)개"
+          test ! -d "$RUNNER_TEMP/clean/apps"  || { echo "::error::apps/ 가 추적되고 있습니다"; exit 1; }
+          test ! -d "$RUNNER_TEMP/clean/tools" || { echo "::error::tools/ 가 추적되고 있습니다"; exit 1; }
+
+      - name: 거기서 처음부터 설치
+        working-directory: ${{ runner.temp }}/clean
+        run: npm ci
+
+      - name: 타입
+        working-directory: ${{ runner.temp }}/clean
+        run: npm run typecheck
+
+      - name: 단위
+        working-directory: ${{ runner.temp }}/clean
+        run: npm test
+
+      - name: 빌드
+        working-directory: ${{ runner.temp }}/clean
+        run: npm run build

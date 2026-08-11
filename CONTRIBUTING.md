@@ -40,14 +40,15 @@ push 하면 나머지는 자동입니다.
 
 ## 어디를 고쳐도 되나
 
-**`workspace/23C/` 안에서만 작업합니다.** 나머지는 주최 측이 준 키트이고, 공식 재실행이
-깨끗한 키트 위에서 이뤄지므로 우리가 고친 것은 심사에 반영되지 않습니다. 고치면 «내
-컴퓨터에서만 되는» 코드가 됩니다.
+**`workspace/23C/` 안에서만 작업합니다.**
 
-손대지 않는 곳: `apps/` · `packages/` · `environments/` · `schemas/` · `examples/` ·
-`tools/` · 저장소 루트의 `tests/` · 루트 `package.json` · 루트 `tsconfig.json`
+저장소에 `packages/` 와 `environments/chicken-store/` 가 함께 있는데 **키트 파일이라
+손대지 않습니다.** 우리 코드가 컴파일되는 대상이라 어쩔 수 없이 두는 것입니다
+(`@kiobridge/*` 는 npm 에 없어 내려받을 방법이 없습니다). 고쳐 봐야 공식 재실행은
+**깨끗한 키트** 위에서 이뤄지므로 심사에 반영되지 않고, «내 컴퓨터에서만 되는» 코드만
+남습니다.
 
-`submission-output/23C/` 는 사람이 직접 고치지 않습니다 — 공식 패키저가 만듭니다
+`submission-output/23C/` 도 사람이 직접 고치지 않습니다 — 공식 패키저가 만듭니다
 (아래 «제출물» 참고).
 
 ## 화면을 고칠 때
@@ -70,30 +71,40 @@ push 하면 나머지는 자동입니다.
 CI 는 **배포되는 화면만** 봅니다 — 배포본에는 Simulation API 가 없으므로 CI 도 API 없이
 돕니다. 배포된 주소와 같은 조건에서 재는 것이 요점입니다.
 
-키트 쪽 검증(제출물 생성 · 공식 검증 · 시나리오 재생)은 CI 에 없습니다. 그건 로컬에서
-API 를 띄워 놓고 합니다:
+키트 쪽 검증(제출물 생성 · 공식 검증 · 시나리오 재생)은 CI 에 없습니다. 키트가 이 저장소에
+없기 때문이기도 하고, 애초에 `:4000` API 가 필요한 일이라 **각자 로컬 키트에서** 합니다
+(키트 준비는 [`README.md`](README.md) 3번).
 
 ```bash
+cp -R <이 저장소>/workspace/23C  ~/kiobridge-kit/<키트>/workspace/23C
+cd ~/kiobridge-kit/<키트>
 npm run start:api                                   # :4000 — 다른 터미널에
 npx tsx workspace/23C/verify-combinations.ts        # 조합 12,960
 npx tsx workspace/23C/verify-scenarios.ts           # 시나리오 A1–A5
-npx playwright test --config tests/e2e/playwright.config.ts   # workspace/23C 에서 · D11 포함
+npx playwright test --config workspace/23C/tests/e2e/playwright.config.ts   # D11 포함
 ```
+
+이 저장소 안에서 도는 검사는 `npm run typecheck` · `npm test` · `npm run test:e2e`
+(D11 제외) · `npm run build` 입니다.
 
 `D11`(오류 주입 7종)은 API 가 있을 때만 화면에 나오는 기능이라 CI 에서 빠져 있습니다.
 그 근처를 고쳤다면 **로컬에서 한 번 돌려 주세요.**
 
 ## 제출물을 다시 만들 때
 
-화면 문구나 엔진이 바뀌면 제출물 내용이 바뀌고 해시도 바뀝니다. 순서가 있습니다:
+화면 문구나 엔진이 바뀌면 제출물 내용이 바뀌고 해시도 바뀝니다. **로컬 키트에서** 합니다:
 
 ```bash
+cp -R <이 저장소>/workspace/23C  ~/kiobridge-kit/<키트>/workspace/23C
+cd ~/kiobridge-kit/<키트>
 npm run start:api                                   # 먼저 켜 둘 것
 npx tsx workspace/23C/build-submission.ts
-npm run participant:validate -- --file workspace/23C/output/participant-submission.json --execute
-npm run participant:package -- --team 23C --file workspace/23C/output/participant-submission.json
+npm run participant:validate -- --file "$PWD/workspace/23C/output/participant-submission.json" --execute
+npm run participant:package -- --team 23C --file "$PWD/workspace/23C/output/participant-submission.json"
 npx tsx workspace/23C/install-readme.ts             # 반드시 마지막
 ```
+
+만들어진 `submission-output/23C/` 8종을 **이 저장소로 되가져와 커밋**합니다.
 
 마지막 줄을 빼먹으면 안 됩니다. `participant:package` 는 돌 때마다
 `submission-output/23C/README.md` 를 **빈 서식으로 덮어씁니다.** `install-readme.ts` 가
