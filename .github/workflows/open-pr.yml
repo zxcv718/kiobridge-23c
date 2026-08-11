@@ -24,7 +24,7 @@ jobs:
     if: github.repository == 'zxcv718/kiobridge-23c'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 2
 
