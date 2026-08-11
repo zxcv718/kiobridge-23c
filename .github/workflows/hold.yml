@@ -1,0 +1,43 @@
+# `hold` 라벨로 자동 병합을 세우고, 떼면 다시 예약한다.
+#
+# 필수 검사로 만들지 않는다. 검사로 두면 «검사가 실패했다»로 보이는데 실제로는 사람이
+# 일부러 세운 것이라, 빨간 X 가 고장과 구분되지 않는다. 자동 병합 자체를 껐다 켜는 편이
+# 화면에도 그대로 «자동 병합 꺼짐»으로 보인다.
+name: Hold
+
+on:
+  pull_request:
+    types: [labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  toggle:
+    name: 자동 병합 껐다 켜기
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'hold'
+
+    steps:
+      - name: 라벨이 붙으면 세운다
+        if: github.event.action == 'labeled'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh pr merge "$PR" --repo "$REPO" --disable-auto \
+            && echo "::notice::자동 병합을 껐습니다. 라벨을 떼면 다시 켜집니다." \
+            || echo "::notice::예약돼 있던 자동 병합이 없었습니다."
+
+      - name: 라벨을 떼면 다시 켠다
+        if: github.event.action == 'unlabeled'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh pr merge "$PR" --repo "$REPO" --auto --merge \
+            && echo "::notice::자동 병합을 다시 켰습니다. 검사가 통과하면 병합됩니다." \
+            || echo "::warning::자동 병합을 켜지 못했습니다 — Settings 의 'Allow auto-merge' 를 확인하세요."
