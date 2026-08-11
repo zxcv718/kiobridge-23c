@@ -9,6 +9,25 @@
 | 배포 | https://kiobridge-23c-demo.vercel.app |
 | 환경 | `chicken-store` |
 | 상태 | SIMULATION **PASS** · `NORMAL_BOUNDARY_STOP` · 결제 계획 0 / 실행 0 |
+| 같이 만들려면 | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+
+## 이 저장소에 두 가지가 들어 있습니다
+
+**우리가 만든 것은 `workspace/23C/` 안에 전부 있습니다.** 나머지 — `apps/` `packages/`
+`environments/` `schemas/` `tools/` `docs/` 와 `Dockerfile`·`start-*` 실행 스크립트 — 는
+주최 측이 준 **KioBridge 시뮬레이션 키트**이고 우리는 손대지 않습니다.
+
+키트를 함께 두는 이유는 정리를 안 해서가 아니라 **우리 것이 진짜와 갈라지지 않게 하려고**입니다:
+
+- 우리 코드는 `@kiobridge/participant-sdk`·`@kiobridge/profile-contract` 를 **25곳**에서
+  가져다 씁니다. 복사본을 쓰면 주최 측이 Input Contract 를 고쳐도 우리 빌드가 조용히
+  낡은 계약으로 통과해 버립니다 — 제출물 자체가 무효가 되는 종류의 실패입니다.
+- 후보·가격·안전규칙·화면전이 **9개 JSON** 도 `environments/chicken-store/` 에서 직접
+  읽습니다. 공식 재실행은 이 진짜 데이터로 돌아가므로, 복사본으로 추천을 계산하면
+  우리 화면과 심사 결과가 다른 메뉴를 가리킬 수 있습니다.
+
+공식 판정은 이 저장소가 아니라 **운영진의 깨끗한 v5.1.4** 에서 제출 JSON 을 재실행한
+결과입니다. 그래서 키트를 고쳐 봐야 심사에 반영되지 않습니다.
 
 ## 로컬 실행
 
@@ -44,7 +63,7 @@ workspace/23C/
     context.ts              상황신호 (기기 시계만, 정렬 순서만 조정)
     submission-meta.ts      선택 채널 3종
   ui/                     사용자 접점 (React + Vite)
-  tests/                  자체 58 + 접근성 실측 6
+  tests/                  단위 135 + 화면 e2e 102 (접근성·시안 좌표 실측 포함)
   tools/                  로컬 실행 보조 설정
 submission-output/23C/    제출 패키지 8종
 ```

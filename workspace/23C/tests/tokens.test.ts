@@ -214,6 +214,42 @@ describe("모드 전환이 색을 빠뜨리지 않는다", () => {
   });
 });
 
+/**
+ * 글꼴 선언 — **파일 하나당 한 번, 굵기는 범위로.**
+ *
+ * 한때 @font-face 가 496개였다. 같은 파일 124개를 굵기(400·500·700·800)마다 한 번씩 네 벌로
+ * 적어 둔 것인데, 이 파일들은 `fvar` 를 가진 **가변 폰트**라 하나가 100~900 을 전부 낸다.
+ * 빌드된 CSS 343 KB 중 314 KB(92%)가 그 선언이었고 우리 스타일은 28 KB 였다.
+ *
+ * 저장소 무게가 아니라 **사용자가 매번 내려받는 것**이라 남겨 둘 수 없었다. 되돌아오는 것을
+ * 막으려고 여기서 «파일 하나에 선언 하나» 를 못 박는다 — 굵기별로 네 벌 적는 방식이 다시
+ * 들어오면 이 검사가 먼저 잡는다.
+ */
+describe("글꼴 선언", () => {
+  const fonts = cssFiles().find((f) => f.name === "fonts.css");
+  const faces = [...(fonts?.text ?? "").matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]);
+
+  it("서브셋 파일 하나당 @font-face 가 하나다", () => {
+    expect(fonts, "ui/src/fonts.css 가 없습니다").toBeDefined();
+    expect(faces.length, "@font-face 를 하나도 못 찾았습니다 — 이 검사가 공짜로 통과하고 있습니다")
+      .toBeGreaterThan(50);
+
+    const urls = faces.map((b) => /url\(([^)]+)\)/.exec(b)?.[1] ?? "");
+    const dup = urls.filter((u, i) => urls.indexOf(u) !== i);
+    expect([...new Set(dup)].map((u) => u.split("/").pop()),
+      "같은 파일을 여러 번 선언하고 있습니다 — 가변 폰트는 font-weight 를 범위로 한 번만 적습니다")
+      .toEqual([]);
+  });
+
+  it("굵기를 범위로 선언한다 — 400·500·700 사이 값도 그대로 나와야 한다", () => {
+    for (const b of faces) {
+      const w = /font-weight:\s*([^;]+);/.exec(b)?.[1].trim();
+      expect(w, "font-weight 선언이 없는 @font-face 가 있습니다").toBeDefined();
+      expect(w, `가변 폰트인데 굵기가 «${w}» 한 값으로 고정돼 있습니다`).toMatch(/^\d+\s+\d+$/);
+    }
+  });
+});
+
 /** 테스트 안에서만 쓰는 편의 — 못 풀면 그 자리에서 실패하게 한다. */
 function resolveOrThrow(value: string, palette: Record<string, string>): string {
   // css.ts 의 resolveColor 와 같은 규칙이지만, 실패를 조용히 넘기지 않는다
