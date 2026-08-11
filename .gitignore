@@ -68,9 +68,18 @@ FINAL_SUBMISSION_CHECKLIST.md
 DO_NOT_EDIT_PLATFORM_FILES.md
 workspace/README.md
 workspace/.gitkeep
+# 아래 여덟은 우리 코드가 컴파일되는 대상이다. package.json 의 dependencies 만 보면
+# 셋으로 보이지만, 소스가 서로를 직접 import 한다(워크스페이스라 선언 없이도 되니까).
+# 셋만 남겼다가 CI 가 «Cannot find module '@kiobridge/evaluator'» 로 잡았다 —
+# 로컬에서는 파일이 디스크에 남아 통과했고, 깨끗한 러너에서만 드러났다.
 packages/*
 !packages/contracts/
+!packages/evaluator/
+!packages/kiosk-driver-contract/
 !packages/participant-sdk/
 !packages/profile-contract/
+!packages/safety-engine/
+!packages/simulation-driver/
+!packages/state-engine/
 environments/*
 !environments/chicken-store/

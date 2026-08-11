@@ -9,8 +9,13 @@
   },
   "workspaces": [
     "packages/contracts",
+    "packages/evaluator",
+    "packages/kiosk-driver-contract",
     "packages/participant-sdk",
-    "packages/profile-contract"
+    "packages/profile-contract",
+    "packages/safety-engine",
+    "packages/simulation-driver",
+    "packages/state-engine"
   ],
   "scripts": {
     "typecheck": "tsc --noEmit -p workspace/23C/tsconfig.json",
