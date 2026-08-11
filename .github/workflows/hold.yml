@@ -31,13 +31,20 @@ jobs:
             && echo "::notice::자동 병합을 껐습니다. 라벨을 떼면 다시 켜집니다." \
             || echo "::notice::예약돼 있던 자동 병합이 없었습니다."
 
+      # 다시 켤 때는 open-pr.yml 과 **같은 토큰**이어야 한다. GITHUB_TOKEN 으로 켜면
+      # 병합 커밋이 봇 것이 되어 그 push 가 Deploy 를 깨우지 못한다 — 병합은 됐는데
+      # 배포는 안 되는, 화면상 아무 문제 없어 보이는 상태가 된다.
       - name: 라벨을 떼면 다시 켠다
         if: github.event.action == 'unlabeled'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::warning::AUTOMERGE_TOKEN 이 없습니다 — PR 에서 직접 Merge 하세요."
+            exit 0
+          fi
           gh pr merge "$PR" --repo "$REPO" --auto --merge \
             && echo "::notice::자동 병합을 다시 켰습니다. 검사가 통과하면 병합됩니다." \
             || echo "::warning::자동 병합을 켜지 못했습니다 — Settings 의 'Allow auto-merge' 를 확인하세요."
