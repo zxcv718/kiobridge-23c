@@ -46,7 +46,7 @@ test("«있어요»를 고르면 6종 목록이 펼쳐지고, 하나도 안 고�
   await page.getByRole("button", { name: "있어요", exact: true }).click();
 
   await expect(page.getByText("보유하신 알레르기를 모두 선택해 주세요")).toBeVisible();
-  for (const 항목 of ["땅콩", "콩(대두)", "우유", "계란", "밀", "새우"]) {
+  for (const 항목 of ["땅콩", "대두", "우유", "계란", "밀", "새우"]) {
     await expect(page.getByRole("button", { name: 항목, exact: true })).toBeVisible();
   }
   // 첫 걸음의 답은 목록에 섞이지 않는다

@@ -1,0 +1,61 @@
+/* 끝나는 두 화면 전용 — Figma S12 안전 중단(99:1337) · S15 안내·저장(99:1830).
+ *
+ * 화면의 바깥 틀(뒤로 → 제목 → 부제 → 넓은 여백 → 아래 붙는 CTA)은 `Screen` 부품과
+ * components.css 의 몫이다. 이 파일은 **그 안에 들어가는 것**과, 이 두 화면에서만
+ * 시안이 다르게 정한 값만 적는다.
+ *
+ * 색은 **의미 이름만** 쓴다(--fg --muted --brand-strong …). `--kb-…` 원시 토큰이나
+ * 생색을 여기서 직접 쓰면 고대비 모드가 그것만 못 갈아끼운다.
+ */
+
+/* ───────── S12 안전 중단 (Figma 99:1337) ─────────
+ * 시안의 콘텐츠(99:1339)는 화면 세로 가운데에 서고, 자식 넷(에러 라벨 → 일러스트 →
+ * 타이틀 → 서브텍스트)을 **20px 간격**으로 쌓는다. 그 간격을 여기서 되돌린다.
+ *
+ * 가운데 정렬을 `Screen` 의 옵션으로 만들지 않는다 — Screen 은 열여섯 화면이 함께 쓰는
+ * 부품이라, 화면 하나가 필요로 하는 변형 때문에 손잡이를 늘리면 다음 사람이 «어떤 화면이
+ * 어떤 조합을 쓰는지»를 다시 세어야 한다. */
+/* 세로 가운데는 `justify-content: center` 가 아니라 **자동 여백**으로 잡는다.
+ * 본문은 넘치면 스크롤되는 상자인데(components.css `.kb-screen-body`), 그 상자에
+ * justify-content:center 를 걸면 내용이 넘칠 때 위아래로 똑같이 삐져나가고 **위쪽은
+ * 스크롤로 되돌아갈 수 없다** — 360×640 에 큰 글씨를 켜면 «ERROR» 가 9px 잘려 사라졌다.
+ * 자동 여백은 남는 자리가 없으면 0 이 되므로, 넘칠 때는 위에서부터 정상으로 흐른다. */
+.kb-screen:has(.stop-figma) .kb-screen-body {
+  display: flex; flex-direction: column;
+  text-align: center;
+}
+.kb-screen:has(.stop-figma) .kb-screen-body > :first-child { margin-top: auto; }
+.kb-screen:has(.stop-figma) .kb-screen-body > :last-child { margin-bottom: auto; }
+.kb-screen:has(.stop-figma) .kb-eyebrow { margin: 0 0 20px; }
+.kb-screen:has(.stop-figma) .kb-title { margin: 0 0 20px; }
+/* 서브텍스트(226:3420)는 18px Regular 다 — 다른 화면의 15px 부제와 크기가 다르다.
+   기준(--fs)이 18px 이므로 1em 이다. */
+.kb-screen:has(.stop-figma) .kb-subtitle { font-size: 1em; margin: 0; }
+
+/* 에러 라벨 (99:1340) — 22px Bold, 시안 색은 #fa520f 다.
+   글자에 얹는 강조색은 --brand-strong 을 쓴다: 흰 배경 위 브랜드 주황은 본문 기준(4.5)에
+   못 미치고, 이 화면의 라벨은 «무슨 일이 났는지»를 말하는 글자라 읽히지 못하면 뜻이 없다.
+   (tokens.css ② · cart.css ① 과 같은 판단이다) */
+.stop-figma-label { display: block; font-size: 1.22em; font-weight: 700; color: var(--brand-strong); }
+
+/* 일러스트 (99:1341) — 192.3×170. 상자에 폭·높이를 둘 다 주고 그림이 그것을 채운다.
+   `auto` 로 두면 원본 크기(193×170)로 튀고, 좁은 화면에서 넘친다. */
+.stop-figma-illus { display: block; width: 193px; height: 170px; max-width: 100%; margin: 20px auto 0; }
+.stop-figma-illus img { display: block; width: 100%; height: 100%; object-fit: contain; }
+/* 세로가 짧은 기기(360×640 급)에서 큰 글씨·누르기 편하게를 켜면 글자가 커진 만큼 그림이
+   화면을 밀어낸다. 그림은 장식이므로 **먼저 양보한다** — 비율(193:170) 그대로 줄인다.
+   글자를 줄이지 않는다: 이 화면에 오는 사람이 읽어야 하는 것은 글자 쪽이다. */
+@media (max-height: 700px) {
+  .stop-figma-illus { width: 136px; height: 120px; }
+}
+
+/* 시안에 없지만 요건상 남기는 설명은 접어 둔다(FIGMA_RULES §2.1) — 접힌 줄 자체는
+   home-saved(profile.css)를 그대로 쓰고, 여기서는 자리만 잡는다. 가운데 정렬은 제목까지고
+   문단은 왼쪽에서 시작해야 읽힌다. */
+.stop-figma { margin: 24px 0 0; text-align: left; }
+
+/* ───────── S15 매장명 캡션 (Figma 114:2559) ─────────
+ * 14px Medium · secondary · 아래 카드와 25px. 시안은 «ChickenStore» 라는 자리표시자를
+ * 쓰지만 우리는 fixture 의 매장 이름을 쓴다 — 없으면 줄 자체를 그리지 않는다.
+ * 크기는 px 이 아니라 em 이다(14 ÷ 18) — «큰 글씨»를 켜면 함께 커져야 한다. */
+.res-store { margin: 0 0 25px; font-size: 0.78em; font-weight: 500; color: var(--muted); }

@@ -22,7 +22,7 @@ async function answerAll(page: Page) {
   // 알레르기는 «있으신가요?» → 항목 목록 두 걸음이다 (디자인 S06 기본/확장)
   await page.getByRole("button", { name: "있어요", exact: true }).click();
   await page.getByRole("button", { name: "땅콩", exact: true }).click();
-  await page.getByRole("button", { name: "콩(대두)" }).click();
+  await page.getByRole("button", { name: "대두", exact: true }).click();
   await page.getByRole("button", { name: /다음/ }).click();
   await page.getByRole("button", { name: "매운맛", exact: true }).click();
   await page.getByRole("button", { name: /다음/ }).click();
@@ -85,17 +85,23 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: /추천 보기|다음/ }).click();
 
     // 1회차 — 사유는 말하지만 중단 화면은 아니다. 조건을 고칠 기회를 먼저 준다.
-    await expect(page.getByRole("heading", { name: /확인이 어려워/ })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "조건 수정" })).toBeVisible();
 
     // 조건 수정 → 그대로 다시 추천 → 2회차
     await page.getByRole("button", { name: "조건 수정" }).click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
-    await expect(page.getByRole("heading", { name: /확인이 어려워/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();
     /* «아무 준비도 시작되지 않았다»는 안심은 그대로 있다 — 승인 전이므로 실행 계획도,
-       장바구니도 없다. */
-    await expect(page.locator(".stopalert")).toContainText("정상적으로 끝난 것이 아닙니다");
-    await expect(page.locator(".stopalert"))
+       장바구니도 없다. 시안(99:1337)에 없는 문단이라 접혀 있을 뿐 없어지지 않았고,
+       한 번 눌러 닿는다 — 접었다는 이유로 세지 않으면 정말 사라진 날에도 통과한다. */
+    const 왜멈췄나 = page.locator("details.home-saved", {
+      has: page.locator("summary", { hasText: "왜 멈췄나요?" }),
+    });
+    await expect(왜멈췄나).toHaveCount(1);
+    await 왜멈췄나.locator("summary").click();
+    await expect(왜멈췄나).toContainText("정상적으로 끝난 것이 아닙니다");
+    await expect(왜멈췄나)
       .toContainText("실행 계획이 만들어지지 않았고, 장바구니에도 아무것도 담기지 않았습니다");
   });
 

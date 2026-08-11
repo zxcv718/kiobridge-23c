@@ -5,6 +5,7 @@ import { Card, Cta, Emphasize, Screen, type CardRow } from "../components";
 import { INJECTIONS, STOP_KO, answerLabel } from "../model";
 import { candidateName, candidatePrice, downloadSubmission, injectError, summarizeOrderPlan } from "../logic";
 import "./cart.css";
+import "./finish.css";
 
 /**
  * 결과 화면 (+ 화면목록 S15 «안내·저장» · Figma 99:1830).
@@ -42,6 +43,11 @@ export function Result() {
   const excluded = uiRec?.rec.excludedCandidates.length ?? 0;
   const serviceKo = uiRec?.engineCtx.preferences.serviceType === "TAKE_OUT" ? "포장"
     : uiRec?.engineCtx.preferences.serviceType === "DINE_IN" ? "먹고 가기" : "메뉴 기본값";
+
+  /* 카드 위 매장명 (디자인 114:2559). 시안은 «ChickenStore» 라는 자리표시자를 쓰지만
+     우리는 이번 주문이 실제로 일어난 가게 이름을 쓴다 — 빈 자리표시자를 그리느니
+     줄을 그리지 않는다. */
+  const storeName = fixture?.manifest.displayName ?? fixture?.manifest.name ?? "";
 
   /* 저장된(또는 저장되지 않은) 내용 — 디자인의 RecentOrderCard(185:227) 다섯 줄.
      값은 이번 세션의 답변에서 그대로 읽는다. */
@@ -131,6 +137,7 @@ export function Result() {
       {/* 카드 아래 안내문을 걷어냈다. «지우면 즉시 삭제되며…»는 바로 위 버튼이 이미
           «저장 지우기»라고 말하고 있어 같은 말을 두 번 하는 것이었고, 서버 저장 여부는
           시작 화면과 저장 방식(S03)에서 이미 밝힌다. 끝난 화면에서 규칙을 다시 읽히지 않는다. */}
+      {storeName && <p className="res-store">{storeName}</p>}
       <Card label={storeToggle ? "이 기기에 남은 내용" : "저장하지 않은 내용"} rows={savedRows} />
 
       {/* 실행 증거는 접어 둔다 — 심사·시연용이라 주문한 사람에게는 부차적이다.

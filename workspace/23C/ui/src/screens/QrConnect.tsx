@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useFlow } from "../flow";
 import { FLOW_STEPS } from "../model";
-import { Card, Cta, Emphasize, Screen } from "../components";
+import { Card, Cta, Screen } from "../components";
 import "./qr.css";
 
 /**
@@ -16,17 +16,22 @@ import "./qr.css";
  * 대조하는 것. 같으면 어느 매장인지 밝히고 다음으로 보내고, 다르면 «이 매장 정보는 아직
  * 없습니다»라고 정직하게 말한다. 어느 쪽이든 막다른 길을 만들지 않는다.
  * 「세션이 발급되었습니다」 같은, 우리가 하지 않은 일을 한 것처럼 말하는 문구를 쓰지 않는다.
- * (디자인 150:365 의 부제가 «매장 정보와 세션을 모두 확인했어요»인데 그대로 쓰지 않는 이유다.)
+ * 그래서 S04b 부제만 시안(150:392 «매장 정보와 세션을 모두 확인했어요»)에서 **«세션» 한
+ * 낱말을 뺀** 「매장 정보를 모두 확인했어요」로 둔다 — 문장의 꼴은 시안 그대로 두고,
+ * 우리가 하지 않은 일만 지운다(FIGMA_RULES §2.8).
  *
  * **이 화면의 핵심은 읽히는 경우가 아니라 읽히지 않는 경우다.** BarcodeDetector 는
  * Safari·Firefox 에 없고, 카메라 권한은 거부될 수 있고, 카메라가 없는 기기도 있다.
  * 세 경우 모두에서 ① 왜 안 되는지 한 문장으로 말하고 ② 직접 입력 ③ 직원 요청
  * ④ 건너뛰기가 같은 화면에 있어야 한다.
  *
- * 디자인은 «직접 입력»·«직원 요청»을 화면 아래 버튼 두 개로 두었지만, 직접 입력은 그
- * 자리에 입력칸으로 펼쳐 둔다. 카메라가 안 되는 사용자에게는 그쪽이 본길이고, 본길을
- * «한 번 더 눌러야 닿는 곳»에 두면 안 되기 때문이다. 아래 버튼 자리는 건너뛰기와
- * 직원 도움이 쓴다.
+ * 시안(150:359)의 화면 아래는 캡션 한 줄과 흰 버튼 둘 — «직접 입력»·«직원 요청» — 이다.
+ * 그대로 둔다. 직접 입력 폼은 한때 이 자리에 펼쳐 둔 채였는데, 그러면 펴기 전 화면이
+ * 시안과 달라진다. 버튼으로 접고(§2.1) **카메라를 못 쓰는 것이 확인된 순간에만 저절로
+ * 편다** — 그때는 이 입력이 본길이라 «한 번 더 눌러야 닿는 곳»에 둘 수 없고, 시안은
+ * 그 상태를 그린 적이 없어 우리가 정하는 자리이기 때문이다.
+ * 건너뛰기(«QR 없이 계속하기»)는 시안에 없지만 지우지 않는다 — iOS 처럼 스캔이 아예
+ * 막힌 기기에서 앞으로 갈 수 있는 마지막 길이라, 캡션이 소개하는 대안 묶음 아래에 둔다.
  */
 
 /** 카메라 프레임을 얼마나 자주 훑는가. 너무 촘촘하면 저사양 기기에서 화면이 끊긴다. */
@@ -81,6 +86,8 @@ export function QrConnect() {
   const [readVia, setReadVia] = useState("");
   const [typed, setTyped] = useState("");
   const [typedError, setTypedError] = useState("");
+  /** 직접 입력 폼을 폈는가. 시안의 기본 상태는 «버튼 하나»이므로 접힌 채로 시작한다. */
+  const [typedOpen, setTypedOpen] = useState(false);
 
   /**
    * 주소에 매장 코드가 실려 왔는가 — 폰 **기본 카메라 앱**으로 QR을 찍으면 이 주소로 열린다.
@@ -205,6 +212,11 @@ export function QrConnect() {
     return stop;
   }, [cameraWanted, decide]);
 
+  /* 카메라를 못 쓰는 것이 확인되면 직접 입력을 펴 둔다. 시안이 그리지 않은 상태이고,
+     그때는 이것이 앞으로 가는 본길이라 한 번 더 누르게 할 이유가 없다. 편 뒤에도
+     사용자가 다시 접을 수 있게 «상태를 덮어쓰기»가 아니라 «한 번 켜기»로 둔다. */
+  useEffect(() => { if (phase === "noCamera") setTypedOpen(true); }, [phase]);
+
   const submitTyped = (e: React.FormEvent) => {
     e.preventDefault();
     if (parseStoreCode(typed) === "") { setTypedError("매장 코드를 입력해 주세요."); return; }
@@ -224,14 +236,16 @@ export function QrConnect() {
         onBack={rescan} backLabel="다시 스캔"
         steps={steps}
         label="매장 QR 연동 — 연결됨"
-        title={<Emphasize text="연결되었습니다" word="연결" />}
-        subtitle="QR에 적힌 매장이 이 기기에 있는 매장 정보와 같습니다."
+        /* 제목·부제는 시안 150:391·150:392 다. 제목은 단일 텍스트 노드의 균일 22px Bold 라
+           강조 분할(`Emphasize`)을 쓰지 않는다 — 그 문법은 질문 화면 전용이다(§3). */
+        title="연결되었습니다"
+        subtitle="매장 정보를 모두 확인했어요"
         actions={<>
           <Cta tone="primary" label="이 매장으로 계속하기" onClick={goNext} />
           <Cta label="다시 스캔하기" onClick={rescan} />
         </>}
       >
-        <div className="qr-view done">
+        <div className="qr-view">
           <span className="qr-mark" aria-hidden="true">✓</span>
         </div>
         {/* 성공을 테두리 색으로만 말하지 않는다 — 문장으로도 말한다 */}
@@ -257,7 +271,7 @@ export function QrConnect() {
         onBack={rescan} backLabel="다시 스캔"
         steps={steps}
         label="매장 QR 연동 — 모르는 매장"
-        title={<Emphasize text="이 매장 정보는 아직 없습니다" word="아직" />}
+        title="이 매장 정보는 아직 없습니다"
         subtitle="QR은 읽었습니다. 다만 이 기기에 담긴 매장과 다릅니다."
         actions={<>
           <Cta tone="primary" label="이대로 계속하기" onClick={goNext} />
@@ -287,16 +301,49 @@ export function QrConnect() {
       onBack={() => setStep("saveChoice")}
       steps={steps}
       label="매장 QR 연동"
-      title={cameraWanted
-        ? <Emphasize text="매장 QR을 비춰 주세요" word="QR" />
-        : <Emphasize text="카메라로 QR을 읽을 수 없습니다" word="QR" />}
+      /* 제목·부제는 시안 150:355·150:356 그대로다. 제목은 단일 텍스트 노드의 균일 22px
+         Bold 라 강조 분할을 쓰지 않는다(§3). 카메라를 못 쓸 때만 시안에 없는 상태이므로
+         우리가 정한다 — 무엇이 막혔는지 제목에서 바로 말한다. */
+      title={cameraWanted ? "매장 QR을 스캔해주세요" : "카메라로 QR을 읽을 수 없습니다"}
       subtitle={cameraWanted
-        ? t(
-          "키오스크 화면의 QR을 카메라에 비춰 주세요.",
-          "키오스크에 표시된 QR을 카메라에 비춰 주시면 어느 매장인지 확인해 드립니다. 사진을 찍거나 어디로 보내지 않습니다.",
-        )
+        ? "키오스크에 표시된 QR을 비춰주시면 자동으로 연결돼요"
         : "카메라 대신 아래 방법으로 진행하실 수 있습니다."}
       actions={<>
+        {/* 시안 150:360 — 두 흰 버튼 **위**의 가운데 정렬 캡션 */}
+        <p className="qr-asks">QR을 스캔하기 어려우신가요?</p>
+
+        {/* 시안 208:775 «직접 입력». Cta 는 aria-expanded 를 받지 않으므로(부품을 이
+            화면 사정으로 넓히지 않는다) 여기만 네이티브 버튼을 쓴다 — 같은 `.btn ghost`
+            라 모양은 시안의 흰 CTA 와 같다. */}
+        <button type="button" className="btn ghost"
+          aria-expanded={typedOpen} aria-controls="qr-typed"
+          onClick={() => setTypedOpen((v) => !v)}>
+          직접 입력
+        </button>
+        {/* 접을 때 지우지 않고 `hidden` 으로 둔다 — 위 aria-controls 가 가리키는 것이
+            늘 있어야 하고, 폼 자체는 카메라가 막힌 사람에게 유일한 길이다. */}
+        <form id="qr-typed" className="qr-fallback" hidden={!typedOpen} onSubmit={submitTyped}>
+          <label className="field">
+            {/* 안내를 라벨 안에 넣는다. 설명을 한 줄 더 두면 접힌 화면(390×844)에서
+                정작 눌러야 할 «이 코드로 연결하기»가 밖으로 밀린다. */}
+            <span className="qr-label">매장 코드 직접 입력 — 키오스크 화면 아래쪽에 있습니다</span>
+            <input name="storeCode" value={typed} inputMode="text" autoComplete="off"
+              placeholder="예: chicken-store"
+              onChange={(e) => { setTyped(e.target.value); setTypedError(""); }} />
+          </label>
+          {typedError && <p className="qr-error" role="alert">{typedError}</p>}
+          <div className="btnrow">
+            {/* Cta 는 type="button" 이라 폼 제출을 못 한다. 여기만 네이티브 제출 버튼을 쓴다 —
+                Enter 키로도 넘어갈 수 있어야 하기 때문이다(같은 .btn 클래스라 모양은 같다). */}
+            <button type="submit" className="btn primary" disabled={!fixture}>이 코드로 연결하기</button>
+          </div>
+          {!fixture && <p className="hint">매장 정보를 불러오는 중입니다. 잠시만 기다려 주세요.</p>}
+        </form>
+
+        {/* 시안 208:777 «직원 요청» — 이 화면에서 직원 도움으로 가는 유일한 길이다 */}
+        <Cta label="직원 요청" onClick={() => setStep("staff")} />
+        {/* 시안에는 없다. 스캔이 아예 막힌 기기에서 앞으로 갈 마지막 길이라 지우지 않고,
+            캡션이 대안을 소개하는 이 묶음의 맨 아래에 둔다. */}
         <Cta label="QR 없이 계속하기" onClick={goNext} />
       </>}
     >
@@ -313,25 +360,6 @@ export function QrConnect() {
           : phase === "scanning" ? "카메라가 켜졌습니다. QR을 찾고 있습니다."
             : blocked}
       </p>
-
-      <form className="qr-fallback" onSubmit={submitTyped}>
-        <p className="qr-asks">QR을 스캔하기 어려우신가요?</p>
-        <label className="field">
-          {/* 안내를 라벨 안에 넣는다. 설명을 한 줄 더 두면 접힌 화면(390×844)에서
-              정작 눌러야 할 «이 코드로 연결하기»가 밖으로 밀린다. */}
-          <span className="qr-label">매장 코드 직접 입력 — 키오스크 화면 아래쪽에 있습니다</span>
-          <input name="storeCode" value={typed} inputMode="text" autoComplete="off"
-            placeholder="예: chicken-store"
-            onChange={(e) => { setTyped(e.target.value); setTypedError(""); }} />
-        </label>
-        {typedError && <p className="qr-error" role="alert">{typedError}</p>}
-        <div className="btnrow">
-          {/* Cta 는 type="button" 이라 폼 제출을 못 한다. 여기만 네이티브 제출 버튼을 쓴다 —
-              Enter 키로도 넘어갈 수 있어야 하기 때문이다(같은 .btn 클래스라 모양은 같다). */}
-          <button type="submit" className="btn primary" disabled={!fixture}>이 코드로 연결하기</button>
-        </div>
-        {!fixture && <p className="hint">매장 정보를 불러오는 중입니다. 잠시만 기다려 주세요.</p>}
-      </form>
     </Screen>
   );
 }

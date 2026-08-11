@@ -113,6 +113,13 @@ export function QuestionScreen() {
   const isLast = nextToAsk(qIndex + 1) >= QUESTIONS.length;
   const shape = LAYOUT[q.key] ?? "rows";
 
+  /* 알레르기 두 걸음은 시안에서 **제목이 같다** — 99:1228(기본)도 99:1246(확장)도
+     「알레르기가 있으신가요?」이고, 걸음을 넘겨 달라지는 것은 부제뿐이다.
+     확장 걸음만 model.ts 의 문장(「피해야 하는 알레르기가 있으세요?」)을 쓰고 있어서,
+     항목을 고르는 순간 제목이 다른 질문처럼 바뀌었다. 문장 자체는 model.ts 의 몫이지만
+     그 파일은 이 레인이 아니므로, 화면에 나갈 문장을 여기서 한 번만 정한다. */
+  const 제목 = q.key === "allergies" ? "알레르기가 있으신가요?" : q.title;
+
   /* 알레르기는 «있으신가요?» → «모두 골라 주세요» 두 걸음이다(디자인 S06 기본/확장).
      지금 어느 걸음인지는 상태 하나로 정하지 않는다 — 질문을 되돌아왔을 때 이미 항목을
      골라 둔 사람에게 «있으신가요?»를 다시 묻는 것은, 방금 한 답을 못 본 척하는 일이다.
@@ -139,15 +146,17 @@ export function QuestionScreen() {
 
   return (
     <Screen
-      label={q.title}
+      label={제목}
       onBack={뒤로}
       steps={{ total: askTotal, current: askPos + 1, srLabel: `질문 ${askPos + 1} / ${askTotal}` }}
       eyebrow="고객님,"
       titleId="qtitle"
-      title={<Emphasize text={알레르기첫걸음 ? "알레르기가 있으신가요?" : q.title} word={EMPHASIS[q.key]} />}
+      title={<Emphasize text={제목} word={EMPHASIS[q.key]} />}
       subtitle={
         알레르기목록 ? "보유하신 알레르기를 모두 선택해 주세요."
-        : 알레르기첫걸음 ? (simple ? undefined : "알레르기가 있는 메뉴는 점수를 깎는 게 아니라 아예 빼고 추천합니다.")
+        /* 첫 걸음(99:1228)에는 부제가 없다. 「점수를 깎지 않고 아예 뺀다」는 설명은
+           시안에 없는 우리 요건이라 아래에서 접어 둔다(FIGMA_RULES §2.1). */
+        : 알레르기첫걸음 ? undefined
         : q.hint && !simple ? q.hint : undefined
       }
       actions={
@@ -177,6 +186,19 @@ export function QuestionScreen() {
               ))}
             </div>
           </div>
+
+          {/* 시안의 첫 걸음은 제목과 타일 두 장뿐이다. 알레르기를 어떻게 반영하는지는
+              없앨 수 없는 설명이라(빼는 것과 깎는 것은 결과가 다르다) 접어 둔다 —
+              펴기 전 화면이 시안과 같아지고, 알고 싶은 사람은 한 번 눌러 읽는다.
+              «쉬운 말»을 켠 사람에게는 접힌 줄도 남기지 않는다. */}
+          {!simple && (
+            <details className="home-saved">
+              <summary>어떻게 반영되나요?<span aria-hidden="true">▾</span></summary>
+              <p className="q-note">
+                알레르기가 있는 메뉴는 점수를 깎는 게 아니라 아예 빼고 추천합니다.
+              </p>
+            </details>
+          )}
         </>
       ) : q.key === "quantity" ? (
         <Stepper

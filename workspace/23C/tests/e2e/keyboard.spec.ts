@@ -90,7 +90,7 @@ test.describe("접근성 실측", () => {
     // 알레르기는 «있으신가요?» → 항목 목록 두 걸음이지만 질문은 하나다 (디자인 S06)
     await page.getByRole("button", { name: "있어요", exact: true }).click();
     await page.getByRole("button", { name: "땅콩", exact: true }).click();
-    await page.getByRole("button", { name: "콩(대두)" }).click();
+    await page.getByRole("button", { name: "대두", exact: true }).click();
     await page.getByRole("button", { name: /다음/ }).click();
 
     await page.getByRole("button", { name: "매운맛", exact: true }).click();

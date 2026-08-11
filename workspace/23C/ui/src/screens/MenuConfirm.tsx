@@ -86,7 +86,9 @@ export function MenuConfirm() {
           </div>
         )}
 
-        <p className="mc-badgeline"><Badge>✓ 추천해요</Badge></p>
+        {/* 표식은 `mark` 로 따로 넘긴다 — 굵기가 갈리고(✓ 만 Bold), 장식이라
+            aria-hidden 이 붙어 낭독기는 「추천해요」만 읽는다. */}
+        <p className="mc-badgeline"><Badge mark="✓">추천해요</Badge></p>
 
         {(lead || tail.length > 0) && (
           <p className="mc-why">

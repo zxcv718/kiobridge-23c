@@ -42,9 +42,17 @@
  * ChoiceGrid 는 클래스를 받지 않으므로 감싼 쪽에서 모양을 정한다. 이렇게 두면
  * 부품은 «무엇을 고르는가»만 알고, «어떻게 생겼는가»는 화면이 안다. */
 .q-rows .choices { grid-template-columns: 1fr; }
+/* 71px 은 시안 값이다(99:1246 · 99:1264). 고른 줄은 73px 로 그려져 있지만 그 2px 는
+   테두리가 1px 씩 굵어진 몫이라, 최소 높이는 71px 하나로 둔다 — 고를 때마다 줄이
+   두 칸씩 밀려 내려가지 않는다. */
 .q-rows .choice {
   display: flex; align-items: center; justify-content: center; gap: 12px;
-  min-height: 64px; padding: 14px 18px;
+  min-height: 71px; padding: 14px 18px;
+  /* 줄에서는 라벨이 **Bold** 다 (I99:1268;56:433 「순한맛」·;56:436 「보통맛」 18px Bold).
+     타일(I99:1278;38:1935 「뼈」)은 Regular 인데, 그쪽은 아이콘이 강조를 지고 있기
+     때문이다. 그림이 없는 줄에서는 글자가 그 몫까지 진다 — 공용 .choice 의 400 은
+     그대로 두고 여기서만 덮는다. */
+  font-weight: 700;
 }
 /* 디자인은 «보통맛 🔥» 처럼 그림을 글자 옆에 둔다 — 목록형에서는 위가 아니라 옆이다 */
 .q-rows .choice .ico { margin: 0; }
@@ -58,6 +66,37 @@
   min-height: 150px; padding: 20px 12px; text-align: center;
 }
 .q-tiles .choice img.ico { height: calc(var(--fs) * 3); }
+
+/* 아이콘 아래 장식 타원 (Figma «Ellipse 34» — 99:1236 없어요 버튼 · 99:1278 뼈 버튼).
+ *
+ * 시안에서는 단색 도형 하나(47×10 `#E5E5E5`)지만 SVG 로 받아 두지 않는다. 색이 파일에
+ * 박혀 있어 고대비 모드가 갈아끼우지 못하고, 검은 바탕에서는 회색 얼룩만 남는다.
+ *
+ * 의미 이름 중 시안 값과 **같은 색**은 --line-soft 다(#e5e5e5, tokens.css 의 «장식용
+ * 구분선 전용»). --line 은 #8a8a8a — 누를 수 있는 것의 경계가 바탕과 3:1 이 되도록
+ * 따로 짙게 잡아 둔 값이라, 그림자에 쓰면 시안보다 세 배 짙은 얼룩이 된다.
+ * 이 타원은 경계가 아니라 장식이므로 3:1 을 질 이유도 없다. 고대비에서는 --line-soft
+ * 가 #6b6b6b 로 함께 갈아끼워진다.
+ *
+ * **자리는 아이콘 바닥이다.** 시안의 타원 한가운데(y=102)가 아이콘 아래 선(y=101)과
+ * 같고 라벨은 그보다 아래(y=116)에서 시작한다 — 내용물 전체가 아니라 그림이 바닥에
+ * 놓인 그림자다. 세로 가운데로 모은 내용물(아이콘 3em + 4px + 라벨 1.6em)에서 아이콘
+ * 아래 선은 «가운데 + 0.7em − 2px» 이므로, 거기에 타원의 중심을 맞춘다.
+ * 크기도 em 이라 «큰 글씨»를 켜면 그림·글자와 같은 비율로 커진다. */
+.q-tiles .choice::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 0.42em - 2px);
+  width: 2.6em;   /* 47px */
+  height: 0.56em; /* 10px */
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--line-soft);
+}
+/* 「상관없어요」가 한 줄을 다 쓰는 변형은 시안에 없는 우리 것이고, 거기서는 그림이
+   글자 **옆에** 온다 — «아이콘 아래»가 성립하지 않으므로 그리지 않는다. */
+.q-tiles .choice:last-child:nth-child(odd)::before { content: none; }
 /* 선택지가 홀수면 마지막 하나가 한 줄을 다 쓴다 — 「상관없어요」가 반 칸으로 남아
    빈자리와 나란히 서면 무언가 빠진 화면처럼 보인다. */
 .q-tiles .choice:last-child:nth-child(odd) {
@@ -65,6 +104,11 @@
   min-height: 72px;
   flex-direction: row; gap: 12px;
 }
+
+/* 접어 둔 설명의 본문 (알레르기 첫 걸음 «어떻게 반영되나요?»).
+   접는 줄 자체는 홈·S03·S05 와 같은 `.home-saved` 를 그대로 쓴다 — 접는 방식이
+   화면마다 다르면 «한 번 눌러 편다»는 같은 동작을 사람이 매번 다시 배워야 한다. */
+.q-note { margin: 0 0 8px; color: var(--muted); font-size: 0.83em; line-height: 1.6; }
 
 /* 고른 것은 색 말고 기호로도 읽혀야 한다.
  * 디자인도 선택된 버튼에 «대두 ✓» 처럼 체크를 함께 넣는다 — 주황 테두리와 연노랑 바탕만으로는
@@ -102,6 +146,11 @@ img.ico {
   align-items: center; justify-content: center;
   text-align: center;
 }
+/* 이 화면의 제목만 28px 이다 — 다른 화면은 22px(.kb-title 1.22em) 이고 그 공용 값은
+   여기서 바꿀 수 없으므로, 계산 화면에만 걸리도록 범위를 좁혀 덮는다.
+   px 가 아니라 em 인 이유는 «큰 글씨»를 켰을 때 이 제목도 함께 커져야 하기 때문이다
+   (--fs 18px 기준 27.9px). :has() 를 모르는 브라우저에서는 22px 로 남을 뿐 깨지지 않는다. */
+.kb-screen:has(.calcspin) .kb-title { font-size: 1.55em; }
 .calc-answers { list-style: none; padding: 0; margin: 0; color: var(--muted); font-size: 0.86em; }
 
 /* 도는 고리. Figma 의 line-md:loading-twotone-loop 는 에셋으로 받아 두지 않았고,
@@ -124,7 +173,11 @@ img.ico {
   .calcspin { animation: none; }
 }
 
-/* 정도를 나타내는 표식 — 글자 **뒤에** 나란히 (Figma S07 «매운맛 🔥🔥🔥»).
-   글자 높이에 맞춰 커지므로 «큰 글씨»를 켜면 함께 커진다. */
-.kb-marks { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; vertical-align: middle; }
-.kb-marks img { height: 1.15em; width: auto; display: block; }
+/* 정도를 나타내는 표식 — 글자 **뒤에** 나란히 (Figma S07 «매운맛 🔥🔥🔥» 99:1264).
+   시안은 불꽃 30×30, 라벨과의 사이 16px 이다.
+   크기를 30px 로 박지 않고 본문 크기(--fs)에 비례시킨다 — 본문 18px 일 때 30.06px 라
+   시안과 같고, «큰 글씨»를 켜면 글자와 같은 비율로 커진다. 이 표식은 옆 글자의 뜻을
+   보태는 그림이라(불꽃 «세 개»가 곧 정도다), 글자만 커지고 그림이 그대로면 세는 일이
+   오히려 어려워진다. */
+.kb-marks { display: inline-flex; align-items: center; gap: 2px; margin-left: 16px; vertical-align: middle; }
+.kb-marks img { width: calc(var(--fs) * 1.67); height: calc(var(--fs) * 1.67); display: block; }

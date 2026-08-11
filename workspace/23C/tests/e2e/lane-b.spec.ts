@@ -32,8 +32,8 @@ const screen = (page: Page) => page.locator("section[aria-label^='매장 QR 연�
 /** 5단계 인디케이터의 현재 라벨 — 내부 상태를 훔쳐보지 않고 화면에 보이는 것으로 잰다. */
 const nowStep = (page: Page) => page.locator(".kb-steps:not(.mini) .kb-step.now .kb-steplabel");
 
-/** 홈을 띄우고 QR 화면으로 옮긴 뒤, 매장 정보(fixture)가 도착할 때까지 기다린다. */
-async function openQr(page: Page) {
+/** 홈에서 사용자와 같은 길로 QR 화면까지 간 뒤, 카메라 판단이 끝날 때까지 기다린다. */
+async function goToQr(page: Page) {
   await page.goto("http://localhost:5173/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
@@ -41,6 +41,22 @@ async function openQr(page: Page) {
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "이번만 사용" }).click();
   await expect(screen(page)).toBeVisible();
+  /* «카메라를 준비하고 있습니다»에서 벗어나야 판단이 끝난 것이다. 그 전에 화면을 재면
+     직접 입력이 접혔는지 펴졌는지가 아직 정해지지 않아 결과가 실행마다 달라진다. */
+  await expect(screen(page).getByRole("status")).not.toHaveText("카메라를 준비하고 있습니다.");
+}
+
+/**
+ * QR 화면으로 옮기고 **직접 입력을 편 뒤**, 매장 정보(fixture)가 도착할 때까지 기다린다.
+ *
+ * 직접 입력은 시안(150:359)대로 버튼 하나로 접혀 있고, 카메라를 못 쓰는 것이 확인되면
+ * 화면이 스스로 편다. 그래서 접혀 있을 때만 누른다 — 무조건 누르면 이미 펴진 경우를
+ * 도로 접어 버린다.
+ */
+async function openQr(page: Page) {
+  await goToQr(page);
+  const 직접입력 = screen(page).getByRole("button", { name: "직접 입력" });
+  if (await 직접입력.getAttribute("aria-expanded") === "false") await 직접입력.click();
   // fixture 가 오기 전에는 대조할 매장이 없어 «확인» 버튼이 잠겨 있다
   await expect(page.getByRole("button", { name: "이 코드로 연결하기" })).toBeEnabled();
 }
@@ -98,7 +114,20 @@ test.describe("레인 B — 매장 QR 읽기", () => {
 
       // ① 직접 입력 ② 직원 요청 ③ 건너뛰기 — 셋 다 이 화면에 있어야 한다
       await expect(page.getByLabel("매장 코드 직접 입력")).toBeVisible();
+      await expect(screen(page).getByRole("button", { name: "직원 요청" })).toBeVisible();
       await expect(page.getByRole("button", { name: /QR 없이 계속하기/ })).toBeVisible();
+    });
+
+    test("카메라가 막히면 직접 입력이 저절로 펴진다 — 본길을 한 번 더 누르게 하지 않는다", async ({ page }) => {
+      /* 시안의 기본 상태는 버튼 하나지만, 시안은 «카메라를 못 쓰는 화면»을 그린 적이 없다.
+         그 상태에서는 이 입력이 앞으로 가는 유일한 길이므로 화면이 먼저 펴 준다. */
+      await expect(screen(page).getByRole("button", { name: "직접 입력" }))
+        .toHaveAttribute("aria-expanded", "true");
+    });
+
+    test("직원 요청은 직원 호출 화면으로 간다", async ({ page }) => {
+      await screen(page).getByRole("button", { name: "직원 요청" }).click();
+      await expect(page.locator("section[aria-label='직원 호출']")).toBeVisible();
     });
 
     test("매장 코드를 직접 넣으면 연결 완료로 간다", async ({ page }) => {
@@ -184,6 +213,26 @@ test.describe("레인 B — 매장 QR 읽기", () => {
       await page.getByRole("button", { name: /QR 없이 계속하기/ }).click();
       await expect(nowStep(page), "세션 시작으로 넘어가지 않았습니다").toHaveText("세션 시작");
       expect(await page.evaluate(() => (window as unknown as { __stopped: number }).__stopped)).toBeGreaterThan(0);
+    });
+  });
+
+  /* 시안(150:359)의 화면 아래는 캡션 한 줄과 흰 버튼 둘뿐이다. 폴백 폼을 펼쳐 둔 채로는
+     펴기 전 화면이 시안과 달라지므로 접었다 — 접힌 것이 실제로 접혀 있고, 눌러서 닿는지
+     여기서 잰다. 위 두 describe 의 beforeEach 는 폼을 펴 두므로 따로 세운다. */
+  test.describe("시안의 기본 상태 — 직접 입력은 버튼 하나로 접혀 있다", () => {
+    test("스캔 중에는 접혀 있고, 눌러야 입력칸이 나온다", async ({ page }) => {
+      await withFakeCamera(page);
+      await goToQr(page);
+
+      const 직접입력 = screen(page).getByRole("button", { name: "직접 입력" });
+      await expect(직접입력).toHaveAttribute("aria-expanded", "false");
+      await expect(page.getByLabel("매장 코드 직접 입력")).toBeHidden();
+      // 시안 150:360 의 캡션이 그 버튼 위에 있다
+      await expect(screen(page).getByText("QR을 스캔하기 어려우신가요?")).toBeVisible();
+
+      await 직접입력.click();
+      await expect(page.getByLabel("매장 코드 직접 입력")).toBeVisible();
+      await expect(직접입력).toHaveAttribute("aria-expanded", "true");
     });
   });
 });

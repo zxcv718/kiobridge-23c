@@ -230,19 +230,39 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
   /* ───────── S12 안전 중단 (Figma 99:1337) ───────── */
 
-  test("D12 안전 중단은 직원에게 말하라고 «글로» 알리고, 빠져나갈 길을 남긴다", async ({ page }) => {
+  test("D12 안전 중단은 시안 그대로 그리고, 빠져나갈 길을 하나 더 남긴다", async ({ page }) => {
     await start(page);
     await toRecommend(page, CASE.noMatch);
     await page.getByRole("button", { name: "조건 수정" }).click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
-    await expect(page.getByRole("heading", { name: /확인이 어려워/ })).toBeVisible();
 
-    /* 시안 99:1337 은 «매장 직원에게 말씀해 주세요»를 문장으로 두고 버튼은 하나뿐이다.
-       직원 호출 버튼을 두지 않는다 — 그러면 이 화면이 막다른 길이 되므로, 조건을 고쳐
-       빠져나갈 길만 남긴다(시안이 다루지 않은 자리다). */
+    /* 시안 99:1337 의 네 조각이 그 순서로 다 있다 — 에러 라벨 · 일러스트 · 타이틀 · 서브텍스트. */
+    await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();
+    await expect(page.locator(".stop-figma-label")).toHaveText("ERROR");
+    await expect(page.locator(".stop-figma-illus img")).toHaveCount(1);
+
+    /* 시안은 «매장 직원에게 말씀해 주세요»를 문장으로 두고 버튼은 하나뿐이다.
+       직원 호출 버튼을 두지 않는다. 시안 버튼이 주 동작이고, 조건을 고쳐 빠져나갈 길은
+       그 아래에 남긴다 — 없으면 두 번 답한 사람에게 이 화면이 막다른 길이 된다. */
     await expect(page.getByText(/매장 직원에게 말씀해 주세요/)).toBeVisible();
     await expect(page.getByRole("button", { name: "직원 도움" })).toHaveCount(0);
-    const first = page.locator(".kb-actions button").first();
-    await expect(first).toHaveText("조건 다시 보기");
+    const 버튼 = page.locator(".kb-actions button");
+    await expect(버튼.first()).toHaveText("처음으로 돌아가기");
+    await expect(버튼.nth(1)).toHaveText("조건 다시 보기");
+
+    /* 일러스트는 고정 px 이라, 글자가 커지는 설정과 겹치면 화면을 밀어낸다.
+       본문은 스크롤 상자라 CTA 가 밀려나지는 않지만, 세로 가운데 정렬은 넘칠 때
+       **위쪽을 스크롤로 되돌아갈 수 없게** 자른다 — 실제로 360×640 에서 «ERROR» 가
+       9px 잘렸다. 가장 불리한 조합(작은 화면 + 큰 글씨 + 누르기 편하게)에서 잰다. */
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.evaluate(() => document.querySelector(".app")?.classList.add("large", "roomy"));
+    const 잘림 = await page.evaluate(() => {
+      const b = document.querySelector(".kb-screen-body") as HTMLElement;
+      const lab = document.querySelector(".stop-figma-label") as HTMLElement;
+      return lab.getBoundingClientRect().top - b.getBoundingClientRect().top;
+    });
+    expect(잘림, "머리말이 본문 상자 위로 잘렸습니다").toBeGreaterThanOrEqual(0);
+    await expect(page.locator(".stop-figma-label")).toBeInViewport();
+    await expect(버튼.first()).toBeInViewport();
   });
 });

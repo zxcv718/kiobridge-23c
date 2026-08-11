@@ -15,23 +15,32 @@ const CSS = allCss();
 const APP = allTsx();
 
 /**
- * 직원 도움 버튼이 없어도 되는 화면과 그 이유.
- * 늘리려면 **이유를 적어야** 하고, 그 이유가 사라지면 검사가 먼저 알려준다.
+ * 디자인이 직원 도움을 둔 자리 — **화면 이름과 그것이 어떤 모양인지.**
+ *
+ * 한때 이 자리에 STAFF_EXEMPT(면제 목록)와 STAFF_IN_ACTIONS 두 상수가 있었다.
+ * 「늘리려면 이유를 적어야 하고 그 이유가 사라지면 검사가 먼저 알려준다」는 주석까지
+ * 달려 있었는데, **정작 그 둘을 읽는 검사가 하나도 없었다.** 검사를 다시 쓰면서
+ * 상수만 남겨 둔 것이다. 목록이 지키는 시늉을 하는 동안 실제로는 아무것도 지켜지지
+ * 않았다 — 지금은 아래 검사가 이 표를 실제로 읽는다.
  */
-const STAFF_EXEMPT: Record<string, string> = {
-  "StaffHelp.tsx": "직원 도움 화면 자체다",
-  "Running.tsx": "1초 남짓 지나가는 진행 표시이며 조작 요소가 없다",
-  "SafetyStop.tsx": "여기서는 직원 도움이 비상구가 아니라 주 동작이라 아래 첫 버튼으로 둔다",
-};
+const STAFF_IN_DESIGN: { file: string; needle: RegExp; shape: string }[] = [
+  { file: "screens/QrConnect.tsx", needle: /직원 요청/, shape: "버튼 (시안 208:777)" },
+  { file: "screens/SafetyStop.tsx", needle: /직원/, shape: "문장 (시안 226:3420 «매장 직원에게 말씀해 주세요»)" },
+];
 
 /**
- * 머리 줄의 직원 도움을 끄고 **대신 자기 화면에 두는** 곳.
+ * 주석을 걷어낸 소스 — **화면에 나오는 것만 남긴다.**
  *
- * 면제(STAFF_EXEMPT)라고 다 같지 않다. StaffHelp·Running 은 정말로 없어도 되는
- * 화면이지만, SafetyStop 은 «없어도 되는» 것이 아니라 «더 크게 있어야 하는» 화면이다.
- * 둘을 한 목록으로 두면 언젠가 안전 중단에서 직원 도움이 통째로 사라져도 검사가 통과한다.
+ * 이 검사를 처음 썼을 때 QrConnect 가 그냥 통과했다. 「직원 요청」이 파일에 세 번
+ * 나오는데 **셋 다 주석 안**이었고 화면에는 버튼이 없었다. 소스를 문자열로 훑는
+ * 검사는 주석이 대신 만족시켜 줄 수 있다 — 아무 일도 안 하는 죽은 상수보다 나쁘다.
+ * 없는 것을 있다고 **적극적으로 보증**하기 때문이다.
+ *
+ * 줄 주석은 **줄 첫머리에 오는 것만** 지운다. `https://` 의 `//` 까지 지우면
+ * 그 뒤 코드가 통째로 사라져 또 다른 헛통과를 만든다.
  */
-const STAFF_IN_ACTIONS = ["SafetyStop.tsx"];
+const stripComments = (s: string) =>
+  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
 
 /** `min-height: 64px;` 같은 선언에서 픽셀값을 전부 뽑는다. */
 function minHeights(selector: string): number[] {
@@ -109,10 +118,14 @@ describe("접근성 — 선언한 보증이 실제로 코드에 있는가", () =
   });
 
   it("직원 도움은 «직원 도움 먼저»를 켠 사람에게 따라온다 — 그리고 선언이 그 사실과 같다", () => {
-    /* 화면마다 상시로 두던 직원 도움을 걷어냈다. 시안 어느 화면에도 없는 요소였고,
-       기획이 «시안에 있는 화면은 시안 그대로»를 요청했다.
+    /* 화면마다 상시로 두던 직원 도움을 걷어냈다. 디자인이 그것을 «모든 화면»이 아니라
+       «필요한 화면»에 두기 때문이다(아래 STAFF_IN_DESIGN 두 자리).
        **선언을 같이 내렸다** — 지키지 않는 것을 지킨다고 적지 않는다. 대신 사용자가
-       «직원 도움 먼저»를 켜면 상단 띠로 따라오고, 그 사실을 새 선언이 말한다. */
+       «직원 도움 먼저»를 켜면 상단 띠로 따라오고, 그 사실을 새 선언이 말한다.
+
+       한때 이 주석이 «시안 어느 화면에도 없는 요소였고» 라고 적고 있었다. 사실이
+       아니었다 — 그때 열어 보지 않은 화면이 11개였고 그중 QR 화면에 [직원 요청]
+       버튼이 있었다. 디자인에 관한 단정을 근거로 쓰려면 전부 열어 본 뒤여야 한다. */
     expect(UI_GUARANTEES.staffHelpReachableFromEveryStep,
       "화면마다 상시로 두지 않기로 했는데 선언이 그대로입니다").toBe(false);
     expect((UI_GUARANTEES as Record<string, unknown>).staffHelpShownWhenUserOptsIn).toBe(true);
@@ -126,6 +139,18 @@ describe("접근성 — 선언한 보증이 실제로 코드에 있는가", () =
     // 그리고 그 화면 자체는 살아 있어야 한다 — 닿을 길이 있는데 화면이 없으면 안 된다
     const screen = uiSources().find((f) => f.name === "screens/StaffHelp.tsx");
     expect(screen, "직원 도움 화면이 없습니다").toBeDefined();
+  });
+
+  it("디자인이 직원 도움을 그린 두 자리에는 실제로 있다", () => {
+    /* 전 화면 고정을 그만두면서 «그럼 어디에도 없어도 된다»로 미끄러지기 쉽다.
+       디자인이 그린 자리만큼은 비어 있으면 안 되므로 여기서 못 박는다. */
+    for (const { file, needle, shape } of STAFF_IN_DESIGN) {
+      const src = uiSources().find((f) => f.name === file);
+      expect(src, `${file} 을 못 찾았습니다`).toBeDefined();
+      const code = stripComments(src!.text);
+      expect(code, `${file} 에 직원 도움이 없습니다 — 디자인은 여기에 ${shape} 로 두었습니다`)
+        .toMatch(needle);
+    }
   });
 
   it("모든 Step 이 라우팅 표에 있고, 표에만 있는 화면도 없다", () => {
