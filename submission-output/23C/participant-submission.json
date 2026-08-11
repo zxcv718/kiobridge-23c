@@ -9,7 +9,7 @@
     "source": {
       "collectionChannel": "WEB_FORM",
       "providerId": "23C",
-      "collectedAt": "2026-08-11T06:58:39.057Z"
+      "collectedAt": "2026-08-11T07:34:53.167Z"
     },
     "accessibility": {
       "largeText": true,
@@ -93,8 +93,8 @@
           "key": "slot",
           "value": "OFF_PEAK",
           "source": "DEVICE_CLOCK",
-          "observedAt": "2026-08-11T06:58:39.045Z",
-          "expiresAt": "2026-08-11T07:58:39.045Z",
+          "observedAt": "2026-08-11T07:34:53.155Z",
+          "expiresAt": "2026-08-11T08:34:53.155Z",
           "confidence": 1
         },
         {
@@ -102,8 +102,8 @@
           "key": "soldOutCount",
           "value": "1",
           "source": "FIXTURE",
-          "observedAt": "2026-08-11T06:58:39.045Z",
-          "expiresAt": "2026-08-11T07:58:39.045Z",
+          "observedAt": "2026-08-11T07:34:53.155Z",
+          "expiresAt": "2026-08-11T08:34:53.155Z",
           "confidence": 1
         }
       ]
@@ -156,7 +156,7 @@
   "userDecision": {
     "approved": true,
     "decision": "APPROVE",
-    "confirmedAt": "2026-08-11T06:58:39.057Z"
+    "confirmedAt": "2026-08-11T07:34:53.167Z"
   },
   "executionPlan": {
     "planId": "PLAN-23C-chicken-store",

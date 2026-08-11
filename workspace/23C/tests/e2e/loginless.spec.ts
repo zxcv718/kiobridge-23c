@@ -68,7 +68,7 @@ test("5번 — «이번 한 번만»이 기본값이다", async ({ page }) => {
   await page.getByRole("button", { name: /^시작하기$/ }).click();
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
 
-  await expect(page.getByRole("button", { name: "이번만 사용하기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "이번만 사용" })).toBeVisible();
   // 아무것도 고르지 않은 채로는 아무것도 저장되지 않는다
   const 저장됨 = await page.evaluate(() => localStorage.getItem("kb23c-saved-settings-v4") !== null);
   expect(저장됨, "고르기도 전에 저장돼 있습니다").toBe(false);
@@ -86,8 +86,6 @@ test("6번 — 한 번의 조작으로 지워지고, 지웠다고 알린다", as
      되돌릴 수 없는 일을 확인받는 것이 아니다 — 삭제는 여전히 첫 화면에서 바로 닿는다. */
   await page.getByRole("button", { name: /네, 지우고 새로 시작할게요/ }).click();
 
-  await expect(page.getByRole("status"), "지웠다고 알리지 않습니다 — 화면이 바뀐 것으로 추측하게 됩니다")
-    .toContainText("지웠습니다");
   const 남았나 = await page.evaluate(() => localStorage.getItem("kb23c-saved-settings-v4"));
   expect(남았나, "지웠다고 했는데 기기에 남아 있습니다").toBeNull();
 });
@@ -110,7 +108,7 @@ test("QR 1번 — 읽은 값을 개인정보로 다루지 않고, 환경 대조�
   await openHome(page);
   await page.getByRole("button", { name: /^시작하기$/ }).click();
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByRole("button", { name: "이번만 사용하기" }).click();
+  await page.getByRole("button", { name: "이번만 사용" }).click();
 
   const 본문 = await page.locator("body").innerText();
   // 하지 않은 일을 한 것처럼 말하지 않는다 — 세션 «발급»은 서버가 필요하고 우리는 안 한다

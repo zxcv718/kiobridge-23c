@@ -15,12 +15,11 @@ import React from "react";
  * 화면 낭독기에는 버튼 세 개가 아니라 **하나의 수 입력**으로 알린다(role="spinbutton").
  * 「빼기, 1, 더하기」로 읽히면 지금 값이 몇인지가 셋 중 어디에 있는지 알 수 없다.
  */
-export function Stepper({ value, onChange, min = 1, max, unit = "개", label, atMaxNote }: {
+export function Stepper({ value, onChange, min = 1, max, label, atMaxNote }: {
   value: number | undefined;
   onChange: (next: number) => void;
   min?: number;
   max: number;
-  unit?: string;
   /** 화면 낭독기용 이름 — 화면에 제목이 따로 있어도 이 입력이 무엇인지 스스로 말해야 한다 */
   label: string;
   /** 상한에 닿았을 때 보여줄 안내 — 없으면 아무 말도 하지 않는다 */
@@ -48,7 +47,6 @@ export function Stepper({ value, onChange, min = 1, max, unit = "개", label, at
         aria-valuenow={cur}
         aria-valuemin={min}
         aria-valuemax={max}
-        aria-valuetext={`${cur}${unit}`}
         tabIndex={0}
         onKeyDown={(e) => {
           // 방향키로도 바꿀 수 있어야 한다 — spinbutton 을 쓰는 사람이 기대하는 조작이다
@@ -62,7 +60,10 @@ export function Stepper({ value, onChange, min = 1, max, unit = "개", label, at
         <button type="button" className="stepbtn" onClick={내리기} disabled={cur <= min} tabIndex={-1}>
           <span aria-hidden="true">−</span><span className="sr">하나 줄이기</span>
         </button>
-        <output className="stepval">{cur}<span className="stepunit">{unit}</span></output>
+        {/* 단위를 붙이지 않는다 — 시안(99:1292)은 주황 숫자 하나만 둔다. 무엇의 수인지는
+            제목(「얼마나 드실 건가요?」)과 이 입력의 이름(aria-label="수량")이 이미 말한다.
+            낭독기에도 aria-valuenow 의 수만 나간다. */}
+        <output className="stepval">{cur}</output>
         <button type="button" className="stepbtn" onClick={올리기} disabled={cur >= max} tabIndex={-1}>
           <span aria-hidden="true">+</span><span className="sr">하나 늘리기</span>
         </button>

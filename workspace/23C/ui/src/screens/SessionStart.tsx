@@ -57,17 +57,17 @@ export function SessionStart() {
       onBack={() => setStep("saveChoice")}
       steps={{ labels: FLOW_STEPS, current: 5 }}
       label="세션 시작"
-      title={prev
-        ? <Emphasize text="이전 주문과 동일하게 준비해드릴까요?" word="동일하게" />
-        : <Emphasize text="이제 주문을 시작할게요" word="주문" />}
+      /* 시안 150:422·150:423·208:754/756 그대로. 강조어를 키우지 않고, 버튼은 「네」·「아니오」다.
+         저장본이 없을 때(시안에 없는 상태)의 문구만 우리가 적는다. */
+      title={prev ? "이전 주문과 동일하게 준비해드릴까요?" : "이제 주문을 시작할게요"}
       subtitle={prev
-        ? "지난번에 주문하신 내용이에요. 그대로 하실지, 새로 고르실지 정해 주세요."
-        : "방금 맞추신 화면 설정으로 진행합니다. 메뉴는 몇 가지 여쭤보고 함께 골라 드릴게요."}
+        ? "지난번에 주문하신 내용이에요"
+        : "방금 맞추신 화면 설정으로 진행합니다"}
       actions={<>
         {prev
           ? <>
-            <Cta tone="primary" label="네, 지난번과 같게" onClick={startFromSaved} disabled={!fixture} />
-            <Cta label="아니오, 새로 고를게요" onClick={beginFresh} disabled={!fixture} />
+            <Cta tone="primary" label="네" onClick={startFromSaved} disabled={!fixture} />
+            <Cta label="아니오" onClick={beginFresh} disabled={!fixture} />
           </>
           : <Cta tone="primary" label="주문 시작하기" onClick={beginFresh} disabled={!fixture} />}
       </>}
@@ -85,7 +85,12 @@ export function SessionStart() {
               { label: "수량", value: answerLabel("quantity", prev.answers.quantity) },
             ]}
           />
-          <p className="p-note">이번 화면 설정 — {settingLine}</p>
+          {/* 시안(150:396)에는 이 줄이 없다 — 화면 설정은 바로 앞 걸음(S03)에서 카드로
+              확인하고 왔으므로 여기서는 접어 둔다. */}
+          <details className="home-saved">
+            <summary>이번 화면 설정<span aria-hidden="true">▾</span></summary>
+            <p className="p-willsave">{settingLine}</p>
+          </details>
         </>
       ) : (
         <>

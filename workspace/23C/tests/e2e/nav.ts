@@ -9,7 +9,7 @@
  *
  * 실제 흐름 (2026-08-11 실측):
  *   홈          [시작하기]
- *   프로필 1/3  라디오 2 · [화면 글씨 맞춰보기] · [다음]
+ *   프로필 1/3  라디오 2 · [다음]
  *   프로필 2/3  라디오 2 · [다음]
  *   프로필 3/3  라디오 2 · 접근성 토글 7 · 입력 방식 2 · [다음]
  *   저장 방식   [이 기기에 저장하기] | [이번만 사용하기]   ← 고르는 즉시 QR 로 간다
@@ -21,7 +21,7 @@ import { expect, type Page } from "@playwright/test";
 
 export const HOME = "http://localhost:5173/";
 
-/** 알레르기 «확장» 걸음에만 있는 항목들 — 첫 걸음에는 「없어요/있어요/잘 모르겠어요」뿐이다 */
+/** 알레르기 «확장» 걸음에만 있는 항목들 — 첫 걸음에는 「없어요/있어요」 두 장뿐이다 */
 const ALLERGY_ITEMS = ["땅콩", "콩(대두)", "우유", "계란", "밀", "새우"];
 
 /**
@@ -90,7 +90,7 @@ export async function openHome(page: Page): Promise<void> {
 /**
  * 홈 → 첫 질문. 화면 설정은 기본값 그대로 지나간다.
  *
- * @param store 저장 방식에서 «이 기기에 저장하기»를 고를지. 기본은 «이번만 사용하기».
+ * @param store 저장 방식에서 «이 기기에 저장하기»를 고를지. 기본은 «이번만 사용».
  */
 export async function enterWizard(page: Page, store = false): Promise<void> {
   await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
@@ -100,11 +100,11 @@ export async function enterWizard(page: Page, store = false): Promise<void> {
     await page.getByRole("button", { name: "다음", exact: true }).click();
   }
   // S03 저장 방식 — 고르는 즉시 다음 걸음으로 간다
-  await page.getByRole("button", { name: store ? "이 기기에 저장하기" : "이번만 사용하기" }).click();
+  await page.getByRole("button", { name: store ? "저장하기" : "이번만 사용" }).click();
   // S04 매장 QR — 카메라는 헤드리스에서 못 쓴다. QR 자체는 lane-b.spec.ts 가 폴백으로 검사한다.
   await page.getByRole("button", { name: "QR 없이 계속하기" }).click();
   // S05 세션 시작
-  await page.getByRole("button", { name: /^(주문 시작하기|아니오, 새로 고를게요)$/ }).click();
+  await page.getByRole("button", { name: /^(주문 시작하기|아니오)$/ }).click();
 
   await expect(page.locator("#qtitle")).toBeVisible();
 }
@@ -122,9 +122,9 @@ export async function enterWizardByKeyboard(
 ): Promise<void> {
   await pressOn(page, /^(시작하기|새로 설정하기)$/);
   for (let i = 0; i < 3; i++) await pressOn(page, /^다음$/);
-  await pressOn(page, /^이번만 사용하기$/);
+  await pressOn(page, /^이번만 사용$/);
   await pressOn(page, /^QR 없이 계속하기$/);
-  await pressOn(page, /^(주문 시작하기|아니오, 새로 고를게요)$/);
+  await pressOn(page, /^(주문 시작하기|아니오)$/);
   await expect(page.locator("#qtitle")).toBeVisible();
 }
 

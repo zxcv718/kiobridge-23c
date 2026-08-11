@@ -26,8 +26,6 @@ const CASE = {
   twoQty: ["없어요", "순한맛", "순살", "먹고 가기", "2개", "일반컵", "없어요"],
   /** 예산 5,000원 — 이 가게 최저가(5,500원)보다 낮아 조건에 맞는 메뉴가 없다 */
   noMatch: ["없어요", "매운맛", "순살", "포장하기", "1개", "상관없어요", "5,000원"],
-  /** 알레르기를 «잘 모르겠어요» — 임의로 판단하지 않고 재확인을 요구한다 */
-  unknown: ["잘 모르겠어요", "매운맛", "순살", "포장하기", "1개", "상관없어요", "없어요"],
 } as const;
 
 async function toRecommend(page: Page, picks: readonly string[]) {
@@ -181,7 +179,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByRole("heading", { name: "저장하지 않았습니다" })).toBeVisible();
 
     // 마음을 바꿀 길은 남아 있다 — 새 질문이 아니라 뒤집기 버튼 하나
-    await page.getByRole("button", { name: /이 기기에 저장/ }).click();
+    await page.getByRole("button", { name: "이 기기에 저장하기" }).click();
     await expect(page.getByRole("heading", { name: "이 기기에 저장했습니다" })).toBeVisible();
     await expect(page.getByText(/저장할까요/)).toHaveCount(0);
 
@@ -193,7 +191,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await start(page);
     await toCartReview(page);
     await finishOrder(page);
-    await page.getByRole("button", { name: /이 기기에 저장/ }).click();
+    await page.getByRole("button", { name: "이 기기에 저장하기" }).click();
 
     const box = page;
     await expect(box.getByText("메뉴명")).toBeVisible();
@@ -234,7 +232,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
   test("D12 안전 중단은 직원에게 말하라고 «글로» 알리고, 빠져나갈 길을 남긴다", async ({ page }) => {
     await start(page);
-    await toRecommend(page, CASE.unknown);
+    await toRecommend(page, CASE.noMatch);
     await page.getByRole("button", { name: "조건 수정" }).click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
     await expect(page.getByRole("heading", { name: /확인이 어려워/ })).toBeVisible();

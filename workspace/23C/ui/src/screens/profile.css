@@ -31,13 +31,10 @@
 .p-minidot.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 .p-minitext { margin-left: 5px; }
 
-/* 카드 위에 붙는 작은 설명 (S05 «지난 주문» · S03 «저장 방식을 선택해주세요») */
-.p-cap { margin: 4px 0 6px; font-size: 0.82em; font-weight: 700; color: var(--muted); }
-
-/* ───────── 화면 글씨 맞춰보기 (우리 것 — 디자인에 없다) ─────────
- * 설정 이름을 고르게 하는 대신 실제 크기로 렌더한 문장을 보여주고 보이는지만 묻는다. */
-.p-probe { margin: 14px 0 4px; border-style: dashed; }
-.p-sample { font-weight: 700; margin: 18px 0; line-height: 1.35; }
+/* 카드 위 캡션 (S05 150:425 «지난 주문 · ChickenStore») — 14px Regular · secondary · 자간 -0.28 */
+.p-cap { margin: 0 0 6px; font-size: 0.78em; font-weight: 400; color: var(--muted); letter-spacing: -0.02em; }
+/* 카드 아래 한 줄 (S03 150:321) — 15px Regular 이고 **본문색**이다. 회색이 아니다. */
+.p-choose { margin: 4px 0 0; font-size: 0.83em; font-weight: 400; color: var(--fg); }
 
 /* ───────── 자세한 설정 ─────────
  * 세 걸음의 라디오는 «가장 많이 쓰는 셋»이고, 나머지 넷을 포함한 7종 전부는 여기 남는다.
@@ -47,7 +44,7 @@
 .p-more > summary {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   min-height: 48px; padding: 10px 16px; cursor: pointer; list-style: none;
-  background: var(--sunken); color: var(--fg); font-weight: 800;
+  background: var(--sunken); color: var(--fg); font-weight: 700;
 }
 .p-more > summary::-webkit-details-marker { display: none; }
 .p-morehint { font-size: 0.78em; font-weight: 500; color: var(--muted); }
@@ -55,45 +52,36 @@
 .p-subhead { font-size: 1em; margin: 18px 0 6px; }
 
 /* ───────── 요약 행의 «수정» (SummaryCard 185:214) ─────────
- * 디자인에서는 글자 링크지만 진짜 버튼으로 만든다 — 눌러서 그 단계로 돌아간다.
- * 밑줄을 함께 두는 것은 색만으로 «누를 수 있음»을 말하지 않기 위해서다. */
+ * 시안 값 그대로다 — **Medium(500) · 브랜드 주황 #ff5a1f · 밑줄 없음**, 값과 10px 간격.
+ * 한때 굵은 짙은 주황에 밑줄을 그어 두었다. 밑줄은 «색만으로 누를 수 있음을 말하지
+ * 않는다»는 우리 규칙이었는데, 시안은 밑줄을 긋지 않는다.
+ *
+ * 대신 규칙이 지키려던 것을 다른 자리에서 지킨다:
+ *  · 진짜 `<button>` 이라 화면 낭독기에는 «수정, 버튼»으로 나간다 — 색과 무관하다
+ *  · 손가락·키보드가 닿는 순간 밑줄이 나타난다(가만히 있을 때의 화면은 시안 그대로)
+ * 흰 바탕 위 #ff5a1f 는 3.12:1 로 본문 기준 미달이며, CTA 와 같은 색쌍이라
+ * tests/tokens.test.ts 의 예외 표에 함께 적혀 있다.
+ *
+ * 글자는 14px 이지만 누르는 자리는 48px 을 지킨다. 그래서 이 행만 시안의 45px 이 아니라
+ * 48px 이 된다 — 3px 차이로 우리가 선언한 터치 타깃 보증을 깨지 않는다. */
 .p-edit {
-  min-height: 48px; padding: 0 12px; cursor: pointer;
-  border: 0; border-radius: 8px; background: var(--card); color: var(--brand-strong);
-  font-size: 0.86em; font-weight: 800; font-family: inherit; text-decoration: underline;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 48px; min-height: 48px; padding: 0; cursor: pointer;
+  border: 0; background: none; color: var(--brand);
+  font-size: 1em; font-weight: 500; font-family: inherit; text-decoration: none;
 }
+.p-edit:hover, .p-edit:focus-visible { text-decoration: underline; }
 
 /* 저장 방식·세션 시작·홈의 안내 문구 */
 .p-note { margin: 12px 0 0; font-size: 0.84em; color: var(--muted); line-height: 1.6; }
 
 /* 저장하면 무엇이 남는지 — 고르기 «전에» 보여준다 (guide.txt 5번 «저장된 내용 확인»).
    경고가 아니라 안내라 danger 색을 쓰지 않는다. */
-.p-willsave {
-  margin: 14px 0 4px; padding: 14px 16px;
-  border: 1.5px solid var(--line-soft); border-radius: var(--kb-radius-md);
-  background: var(--sunken); font-size: 0.86em; line-height: 1.6;
-}
+.p-willsave { padding: 0 0 8px; font-size: 0.83em; line-height: 1.6; }
 .p-willsave ul { margin: 8px 0; padding-left: 20px; }
 .p-willsave li { margin: 4px 0; color: var(--muted); }
 .p-willsave li span, .p-willsave li b { color: var(--fg); }
 .p-willsave > p { margin: 8px 0 0; color: var(--muted); }
-
-/* 저장 기록을 지우는 자리 — 카드 바로 아래. 되돌릴 수 없다는 사실을 색이 아니라
-   글자로 말한다. 시작 버튼들과 나란히 두지 않는 이유는 Home.tsx 주석에 적었다. */
-.home-erase {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
-  width: 100%; margin-top: 10px; text-align: left;
-}
-.home-erase small { font-size: 0.76em; font-weight: 500; color: var(--muted); }
-
-/* «지웠습니다» — 색만으로 말하지 않는다. 성공을 초록으로 칠하는 대신 글자로 적고,
-   테두리로 «방금 일어난 일»이라는 것만 표시한다. */
-.home-erased {
-  margin: 12px 0 0; padding: 12px 16px;
-  border: 1.5px solid var(--line); border-left: 4px solid var(--brand-strong);
-  border-radius: 10px; background: var(--sunken);
-  font-weight: 700;
-}
 
 /* ───────── 저장된 내용 보기 (접어 둔 조회·수정) ─────────
  * 시안(150:190)의 재방문 홈에는 제목·부제·버튼 둘뿐이다. 조회·수정은 무로그인 가이드

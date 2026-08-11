@@ -234,7 +234,16 @@ export const ALLERGY_GATE = [
 ] as const;
 
 /** 첫 걸음 아래 한 줄 — 시안에 없는, 안전을 위한 우리 선택지 */
-export const ALLERGY_UNKNOWN = { value: "모름", label: "잘 모르겠어요" } as const;
+/**
+ * 「모름」은 **화면에서 고를 수 없다.** 시안(99:1228)의 첫 걸음은 타일 두 장뿐이고,
+ * 「잘 모르겠어요」는 우리가 그 아래에 덧붙였던 선택지였다.
+ *
+ * 값 자체는 남긴다 — 엔진은 여전히 SENTINEL.UNKNOWN 을 하드 제약 미확인으로 다루고
+ * (engine.ts `hardConstraintUnknown`), 조합 검증 12,960 에도 「모름」이 들어 있다.
+ * 옛 저장본이나 대리 입력으로 들어온 값이 화면에서 사라졌다는 이유로 조용히
+ * «알레르기 없음»이 되면 안 되기 때문이다. 화면에 입구가 없을 뿐 계약은 그대로다.
+ */
+export const ALLERGY_UNKNOWN_VALUE = "모름";
 
 /** 둘째 걸음 — 시안 99:1246 의 6종 그대로. 「없음」·「모름」은 여기 없다(첫 걸음의 답이다). */
 export const ALLERGY_ITEMS = ["땅콩", "콩", "우유", "계란", "밀", "새우"] as const;

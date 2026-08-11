@@ -23,9 +23,9 @@ async function 안내켜고(page: Page, 켤까: boolean): Promise<void> {
   await page.getByRole("button", { name: "다음", exact: true }).click();
   if (켤까) await page.getByRole("button", { name: "안내 켜짐" }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByRole("button", { name: "이번만 사용하기" }).click();
+  await page.getByRole("button", { name: "이번만 사용" }).click();
   await page.getByRole("button", { name: "QR 없이 계속하기" }).click();
-  await page.getByRole("button", { name: /주문 시작하기|아니오/ }).click();
+  await page.getByRole("button", { name: /^(주문 시작하기|아니오)$/ }).click();
   await expect(page.locator("#qtitle")).toBeVisible();
 }
 

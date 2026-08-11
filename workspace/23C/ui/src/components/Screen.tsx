@@ -18,7 +18,7 @@ import { StepIndicator } from "./StepIndicator";
  * 홈 버튼이 있는 기기에서 가려지지 않도록 안전 영역(safe-area)만큼 아래를 띄운다.
  */
 export function Screen({
-  onBack, backLabel, steps, eyebrow, title, titleId, subtitle, children, actions, label, busy,
+  onBack, backLabel, steps, eyebrow, title, titleId, subtitle, subtitleStrong, children, actions, label, busy,
 }: {
   /** 없으면 뒤로가기를 그리지 않는다 */
   onBack?: () => void;
@@ -35,6 +35,12 @@ export function Screen({
    */
   titleId?: string;
   subtitle?: React.ReactNode;
+  /**
+   * 부제를 tertiary(#464c53)로 — 시안이 화면마다 다르게 정했다.
+   * 홈(150:185·150:213)·세션 시작(150:423)은 secondary #8c8c8c 이고,
+   * 저장 방식(150:302)만 tertiary 다. 골라 쓰라는 뜻이므로 골라 쓴다.
+   */
+  subtitleStrong?: boolean;
   children?: React.ReactNode;
   /** 화면 아래에 붙는 버튼들. 넘긴 순서가 곧 중요도 순서다. */
   actions?: React.ReactNode;
@@ -59,9 +65,15 @@ export function Screen({
       )}
 
       <div className="kb-screen-body">
-        {eyebrow && <p className="kb-eyebrow">{eyebrow}</p>}
+        {/* 시안은 진행 표시와 제목 사이에 **빈 16px 한 줄**을 둔다(150:182 · 150:210
+            «MiniStepIndicatorSpacer»). S02 에서는 그 자리에 세 걸음 점이 들어가고,
+            홈처럼 점이 없는 화면에서는 자리만 남는다 — 그래서 두 화면의 제목이 같은
+            높이에서 시작한다. 자리를 지우면 홈만 제목이 위로 붙어 시안과 어긋난다. */}
+        {eyebrow
+          ? <p className="kb-eyebrow">{eyebrow}</p>
+          : steps?.labels && <div className="kb-eyebrow-spacer" aria-hidden="true" />}
         {title && <h2 className="kb-title" id={titleId}>{title}</h2>}
-        {subtitle && <p className="kb-subtitle">{subtitle}</p>}
+        {subtitle && <p className={subtitleStrong ? "kb-subtitle strong" : "kb-subtitle"}>{subtitle}</p>}
         {children}
       </div>
 

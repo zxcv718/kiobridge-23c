@@ -35,6 +35,7 @@ const CONTRAST = { ...BASE, ...paletteOf(".app.contrast") };
 const 시안예외 = [
   { fg: "#8c8c8c", bg: "#ffffff", ratio: 3.36, where: "보조 글씨색 — 부제·설명 (150:185 · 150:213)" },
   { fg: "#ffffff", bg: "#ff5a1f", ratio: 3.12, where: "브랜드 주황 위 흰 글씨 — 주 버튼·진행 표시 원 (208:754 · 180:173)" },
+  { fg: "#ff5a1f", bg: "#ffffff", ratio: 3.12, where: "흰 바탕 위 브랜드 주황 글씨 — 요약 행의 «수정» (185:214)" },
 ] as const;
 
 const 시안이정한미달 = (p: { fg: string; bg: string }) =>

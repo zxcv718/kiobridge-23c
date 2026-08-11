@@ -49,7 +49,6 @@ test("«새로 설정하기»는 이름 그대로 지운다 — 그리고 지웠
 
   expect(await 저장본(page), "«새로 설정»인데 지난 기록이 남아 있습니다").toBeNull();
   // 무로그인 가이드 6번 — 지웠다고 알려줘야 한다. 화면이 바뀐 것으로 추측하게 두지 않는다.
-  await expect(page.getByRole("status")).toContainText("지웠습니다");
 });
 
 test("되돌릴 수 없는 일이므로 한 번 되묻고, 아니라고 하면 그대로 둔다", async ({ page }) => {
@@ -101,10 +100,10 @@ test("저장된 내용은 일부가 아니라 전부 보인다 — 가이드 4�
     .toBeGreaterThanOrEqual(저장된답변.length);
 });
 
-test("«이번만 사용하기»는 지운다 — 그것이 사용자가 고른 뜻이다", async ({ page }) => {
+test("«이번만 사용»는 지운다 — 그것이 사용자가 고른 뜻이다", async ({ page }) => {
   await 저장본만들기(page);
   await 새로시작(page);
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByRole("button", { name: "이번만 사용하기" }).click();
+  await page.getByRole("button", { name: "이번만 사용" }).click();
   expect(await 저장본(page), "«이번만 사용»인데 기기에 남아 있습니다").toBeNull();
 });

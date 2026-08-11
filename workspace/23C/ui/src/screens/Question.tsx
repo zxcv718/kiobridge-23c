@@ -1,7 +1,7 @@
 import React from "react";
 import { useFlow } from "../flow";
 import { ChoiceGrid, Cta, Emphasize, Screen, Stepper } from "../components";
-import { ALLERGY_GATE, ALLERGY_ITEMS, ALLERGY_UNKNOWN, EDIT_LABELS, QUANTITY_MAX, QUESTIONS, answerLabel } from "../model";
+import { ALLERGY_GATE, ALLERGY_ITEMS, EDIT_LABELS, QUANTITY_MAX, QUESTIONS, answerLabel } from "../model";
 import hotIcon from "../assets/icons/hot.svg";
 import "./question.css";
 
@@ -177,14 +177,6 @@ export function QuestionScreen() {
               ))}
             </div>
           </div>
-          {/* 시안에 없는 우리 선택지. 타일 두 장과 나란히 두면 «둘 중 하나»가 흐려지므로
-              아래 한 줄로 두되, 해당하는 사람이 못 보고 지나치지 않게 감추지는 않는다. */}
-          <button type="button" className="choice q-unsure"
-            aria-pressed={Array.isArray(answers.allergies) && answers.allergies[0] === ALLERGY_UNKNOWN.value}
-            onClick={() => 알레르기선택(ALLERGY_UNKNOWN.value)}>
-            {ALLERGY_UNKNOWN.label}
-            <small>확실하지 않으면 이걸 골라 주세요. 임의로 판단하지 않고 다시 확인합니다.</small>
-          </button>
         </>
       ) : q.key === "quantity" ? (
         <Stepper

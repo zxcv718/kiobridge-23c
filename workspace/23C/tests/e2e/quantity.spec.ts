@@ -86,7 +86,9 @@ test("누르는 자리가 48px 이상이고, 낭독기에는 수 입력 하나�
   }
   const spin = page.getByRole("spinbutton", { name: "수량" });
   await expect(spin).toHaveAttribute("aria-valuenow", "1");
-  await expect(spin).toHaveAttribute("aria-valuetext", "1개");
+  /* 단위는 화면에도 낭독기에도 붙이지 않는다 — 시안(99:1292)은 주황 숫자 하나만 두고,
+     무엇의 수인지는 제목(「얼마나 드실 건가요?」)과 이 입력의 이름이 이미 말한다. */
+  await expect(spin).not.toHaveAttribute("aria-valuetext", /.*/);
 });
 
 test("키보드 방향키로도 바꿀 수 있다", async ({ page }) => {

@@ -7,7 +7,6 @@
  * 이 파일이 지키는 것은 «디자인대로 그렸는가»가 아니라 **흐름과 접근성이 살아 있는가**다.
  * 화면을 넷으로 쪼개면서 잃기 쉬운 것 셋을 특히 붙잡는다 —
  *   ① 접근성 토글 7종이 3단계 라디오 뒤로 사라지지 않는다 (제출물이 채널 8종을 선언한다)
- *   ② 「화면 글씨 맞춰보기」 문답이 1단계에 남는다
  *   ③ S03 에서 정한 저장 의사가 세션 시작(startWizard)에서 지워지지 않는다
  */
 import { expect, test, type Page } from "@playwright/test";
@@ -39,7 +38,7 @@ async function toSaveChoice(page: Page) {
 
 /** S03 에서 저장 방식을 고르고 QR 을 건너뛰어 세션 시작까지. */
 async function chooseAndSkipQr(page: Page, store = false) {
-  await page.getByRole("button", { name: store ? "이 기기에 저장하기" : "이번만 사용하기" }).click();
+  await page.getByRole("button", { name: store ? "저장하기" : "이번만 사용" }).click();
   await page.getByRole("button", { name: "QR 없이 계속하기" }).click();
 }
 
@@ -156,31 +155,6 @@ test.describe("A계열 — 프로필 흐름", () => {
     await expect(page.getByRole("button", { name: /음성/ })).toHaveCount(0);
   });
 
-  test("A5 「화면 글씨 맞춰보기」 문답은 글씨 크기만 정한다", async ({ page }) => {
-    await toProfile(page);
-    await page.getByRole("button", { name: "화면 글씨 맞춰보기" }).click();
-    /* 문답은 두 걸음이다 — 예시가 실제로 적용되는 두 크기(기본·큰 글씨)뿐이기 때문이다.
-       예전에는 «지금 크기의 1.9배»까지 세 걸음을 보여줬는데, 그 크기는 적용할 수가 없어서
-       가장 큰 것을 고르고도 화면이 안 바뀌었다(probe.spec.ts). 마지막에서 더 작다고 하면
-       버튼 이름이 «그래도 작아요»가 된다 — 더 큰 것이 있는 척하지 않는다. */
-    await page.getByRole("button", { name: "조금 작아요" }).click();
-    await page.getByRole("button", { name: "그래도 작아요" }).click();
-
-    const app = page.locator(".app");
-    await expect(app).toHaveClass(/large/);
-
-    /* 한때 마지막 단계에서 고대비·화면 안내까지 함께 켰다. 고대비는 **바로 다음 걸음의
-       질문**이고 화면 안내는 그 다음 걸음의 질문인데, 1단계 문답이 손을 뻗어 대신 답해
-       버리면 글씨 크기를 고르던 사람 눈앞에서 화면이 통째로 반전된다. 실제로 그렇게
-       보고됐다. 신호는 «권유 문장»으로 넘기고, 켜는 것은 사용자가 한다. */
-    await expect(app, "묻지도 않고 고대비를 켰습니다").not.toHaveClass(/contrast/);
-    await expect(app, "묻지도 않고 화면 안내를 켰습니다").not.toHaveClass(/guide/);
-    await expect(page.getByText(/다음 단계에서 고대비 화면/)).toBeVisible();
-
-    // 문답 결과가 1단계 라디오에도 그대로 비친다 (두 곳이 같은 값을 본다)
-    await expect(radio(page, "큰 글씨")).toContainText("선택됨");
-  });
-
   test("A6 S03 이 프로필 요약을 보여주고 저장 여부를 여기서 한 번만 묻는다", async ({ page }) => {
     await toSaveChoice(page);
 
@@ -198,13 +172,13 @@ test.describe("A계열 — 프로필 흐름", () => {
     const stored = () => page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
     expect(await stored(), "고르기도 전에 저장돼 있습니다").toBeNull();
 
-    await page.getByRole("button", { name: "이 기기에 저장하기" }).click();
+    await page.getByRole("button", { name: "저장하기" }).click();
     expect(await stored(), "«저장하기»를 골랐는데 저장본이 없습니다").not.toBeNull();
 
     // 뒤로 돌아와 마음을 바꾸면 그 자리에서 지워진다 (S03 은 QR 화면의 «뒤로»로 다시 온다)
     await page.getByRole("button", { name: "뒤로" }).click();
     await expect(page.getByRole("heading", { name: "선택하신 내용을 확인해주세요" })).toBeVisible();
-    await page.getByRole("button", { name: "이번만 사용하기" }).click();
+    await page.getByRole("button", { name: "이번만 사용" }).click();
     expect(await stored(), "«이번만 사용»으로 바꿨는데 저장본이 남아 있습니다").toBeNull();
   });
 
@@ -212,11 +186,11 @@ test.describe("A계열 — 프로필 흐름", () => {
     // 저장 여부와 이동을 한 버튼에 합쳤다 — 라디오로 고르고 «다음»을 또 누르면
     // «무엇을 골랐는지»와 «어디로 가는지»가 한 줄에 섞여 두 번 판단하게 된다.
     await toSaveChoice(page);
-    await page.getByRole("button", { name: "이번만 사용하기" }).click();
+    await page.getByRole("button", { name: "이번만 사용" }).click();
     await expect(nowStep(page)).toHaveText("QR 연동");
 
     await toSaveChoice(page);
-    await page.getByRole("button", { name: "이 기기에 저장하기" }).click();
+    await page.getByRole("button", { name: "저장하기" }).click();
     await expect(nowStep(page)).toHaveText("QR 연동");
 
     // 매장 QR 이 없는 경우 — 여기서 건너뛰면 세션 시작으로

@@ -46,18 +46,6 @@ async function 가려진버튼(page: Page): Promise<string[]> {
   return 결과;
 }
 
-test("프로필 1단계 — 「화면 글씨 맞춰보기」 문답의 버튼이 실제로 눌린다", async ({ page }) => {
-  await openHome(page);
-  await page.getByRole("button", { name: /^시작하기$/ }).click();
-  await page.getByRole("button", { name: "화면 글씨 맞춰보기" }).click();
-
-  // 예시 문장이 커질수록 버튼이 아래로 밀린다 — 두 단계 모두 잰다
-  for (const 단계 of [1, 2]) {
-    expect(await 가려진버튼(page), `문답 ${단계}단계`).toEqual([]);
-    if (단계 < 2) await page.getByRole("button", { name: "조금 작아요" }).click();
-  }
-});
-
 test("프로필 3단계 — 자세한 설정을 펼쳐도 모든 토글이 눌린다", async ({ page }) => {
   await openHome(page);
   await page.getByRole("button", { name: /^시작하기$/ }).click();

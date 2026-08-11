@@ -45,11 +45,14 @@ export function SaveChoice() {
       onBack={() => setStep("profile")}
       steps={{ labels: FLOW_STEPS, current: 3 }}
       label="저장 방식"
-      title={<Emphasize text="선택하신 내용을 확인해주세요" word="확인" />}
-      subtitle="고치실 것이 있으면 «수정»을 눌러 그 단계로 돌아가실 수 있습니다."
+      /* 제목·부제·버튼 문구 전부 시안 그대로다 (150:301 · 150:302 · 208:754/756).
+         부제 색도 시안을 따른다 — 이 화면만 secondary 가 아니라 tertiary 다. */
+      title="선택하신 내용을 확인해주세요"
+      subtitle="아래 내용을 확인해주세요"
+      subtitleStrong
       actions={<>
-        <Cta tone="primary" label="이 기기에 저장하기" onClick={() => choose(true)} />
-        <Cta label="이번만 사용하기" onClick={() => choose(false)} />
+        <Cta tone="primary" label="저장하기" onClick={() => choose(true)} />
+        <Cta label="이번만 사용" onClick={() => choose(false)} />
       </>}
     >
       <Card
@@ -61,24 +64,28 @@ export function SaveChoice() {
         ]}
       />
 
-      <p className="p-cap">저장 방식을 선택해주세요</p>
-      {/* guide.txt 5번은 «저장 여부 선택 · 저장된 내용 확인 · 수정 · 삭제» 를 요구한다.
-          «내용 확인»이 저장한 뒤에만 되면 늦다 — 고르기 전에 무엇이 남는지 알아야 한다.
-          특히 알레르기는 건강에 가까운 정보이고, 공용 기기에서 가장 민감한 항목이다. */}
-      <div className="p-willsave">
-        <b>저장하면 이 기기에 남는 것</b>
-        <ul>
-          <li>지금 고르신 <span>화면 설정</span> (글씨 크기·고대비·화면 안내 등)</li>
-          <li>주문을 마치면 <span>답해 주신 내용</span> — <b>알레르기</b>·맵기·형태·이용 방식·수량·컵·예산</li>
-          <li>주문을 마치면 <span>고르신 메뉴</span> 하나</li>
-        </ul>
-        <p>서버나 계정에는 아무것도 보내지 않습니다. 이 기기 안에만 남습니다.</p>
-      </div>
+      {/* 시안 150:321 — 카드 아래 한 줄, 15px Regular 이고 색은 본문색이다(회색이 아니다) */}
+      <p className="p-choose">저장 방식을 선택해주세요</p>
 
-      <p className="p-note">
-        저장하시면 다음에 오셨을 때 그대로 되살려 드리고, 홈 화면에서 언제든 지우실 수 있습니다.
-        {" "}여러 사람이 쓰는 기기라면 <b>이번만 사용하기</b>를 권합니다.
-      </p>
+      {/* guide.txt 5번은 «저장 여부 선택 · 저장된 내용 확인 · 수정 · 삭제» 를 요구한다.
+          «내용 확인»이 저장한 뒤에만 되면 늦다 — 고르기 전에 무엇이 남는지 알아야 하고,
+          알레르기는 건강에 가까운 정보라 공용 기기에서 가장 민감한 항목이다.
+          시안에는 이 설명이 없으므로 **접어 둔다** — 펴기 전 화면은 시안과 같고,
+          알고 싶은 사람은 한 번 눌러 읽는다(홈의 «저장된 내용 보기»와 같은 방식이다). */}
+      <details className="home-saved">
+        <summary>저장하면 무엇이 남나요?<span aria-hidden="true">▾</span></summary>
+        <div className="p-willsave">
+          <ul>
+            <li>지금 고르신 <span>화면 설정</span> (글씨 크기·고대비·화면 안내 등)</li>
+            <li>주문을 마치면 <span>답해 주신 내용</span> — <b>알레르기</b>·맵기·형태·이용 방식·수량·컵·예산</li>
+            <li>주문을 마치면 <span>고르신 메뉴</span> 하나</li>
+          </ul>
+          <p>
+            서버나 계정에는 아무것도 보내지 않습니다. 이 기기 안에만 남고, 홈 화면에서 언제든
+            지우실 수 있습니다. 여러 사람이 쓰는 기기라면 <b>이번만 사용</b>을 권합니다.
+          </p>
+        </div>
+      </details>
     </Screen>
   );
 }

@@ -19,7 +19,7 @@ async function QR까지(page: Page, 주소: string): Promise<void> {
   await page.goto(주소);
   await page.getByRole("button", { name: /^시작하기$/ }).click();
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByRole("button", { name: "이번만 사용하기" }).click();
+  await page.getByRole("button", { name: "이번만 사용" }).click();
 }
 
 test("주소에 매장 코드가 있으면 카메라 없이도 매장을 맞춰 본다", async ({ page }) => {
@@ -51,7 +51,7 @@ test("주소에 아무것도 없으면 예전 그대로 카메라 화면이다",
   await openHome(page);
   await page.getByRole("button", { name: /^시작하기$/ }).click();
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByRole("button", { name: "이번만 사용하기" }).click();
+  await page.getByRole("button", { name: "이번만 사용" }).click();
   await expect(page.getByRole("heading", { name: /연결되었습니다/ })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "QR 없이 계속하기" })).toBeVisible();
 });

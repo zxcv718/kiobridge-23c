@@ -27,7 +27,7 @@
   display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 10px 12px;
   border: 1.5px solid var(--line-soft); border-radius: var(--kb-radius-md); padding: 14px 16px;
 }
-.q-altname { font-weight: 800; word-break: keep-all; }
+.q-altname { font-weight: 700; word-break: keep-all; }
 .q-alts .btn { grid-column: 1 / -1; min-height: 48px; padding: 10px 16px; font-size: 0.86em; }
 
 /* 제외된 메뉴 — 왼쪽 굵은 선으로 «뺀 것»임을 표시한다. 색만으로 말하지 않도록

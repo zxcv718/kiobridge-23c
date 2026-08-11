@@ -16,8 +16,11 @@
      라디오 카드의 «지금 화면과 같은 크기로 보여드려요» 같은 줄이다(172:2370).
      흰 바탕 8.68:1 로 본문 기준을 넘는다. */
   --muted-strong: var(--kb-color-text-tertiary);
-  /* 경계는 둘로 나뉜다 — 누를 수 있는 것(3:1 필요)과 장식용 구분선 */
+  /* 경계는 셋으로 나뉜다 — 누를 수 있는 것(3:1 필요) · 카드 테두리/구분선 · 장식선 */
   --line: var(--kb-color-border-control);
+  /* 시안의 카드 테두리와 행 구분선은 border/default(#b1b8be)다 (185:209 · 185:215).
+     누르는 것의 경계가 아니라 «내용을 묶는 상자»의 선이라 3:1 을 요구하지 않는다. */
+  --line-card: var(--kb-color-border-default);
   --line-soft: var(--kb-color-border-subtle);
   /* 브랜드 주황은 «면»이고, 글자를 얹는 자리는 strong 이다 (tokens.css ②) */
   --brand: var(--kb-color-accent-primary);
@@ -57,7 +60,7 @@
 .app.large { --fs: var(--fs-large); }
 .app.contrast {
   --bg: #000000; --card: #101010; --fg: #ffffff; --muted: #d8d8d8; --muted-strong: #ededed;
-  --line: #9a9a9a; --line-soft: #6b6b6b;
+  --line: #9a9a9a; --line-card: #7d7d7d; --line-soft: #6b6b6b;
   --brand: #ffd400; --brand-strong: #ffd400; --brand-weak: #333000; --selected: #3a3300; --sunken: #1c1c1c;
   --on-brand: #000000;
   --danger: #ff7b6e; --danger-weak: #3a1512; --warn: #ffc861; --warn-weak: #332711;
@@ -92,6 +95,10 @@ body { margin: 0; }
   height: 100dvh;
   display: flex;
   flex-direction: column;
+  /* 진행 표시의 양끝 라벨은 점 중심에 맞추느라 본문 선 밖으로 나간다(시안도 같다).
+     좌우 여백(24px)까지는 쓰게 두고 그 바깥만 자른다. `clip` 이지 `hidden` 이 아니다 —
+     hidden 은 스크롤 상자를 만들어 세로 스크롤이 본문 대신 여기서 일어난다. */
+  overflow-x: clip;
 }
 /* 포커스 테두리는 brand 가 아니라 brand-strong 이다.
    brand(#ff5a1f)는 순백 위에서 3.12:1 로 겨우 통과하지만, 실제 바탕인 캔버스(#f7f7f8)
@@ -113,14 +120,29 @@ body { margin: 0; }
 }
 .toggle[aria-pressed="true"] { border-color: var(--brand); border-width: 2px; background: var(--selected); color: var(--fg); }
 
-.card { background: var(--card); border: 1.5px solid var(--line-soft); border-radius: var(--kb-radius-lg); padding: 22px; margin: 14px 0; box-shadow: var(--kb-shadow-card); }
+/* 시안 SummaryCard 185:209 / RecentOrderCard 185:227 — 둘이 같은 상자다.
+   테두리 1px #b1b8be · 모서리 16 · 안쪽 `4px 16px` · 그림자 shadow/card.
+   안쪽 여백이 4px 인 것은 **행(45px)이 스스로 높이를 쥐기 때문**이다. 22px 을 두면
+   행 높이 위에 여백이 한 겹 더 얹혀 카드가 시안보다 44px 커진다. 행이 없는 카드는
+   아래에서 다시 벌린다 — 그런 카드는 시안의 이 상자가 아니다. */
+.card {
+  background: var(--card); border: 1px solid var(--line-card);
+  border-radius: var(--kb-radius-lg); padding: 4px 16px; margin: 14px 0;
+  box-shadow: var(--kb-shadow-card);
+}
+/* 라벨·값 목록이 아닌 것을 담은 카드(안내문·QR 폴백 등)는 시안의 SummaryCard 가 아니다 */
+.card:not(:has(.kb-rows)) { padding: 20px 16px; }
 h2 { font-size: 1.25em; margin: 0 0 6px; }
 .hint { color: var(--muted); font-size: 0.88em; margin: 0 0 14px; }
 .stepmeta { color: var(--muted); font-size: 0.8em; font-weight: 700; letter-spacing: 0.06em; }
 
 .choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 8px 0; }
+/* 굵기는 시안 값이다 — 선택지 라벨은 Regular 다(99:1278 「뼈」 `font-normal` 18px).
+   한때 700 이었고, CTA 는 800 이었다. 화면에 가장 많이 나오는 것이 이 둘이라
+   «무엇을 골라도 전부 굵어 보인다»는 인상이 거기서 왔다. 강조는 굵기가 아니라
+   크기·색·테두리가 맡는다 — 다 굵으면 아무것도 굵지 않은 것과 같다. */
 .choice {
-  min-height: 64px; padding: 12px; font-size: 1em; font-weight: 700; cursor: pointer;
+  min-height: 64px; padding: 12px; font-size: 1em; font-weight: 400; cursor: pointer;
   border: 2px solid var(--line); border-radius: 12px; background: var(--card); color: var(--fg);
   word-break: keep-all; overflow-wrap: anywhere; /* 한국어는 어절 유지, 긴 영문 코드는 안전하게 줄바꿈 */
 }
@@ -130,8 +152,9 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 .choice .verdict { display: block; font-size: 0.78em; font-weight: 800; color: var(--danger); margin-top: 6px; }
 
 .btnrow { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+/* CTA 라벨도 시안은 Regular 다 (208:755 `font-normal` 18px · text/inverse) */
 .btn {
-  min-height: 56px; padding: 12px 22px; font-size: 1em; font-weight: 800; cursor: pointer;
+  min-height: 56px; padding: 12px 22px; font-size: 1em; font-weight: 400; cursor: pointer;
   border-radius: 12px; border: 2px solid transparent;
 }
 /* 주 버튼 바탕은 **시안의 브랜드 주황(#ff5a1f)** 이다.
@@ -165,9 +188,9 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 .excluded { border-left: 4px solid var(--danger); padding: 8px 14px; margin: 8px 0; background: var(--danger-weak); border-radius: 8px; font-size: 0.9em; }
 .altcard { border: 2px dashed var(--line); border-radius: 12px; padding: 14px; margin: 8px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 
-.summary dt { font-weight: 800; margin-top: 10px; }
+.summary dt { font-weight: 700; margin-top: 10px; }
 .summary dd { margin: 2px 0 0; color: var(--muted); }
-.total { font-size: 1.3em; font-weight: 800; margin-top: 14px; }
+.total { font-size: 1.3em; font-weight: 700; margin-top: 14px; }
 
 .runlog { list-style: none; padding: 0; margin: 12px 0; }
 .runlog li { padding: 10px 14px; border-left: 4px solid var(--brand); background: var(--brand-weak); border-radius: 8px; margin: 8px 0; font-weight: 600; }
@@ -175,8 +198,8 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 .evgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
 .evitem { border: 1.5px solid var(--line-soft); border-radius: var(--kb-radius-sm); padding: 10px 14px; font-size: 0.85em; }
 .evitem b { display: block; font-size: 0.82em; color: var(--muted); font-weight: 700; }
-.pass { color: var(--brand-strong); font-weight: 800; }
-.fail { color: var(--danger); font-weight: 800; }
+.pass { color: var(--brand-strong); font-weight: 700; }
+.fail { color: var(--danger); font-weight: 700; }
 
 .errpanel .choices { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
 .errresult { font-family: ui-monospace, monospace; font-size: 0.8em; margin-top: 10px; white-space: pre-wrap; }
@@ -203,7 +226,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
   font-size: 1em; font-family: inherit; cursor: pointer; text-align: left;
 }
 .edithead[aria-expanded="true"] { border-bottom: 1.5px solid var(--line); }
-.editlabel { font-weight: 800; min-width: 92px; }
+.editlabel { font-weight: 700; min-width: 92px; }
 .editvalue { flex: 1; color: var(--muted); font-weight: 600; }
 .editbody { padding: 12px 16px 16px; }
 
@@ -283,9 +306,9 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
   font-size: 1em; font-family: inherit;
 }
 .a11yrow[aria-pressed="true"] { border-color: var(--brand); background: var(--selected); }
-.alabel { font-weight: 800; }
+.alabel { font-weight: 700; }
 .aeffect { color: var(--muted); font-size: 0.82em; }
-.astate { font-weight: 800; color: var(--muted); min-width: 2.2em; text-align: right; }
+.astate { font-weight: 700; color: var(--muted); min-width: 2.2em; text-align: right; }
 .a11yrow[aria-pressed="true"] .astate { color: var(--fg); }
 
 /* 시연 프리셋 — 입력을 채우는 버튼(결과를 정해두지 않는다) */
@@ -297,7 +320,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 }
 .presetrow:hover { border-color: var(--brand); border-style: solid; }
 .presetrow:disabled { opacity: 0.45; cursor: not-allowed; }
-.ptitle { font-weight: 800; }
+.ptitle { font-weight: 700; }
 .pshows { color: var(--muted); font-size: 0.86em; font-weight: 700; }
 
 .foot { margin-top: 26px; color: var(--muted); font-size: 0.78em; text-align: right; }
@@ -337,7 +360,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 .sellist li[data-origin="AUTO"],
 .sellist li[data-origin="SUBSTITUTED"] { border-color: var(--warn); background: var(--warn-weak); }
 .sellist .sg { color: var(--muted); font-weight: 700; font-size: 0.86em; }
-.sellist .sv { font-weight: 800; }
+.sellist .sv { font-weight: 700; }
 .sellist .so { color: var(--muted); font-size: 0.8em; }
 @media (max-width: 560px) {
   .sellist li { grid-template-columns: 5.5em 1fr; }

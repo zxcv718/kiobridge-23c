@@ -1,6 +1,6 @@
 import React from "react";
 import { useFlow } from "../flow";
-import { A11Y_ITEMS, FLOW_STEPS, PROBE_NOT_ENOUGH, PROBE_RESULT, PROBE_SAMPLE, PROBE_SIZES, type A11y } from "../model";
+import { A11Y_ITEMS, FLOW_STEPS, type A11y } from "../model";
 import { Cta, RadioCard, Screen } from "../components";
 import "./profile.css";
 
@@ -68,24 +68,14 @@ const SUBSTEPS: {
 ];
 
 export function ProfileSetup() {
-  const {
-    a11y, setA11y, setFlag, probeStep, setProbeStep, probeResult, setProbeResult,
-    profileStep, setProfileStep, setStep, erased, setErased,
-  } = useFlow();
+  const { a11y, setFlag, profileStep, setProfileStep, setStep } = useFlow();
 
-  /* «지웠습니다»는 지운 직후 한 번만 보여준다 — 무로그인 가이드 6번.
-     지우는 것은 홈의 «처음부터 새로 시작하기»이고 그 즉시 이 화면으로 넘어오므로,
-     알림도 여기서 받는다.
-     끄는 일을 **unmount 정리 함수에 맡기지 않는다.** StrictMode 는 개발 모드에서
-     마운트→언마운트→재마운트를 하는데, 그러면 정리 함수가 곧바로 돌아 알림을 켜자마자
-     꺼 버린다(같은 함정에 profileStep 이 한 번 빠졌었다). 사용자가 이 걸음을 떠날 때
-     아래 back/setSub 에서 명시적으로 끈다. */
   const sub = profileStep;
-  const setSub = (n: number) => { setErased(false); setProfileStep(n as 1 | 2 | 3); };
+  const setSub = (n: number) => setProfileStep(n as 1 | 2 | 3);
 
   const here = SUBSTEPS[sub - 1];
   const last = sub === SUBSTEPS.length;
-  const back = () => { setErased(false); return sub > 1 ? setSub(sub - 1) : setStep("start"); };
+  const back = () => (sub > 1 ? setSub(sub - 1) : setStep("start"));
   const next = () => (last ? setStep("saveChoice") : setSub(sub + 1));
 
   /* Figma 의 MiniStepIndicator(183:205) 자리. `Screen` 의 eyebrow 는 <p> 안에 들어가므로
@@ -123,49 +113,6 @@ export function ProfileSetup() {
           />
         ))}
       </div>
-
-      {/* 화면목록 S02 «실시간 변동되는 화면을 통해 최적 화면 맞춤» — 1단계에만 둔다.
-          글씨 크기를 스스로 고르기 어려운 분에게 «보이는지»만 물어 대신 정해 드린다. */}
-      {sub === 1 && erased && (
-        <p className="home-erased" role="status">이 기기에 저장된 기록을 지웠습니다.</p>
-      )}
-
-      {sub === 1 && (probeStep === null ? (
-        <div className="btnrow">
-          <Cta label="화면 글씨 맞춰보기" onClick={() => { setProbeStep(0); setProbeResult(null); }} />
-          {probeResult !== null && (
-            <span className="hint">
-              {probeResult === 0 && "기본 크기로 두었습니다."}
-              {probeResult !== 0 && "큰 글씨를 켰습니다."}
-              {" "}위에서 언제든 바꾸실 수 있습니다.
-              {/* 가장 크게 해도 부족했다면 글씨 외의 도움이 필요할 수 있다. 다만 그것을
-                  여기서 대신 켜지는 않는다 — 바로 다음 걸음에서 여쭤볼 질문이다. */}
-              {probeResult === PROBE_NOT_ENOUGH && (
-                <> 글씨를 가장 크게 해도 불편하시면, <b>다음 단계에서 고대비 화면</b>도 함께 보시겠어요?</>
-              )}
-            </span>
-          )}
-        </div>
-      ) : (
-        <div className="card p-probe" aria-labelledby="probehead">
-          <h2 id="probehead">화면 글씨가 잘 보이시나요?</h2>
-          <p className="p-sample" aria-hidden="true" style={{ fontSize: PROBE_SIZES[probeStep] }}>{PROBE_SAMPLE}</p>
-          <p className="hint">위 문장이 편하게 읽히시면 «잘 보여요»를 눌러 주세요.</p>
-          <div className="choices" role="group" aria-label="글씨 크기 확인">
-            <button type="button" className="choice" onClick={() => {
-              setA11y((s) => ({ ...s, ...PROBE_RESULT[probeStep] }));
-              setProbeResult(probeStep); setProbeStep(null);
-            }}>잘 보여요</button>
-            <button type="button" className="choice" onClick={() => {
-              if (probeStep < PROBE_SIZES.length - 1) { setProbeStep(probeStep + 1); return; }
-              /* 마지막 크기에서도 작다고 하셨다. 우리가 줄 수 있는 가장 큰 글씨를 켜 두되,
-                 «크기로는 여기까지»라는 사실을 결말로 남긴다(고대비는 다음 걸음의 질문이다). */
-              setA11y((s) => ({ ...s, ...PROBE_RESULT[PROBE_SIZES.length - 1] }));
-              setProbeResult(PROBE_NOT_ENOUGH); setProbeStep(null);
-            }}>{probeStep < PROBE_SIZES.length - 1 ? "조금 작아요" : "그래도 작아요"}</button>
-          </div>
-        </div>
-      ))}
 
       {/* 선언한 접근성 채널 7종은 마지막 걸음에서 전부 닿는다 — 접어 두지 않는다 */}
       {last && (

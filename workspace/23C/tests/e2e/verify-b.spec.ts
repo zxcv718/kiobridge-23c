@@ -73,56 +73,30 @@ test.describe("B계열 — 신규 동작", () => {
     await expect(page.getByText(/상관없다고 하셔서 이 메뉴의 값으로 정했습니다/).first()).toBeVisible();
   });
 
-  test("B4 재확인 2회째에 안전 중단 전용 화면", async ({ page }) => {
+  test("B4 확정되지 않은 추천을 두 번 만나면 안전 중단 전용 화면", async ({ page }) => {
     await start(page);
     await enterWizard(page);
-    await page.getByRole("button", { name: "잘 모르겠어요" }).click();
-    await page.getByRole("button", { name: /다음/ }).click();
+    /* 예산을 5,000원으로 두면 이 가게에서 살 수 있는 것이 없다(최저가 5,500원).
+       추천을 만들지 못하는 상태이고, 그것이 «확정되지 않은 추천»의 한 갈래다.
+       한때 여기서 알레르기 «잘 모르겠어요»를 썼는데 그 선택지는 시안에 없어 걷어냈다 —
+       화면에서 재확인(하드 제약 미확인) 경로로 들어가는 입구는 이제 없다. */
+    for (let i = 0; i < 6; i++) await 아무거나답하고다음(page);
+    await page.getByRole("button", { name: "5,000원" }).click();
+    await page.getByRole("button", { name: /추천 보기|다음/ }).click();
 
-    // 남은 질문을 끝까지 답한다 (질문은 7개 고정)
-    for (let i = 0; i < 6; i++) {
-      if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
-      await 아무거나답하고다음(page);
-    }
-
-    // 1회차 — 경고는 뜨지만 중단 화면은 아니다
-    await expect(page.getByText(/확실하지 않은 정보가 있어요/)).toBeVisible();
+    // 1회차 — 사유는 말하지만 중단 화면은 아니다. 조건을 고칠 기회를 먼저 준다.
     await expect(page.getByRole("heading", { name: /확인이 어려워/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "조건 수정" })).toBeVisible();
 
     // 조건 수정 → 그대로 다시 추천 → 2회차
     await page.getByRole("button", { name: "조건 수정" }).click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
     await expect(page.getByRole("heading", { name: /확인이 어려워/ })).toBeVisible();
-    /* «아무 준비도 시작되지 않았다»는 안심은 그대로 있다 — 다만 배너 하나와 문단 하나로
-       두 번 하던 말을 한 덩어리(.stopalert)로 합쳤다. 문구가 바뀐 자리에서 같은 사실을
-       잰다: 승인 전이므로 실행 계획도, 장바구니도 없다. */
+    /* «아무 준비도 시작되지 않았다»는 안심은 그대로 있다 — 승인 전이므로 실행 계획도,
+       장바구니도 없다. */
     await expect(page.locator(".stopalert")).toContainText("정상적으로 끝난 것이 아닙니다");
     await expect(page.locator(".stopalert"))
       .toContainText("실행 계획이 만들어지지 않았고, 장바구니에도 아무것도 담기지 않았습니다");
-  });
-
-  test("B5 화면 글씨 문답은 글씨 크기만 정하고, 나머지는 권유에 그친다", async ({ page }) => {
-    await start(page);
-    await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
-    await page.getByRole("button", { name: "화면 글씨 맞춰보기" }).click();
-    /* 문답은 두 걸음이다 — 예시가 실제로 적용되는 두 크기(기본·큰 글씨)뿐이기 때문이다.
-       예전에는 «지금 크기의 1.9배»까지 세 걸음을 보여줬는데, 그 크기는 적용할 수가 없어서
-       가장 큰 것을 고르고도 화면이 안 바뀌었다(probe.spec.ts). 마지막에서 더 작다고 하면
-       버튼 이름이 «그래도 작아요»가 된다 — 더 큰 것이 있는 척하지 않는다. */
-    await page.getByRole("button", { name: "조금 작아요" }).click();
-    await page.getByRole("button", { name: "그래도 작아요" }).click();
-
-    const app = page.locator(".app");
-    await expect(app).toHaveClass(/large/);
-    // 아직 묻지 않은 것(고대비·화면 안내)을 대신 답해 버리지 않는다
-    await expect(app, "묻지도 않고 고대비를 켰습니다").not.toHaveClass(/contrast/);
-    await expect(app, "묻지도 않고 화면 안내를 켰습니다").not.toHaveClass(/guide/);
-    await expect(page.getByText(/다음 단계에서 고대비 화면/)).toBeVisible();
-
-    // 다음 걸음에서 사용자가 직접 켜면 그때 적용된다
-    await page.getByRole("button", { name: "다음", exact: true }).click();
-    await page.getByRole("button", { name: /고대비 화면/ }).click();
-    await expect(app).toHaveClass(/contrast/);
   });
 
   test("B6 v3 저장본이 살아남고 v4 키로 옮겨진다", async ({ page }) => {
@@ -192,7 +166,7 @@ test.describe("B계열 — 신규 동작", () => {
     // 이 흐름은 S03 에서 기본값(이번만 사용)으로 지나왔으므로 «저장 안 함»이어야 한다
     await expect(page.getByRole("heading", { name: "저장하지 않았습니다" })).toBeVisible();
     // 마음을 바꿀 길은 남아 있다 — 뒤집으면 그 자리에서 저장된다
-    await page.getByRole("button", { name: /이 기기에 저장/ }).click();
+    await page.getByRole("button", { name: "이 기기에 저장하기" }).click();
     await expect(page.getByRole("heading", { name: "이 기기에 저장했습니다" })).toBeVisible();
 
     await page.getByRole("button", { name: "처음으로" }).first().click();
@@ -266,7 +240,7 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
     for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
     // S03 은 라디오+«다음»이 아니라 저장 방식 CTA 를 고르는 순간 QR 로 간다
-    await page.getByRole("button", { name: "이번만 사용하기" }).click();
+    await page.getByRole("button", { name: "이번만 사용" }).click();
 
     await expect(page.getByRole("heading", { name: /매장 QR|QR을 읽을 수 없습니다/ })).toBeVisible();
 

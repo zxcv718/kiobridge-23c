@@ -39,7 +39,7 @@ async function openQr(page: Page) {
   await page.reload();
   await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByRole("button", { name: "이번만 사용하기" }).click();
+  await page.getByRole("button", { name: "이번만 사용" }).click();
   await expect(screen(page)).toBeVisible();
   // fixture 가 오기 전에는 대조할 매장이 없어 «확인» 버튼이 잠겨 있다
   await expect(page.getByRole("button", { name: "이 코드로 연결하기" })).toBeEnabled();

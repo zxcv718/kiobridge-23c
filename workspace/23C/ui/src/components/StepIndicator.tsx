@@ -25,8 +25,12 @@ export function StepIndicator({ total, current, labels, srLabel }: {
   const here = Math.min(Math.max(current, 1), n);
   const say = srLabel ?? `${n}단계 중 ${here}단계${labels ? ` — ${labels[here - 1]}` : ""}`;
 
+  /* 지나온 비율. 시안(181:196 ConnectorProgress)은 첫 점 중심에서 지금 점 중심까지를
+     주황으로 덮는다 — 칸마다 선을 나눠 색칠하면 점이 양끝에 붙는 배치에서 길이가 틀어진다. */
+  const done = { "--steps-done": String((here - 1) / (n - 1)) } as React.CSSProperties;
+
   return (
-    <div className={labels ? "kb-steps" : "kb-steps mini"}>
+    <div className={labels ? "kb-steps" : "kb-steps mini"} style={done}>
       {/* 점은 장식이다 — 뜻은 이 문장이 전한다 */}
       <span className="srline">{say}</span>
       {Array.from({ length: n }, (_, i) => {

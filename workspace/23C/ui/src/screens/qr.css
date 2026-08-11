@@ -59,7 +59,7 @@
   border: 1.5px dashed var(--line);
   border-radius: 12px;
 }
-.qr-asks { margin: 0 0 2px; font-weight: 800; }
+.qr-asks { margin: 0 0 2px; font-weight: 700; }
 .qr-label { display: block; font-weight: 700; font-size: 0.86em; margin-bottom: 6px; }
 /* 접힌 화면에서 «이 코드로 연결하기»가 화면 밖으로 밀리지 않게 위 여백만 줄인다 */
 .qr-fallback .btnrow { margin-top: 10px; }
