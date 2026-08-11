@@ -139,8 +139,11 @@ test.describe("레인 B — 매장 QR 읽기", () => {
       await expect(screen(page)).toContainText("닭강정 가게");
       await expect(screen(page)).toContainText("chicken-store");
 
-      // 없는 것을 있다고 하지 않는다 — 세션을 발급받은 것이 아니다
-      await expect(screen(page)).not.toContainText(/세션 발급|세션이 발급/);
+      /* 없는 것을 있다고 하지 않는다 — 세션을 발급받은 것도, 확인한 것도 아니다.
+         시안 부제(150:392)가 「매장 정보와 **세션을 모두 확인했어요**」라서, «발급»만
+         막으면 시안 문구를 그대로 되돌려 놓아도 검사가 통과해 버린다. 진행 표시의
+         «세션 시작»은 걸리지 않도록 «세션을 어떻게 했다»는 꼴만 막는다. */
+      await expect(screen(page)).not.toContainText(/세션[을이]?\s*(모두\s*)?(발급|생성|확인)/);
 
       await page.getByRole("button", { name: /이 매장으로 계속하기/ }).click();
       await expect(nowStep(page), "세션 시작으로 넘어가지 않았습니다").toHaveText("세션 시작");
