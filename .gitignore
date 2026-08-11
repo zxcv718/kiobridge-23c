@@ -20,3 +20,6 @@ playwright-report/
 workspace/*/output/
 .vercel
 .env*
+
+# Vercel 식별자 메모 — 손으로 옮겨 적는 용도, 저장소에 올리지 않는다
+vercel-ids.txt
