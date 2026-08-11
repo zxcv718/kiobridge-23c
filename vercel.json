@@ -4,5 +4,6 @@
   "buildCommand": "npx vite build --config workspace/23C/ui/vite.config.ts",
   "outputDirectory": "workspace/23C/ui/dist",
   "framework": null,
-  "github": { "silent": true }
+  "github": { "silent": true },
+  "git": { "deploymentEnabled": false }
 }
