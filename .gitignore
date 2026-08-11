@@ -88,5 +88,10 @@ packages/*
 environments/*
 !environments/chicken-store/
 
-# macOS 가 같은 이름 파일을 옮길 때 만드는 «... 2.json» 류 사본
-*[ ]2.json
+# macOS 가 같은 이름 파일을 옮길 때 만드는 «파일 2.json» 류 사본.
+# 이 저장소에서 rm 이 trash 로 별칭돼 있어, 지운 줄 알았던 파일이 번호만 붙어 옆에
+# 남는다. 그걸 git add -A 가 집어 가 두 번이나 커밋됐다(«package-lock 2.json»,
+# «package-lock 3.json» — 둘 다 키트 원본 락파일 사본이었다).
+# 숫자를 하나로 못 박지 않는다 — 2 만 막았더니 3 이 들어왔다.
+* [0-9].*
+* [0-9][0-9].*
