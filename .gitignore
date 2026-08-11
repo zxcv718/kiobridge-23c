@@ -39,7 +39,10 @@ vercel-ids.txt
 # 쓰이고, 그건 로컬 키트에서 하는 일이다.
 apps/
 docs/
-examples/
+# 공개 예제 재현 검사(tests/scenarios.test.ts)가 읽는 자리만 남긴다.
+# 이것도 로컬에서는 파일이 남아 있어 통과했고, 깨끗한 사본에서만 3개가 실패했다.
+examples/*
+!examples/public-canonical-input/
 extensions/
 participant-deliverables/
 participant-workspace/
