@@ -75,8 +75,11 @@ test("5번 — «이번 한 번만»이 기본값이다", async ({ page }) => {
 test("6번 — 한 번의 조작으로 지워지고, 지웠다고 알린다", async ({ page }) => {
   await 저장하고재방문(page);
 
-  // «한 번의 조작» — 지우기 버튼 하나로 끝나야 한다
-  await page.getByRole("button", { name: /이 기록 지우기/ }).click();
+  /* «한 번의 조작» — 버튼 하나로 끝나야 한다.
+     한때 지우기 버튼이 따로 한 장 있었는데, 「처음부터 새로 시작하기」와 뜻이 겹쳐
+     같은 일처럼 읽혔다. 이름이 이미 «지난 것을 버리고 시작한다»는 뜻이므로 그 버튼이
+     지우게 하고 한 장으로 합쳤다. 조작 수는 그대로 하나다. */
+  await page.getByRole("button", { name: "처음부터 새로 시작하기" }).click();
 
   await expect(page.getByRole("status"), "지웠다고 알리지 않습니다 — 화면이 바뀐 것으로 추측하게 됩니다")
     .toContainText("지웠습니다");

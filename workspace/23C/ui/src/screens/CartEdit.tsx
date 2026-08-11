@@ -58,10 +58,13 @@ export function CartEdit() {
     ),
   }));
 
+  /* 이 화면에는 두 갈래로 들어온다 — 추천을 받은 뒤 «조건 수정», 그리고 홈에서
+     «저장된 내용 수정». 뒤로가 늘 추천으로 가면 추천을 받은 적 없는 사람이 빈 화면에
+     떨어진다. 어디서 왔는지는 «추천이 있는가»가 말해 준다. */
   return (
     <Screen
       label="주문 조건과 화면 보기 방식 수정"
-      onBack={() => setStep("recommend")}
+      onBack={() => setStep(uiRec ? "recommend" : "start")}
       eyebrow="고객님,"
       title={<Emphasize text="어떤 항목을 수정하고 싶으신가요?" word="수정" />}
       actions={(

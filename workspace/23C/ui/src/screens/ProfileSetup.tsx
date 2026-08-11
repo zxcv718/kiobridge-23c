@@ -64,13 +64,22 @@ const SUBSTEPS: {
 export function ProfileSetup() {
   const {
     a11y, setA11y, setFlag, probeStep, setProbeStep, probeResult, setProbeResult,
-    profileStep, setProfileStep, setStep, } = useFlow();
+    profileStep, setProfileStep, setStep, erased, setErased,
+  } = useFlow();
+
+  /* «지웠습니다»는 지운 직후 한 번만 보여준다 — 무로그인 가이드 6번.
+     지우는 것은 홈의 «처음부터 새로 시작하기»이고 그 즉시 이 화면으로 넘어오므로,
+     알림도 여기서 받는다.
+     끄는 일을 **unmount 정리 함수에 맡기지 않는다.** StrictMode 는 개발 모드에서
+     마운트→언마운트→재마운트를 하는데, 그러면 정리 함수가 곧바로 돌아 알림을 켜자마자
+     꺼 버린다(같은 함정에 profileStep 이 한 번 빠졌었다). 사용자가 이 걸음을 떠날 때
+     아래 back/setSub 에서 명시적으로 끈다. */
   const sub = profileStep;
-  const setSub = (n: number) => setProfileStep(n as 1 | 2 | 3);
+  const setSub = (n: number) => { setErased(false); setProfileStep(n as 1 | 2 | 3); };
 
   const here = SUBSTEPS[sub - 1];
   const last = sub === SUBSTEPS.length;
-  const back = () => (sub > 1 ? setSub(sub - 1) : setStep("start"));
+  const back = () => { setErased(false); return sub > 1 ? setSub(sub - 1) : setStep("start"); };
   const next = () => (last ? setStep("saveChoice") : setSub(sub + 1));
 
   /* Figma 의 MiniStepIndicator(183:205) 자리. `Screen` 의 eyebrow 는 <p> 안에 들어가므로
@@ -109,6 +118,10 @@ export function ProfileSetup() {
 
       {/* 화면목록 S02 «실시간 변동되는 화면을 통해 최적 화면 맞춤» — 1단계에만 둔다.
           글씨 크기를 스스로 고르기 어려운 분에게 «보이는지»만 물어 대신 정해 드린다. */}
+      {sub === 1 && erased && (
+        <p className="home-erased" role="status">이 기기에 저장된 기록을 지웠습니다.</p>
+      )}
+
       {sub === 1 && (probeStep === null ? (
         <div className="btnrow">
           <Cta label="화면 글씨 맞춰보기" onClick={() => { setProbeStep(0); setProbeResult(null); }} />

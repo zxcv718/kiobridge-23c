@@ -47,20 +47,23 @@ test("아래 버튼바가 화면을 반쯤 먹지 않는다", async ({ page }) =
   expect(비율, `아래 버튼바가 화면의 ${Math.round(비율 * 100)}% 를 차지합니다`).toBeLessThan(0.25);
 });
 
-test("기록 지우기는 사라지지 않았고, 지워질 것 바로 아래에 있다", async ({ page }) => {
+test("삭제와 수정 둘 다 닿는다 — 아래 버튼 자리를 쓰지 않고", async ({ page }) => {
   await 재방문홈(page);
-  const 지우기 = page.getByRole("button", { name: /이 기록 지우기/ });
-  await expect(지우기, "guide.txt 5번이 요구하는 «삭제» 경로가 없습니다").toBeVisible();
 
-  // 시작 버튼들 옆이 아니라 본문(카드 아래)에 있어야 «새로 시작»과 같은 일로 안 읽힌다
-  const 본문안 = await 지우기.evaluate((el) => !!el.closest(".kb-screen-body") && !el.closest(".kb-actions"));
-  expect(본문안, "지우기가 아래 버튼 더미에 있습니다").toBe(true);
+  /* 무로그인 가이드 4번은 «조회·수정·삭제»를 요구한다. 셋 다 있어야 하지만, 그렇다고
+     아래 버튼을 셋으로 늘리면 시안의 두 장이 무너진다. 삭제는 「처음부터 새로 시작하기」가
+     겸하고(이름이 이미 그 뜻이다), 수정은 고칠 대상인 카드 바로 아래 둔다. */
+  const 수정 = page.getByRole("button", { name: /저장된 내용 수정/ });
+  await expect(수정, "저장된 내용을 고칠 길이 없습니다").toBeVisible();
+  const 본문안 = await 수정.evaluate((el) => !!el.closest(".kb-screen-body") && !el.closest(".kb-actions"));
+  expect(본문안, "수정 버튼이 아래 버튼 더미에 있습니다").toBe(true);
 
-  // 되돌릴 수 없다는 사실을 색이 아니라 글자로 말한다
-  await expect(지우기).toContainText("되돌릴 수 없습니다");
+  // 삭제는 아래 버튼이 겸한다 — 누르기 전에 그 사실을 말한다
+  await expect(page.locator(".home-warn")).toContainText("지웁니다");
 
-  await 지우기.click();
-  await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요/ })).toBeVisible();
+  await page.getByRole("button", { name: "처음부터 새로 시작하기" }).click();
+  const 남았나 = await page.evaluate(() => localStorage.getItem("kb23c-saved-settings-v4"));
+  expect(남았나, "«처음부터 새로 시작»인데 기록이 남아 있습니다").toBeNull();
 });
 
 test("직원 도움은 어느 화면에서든 머리 줄 같은 자리에 있다", async ({ page }) => {

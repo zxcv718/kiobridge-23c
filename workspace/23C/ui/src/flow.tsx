@@ -243,12 +243,41 @@ export function useFlowState() {
    */
   const persist = () => {
     const id = uiRec?.rec.recommendedCandidateId ?? saved?.lastCandidateId;
+    /* 아직 아무것도 답하지 않았으면 **지난번 답변을 지우지 않는다.**
+     *
+     * 저장은 두 번 일어난다 — S03 에서 «저장하기»를 고른 즉시(화면 설정), 그리고 주문이
+     * 끝날 때(답변·확정 메뉴). 그런데 첫 번째 시점의 answers 는 비어 있어서, 그대로 쓰면
+     * «저장하기»를 고른 순간 지난번 알레르기·맵기가 빈 값으로 덮였다. 저장을 **고른**
+     * 사람이 데이터를 잃는 것이고, 거기서 그만두면 영영 사라진다.
+     * 바로 아래 lastCandidateId 는 같은 이유로 이미 지켜지고 있었다 — 답변만 빠져 있었다. */
+    const next = Object.keys(answers).length > 0 ? { ...answers } : { ...(saved?.answers ?? {}) };
     const s: SavedSettings = {
       v: SAVED_VERSION,
-      answers: { ...answers }, a11y, savedAt: new Date().toISOString(),
+      answers: next, a11y, savedAt: new Date().toISOString(),
       ...(id ? { lastCandidateId: id } : {}),
     };
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); setSaved(s); } catch { /* 저장 불가 환경이면 조용히 건너뜀 */ }
+  };
+
+  /**
+   * 저장된 내용을 **고친다** — 무로그인 가이드 4번의 «조회·수정·삭제» 중 수정.
+   *
+   * 조회(홈 카드)와 삭제(«처음부터 새로 시작하기»)는 있었는데 수정만 없었다. 고치려면
+   * 주문을 처음부터 다시 해야 했고, 그건 «수정할 수 있다»가 아니다.
+   *
+   * 되살리기(startFromSaved)와 다른 점: 추천으로 바로 가지 않고 수정 화면에서 멈춘다.
+   * carried 를 비우는 이유는 여기서 **전부 보여줘야** 하기 때문이다 — 불러온 항목을
+   * «다시 안 묻는 것»으로 표시하면 정작 고치러 온 화면에서 절반이 숨는다.
+   */
+  const editSaved = () => {
+    if (!saved) return;
+    setAnswers({ ...saved.answers });
+    setA11y(saved.a11y);
+    setFromSaved(true);
+    setStoreToggle(true);   // 이미 저장해 둔 사람이다 — 고친 값도 남는 것이 기대에 맞는다
+    setCarried([]); setManual(false); setDemoHour(null); setReconfirmCount(0);
+    resetRun(); setUiRec(null); setEditOpen(null);
+    setStep("edit");
   };
 
   const applyEditAndRecommend = () => {
@@ -340,7 +369,7 @@ export function useFlowState() {
     setStep, setA11y, setFlag, setQIndex, setAnswers, setUiRec, setManual, setSessionInput,
     setSubmitted, setErrResults, setStoreToggle, setEditOpen, setReconfirmCount,
     setProbeStep, setProbeResult, setProfileStep, setAllergyOpen, setErased,
-    t, staffBtn, nextToAsk, advance, startWizard, startFromSaved, applyPreset, deleteSaved,
+    t, staffBtn, nextToAsk, advance, startWizard, startFromSaved, applyPreset, deleteSaved, editSaved,
     openEdit, applyEditAndRecommend, toggleStore, setStoreIntent, finishOrder,
     confirmOffline, runSimulation, goRecommend,
   };
