@@ -229,7 +229,16 @@ test.describe("A계열 — 프로필 흐름", () => {
 
     const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });
     await ((await live.count()) > 0 ? live : page.getByRole("button", { name: /주문 확정하기/ })).click();
-    await expect(page.getByRole("heading", { name: /실행 결과|주문이 완성되었습니다|주문 계획/ })).toBeVisible();
+    /* 화면 제목(.kb-title)만 본다. 예전에는 role=heading 에 세 후보를 «|» 로 묶어 두었는데,
+       그중 「주문 계획」은 화면 제목이 아니라 결과 화면 **안쪽 절 제목**(h3.cart-cap)이다.
+       Simulation API 가 없는 체험 모드에서는 그 절이 함께 나오므로 heading 이 둘이 되고,
+       Playwright 의 strict mode 가 «둘이 잡혔다» 며 멈춘다.
+
+       로컬에서는 API 를 띄워 두고 돌려서 이 사실이 드러나지 않았다. 배포본에는 API 가
+       없으므로, **심사위원이 여는 화면에서는 이 검사가 한 번도 통과한 적이 없었다.**
+       CI 를 배포와 같은 조건(API 없음)으로 맞춘 첫 실행에서 잡혔다. */
+    await expect(page.locator(".kb-title"), "결과 화면에 닿지 못했습니다")
+      .toHaveText(/실행 결과|주문이 완성되었습니다|실행하지 못했습니다/);
 
     // 답변까지 함께 남았는가 — startWizard 가 저장 의사를 지웠다면 여기서 걸린다
     const saved = await page.evaluate((k) => {
