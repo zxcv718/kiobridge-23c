@@ -81,5 +81,6 @@ packages/*
 !packages/safety-engine/
 !packages/simulation-driver/
 !packages/state-engine/
+!packages/uprlite-driver-contract/
 environments/*
 !environments/chicken-store/
