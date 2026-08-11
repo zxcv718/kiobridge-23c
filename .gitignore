@@ -87,3 +87,6 @@ packages/*
 !packages/uprlite-driver-contract/
 environments/*
 !environments/chicken-store/
+
+# macOS 가 같은 이름 파일을 옮길 때 만드는 «... 2.json» 류 사본
+*[ ]2.json
