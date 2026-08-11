@@ -23,3 +23,54 @@ workspace/*/output/
 
 # Vercel 식별자 메모 — 손으로 옮겨 적는 용도, 저장소에 올리지 않는다
 vercel-ids.txt
+
+# ── KioBridge 키트 (로컬 전용) ────────────────────────────────────────────
+# 주최 측이 ZIP 으로 나눠 준 시뮬레이션 키트다. 팀원 모두 이미 갖고 있고,
+# 운영진의 갱신 절차도 «새 키트를 별도 폴더에 풀고 참가팀 파일만 옮겨라» 이므로
+# 저장소에 둘 이유가 없다.
+#
+# 예외 셋만 남긴다 — 이것들은 우리 코드가 **컴파일되는 대상**이라 없으면 CI 가
+# npm ci 부터 실패한다. @kiobridge/* 는 npm 에 없고(404) 내려받을 주소도 없어
+# 저장소에 함께 두는 것 말고 방법이 없다:
+#   packages/{contracts,participant-sdk,profile-contract}   — import 25곳
+#   environments/chicken-store                              — logic.ts 가 JSON 9개를 직접 읽는다
+#
+# 나머지(apps·tools·docs·examples·schemas·Docker·실행 스크립트)는 제출물을 만들 때만
+# 쓰이고, 그건 로컬 키트에서 하는 일이다.
+apps/
+docs/
+examples/
+extensions/
+participant-deliverables/
+participant-workspace/
+schemas/
+tools/
+/tests/
+compose.yaml
+Dockerfile
+.dockerignore
+.devcontainer/
+start-*.command
+start-*.bat
+start-*.sh
+stop-*.command
+stop-*.bat
+stop-*.sh
+setup-*.bat
+/tsconfig.json
+/playwright.config.ts
+official-package-manifest.json
+00_START_HERE.*
+README_FIRST.md
+PARTICIPANT_CHECKLIST.md
+WINDOWS_FINAL_CHECKLIST.md
+FINAL_SUBMISSION_CHECKLIST.md
+DO_NOT_EDIT_PLATFORM_FILES.md
+workspace/README.md
+workspace/.gitkeep
+packages/*
+!packages/contracts/
+!packages/participant-sdk/
+!packages/profile-contract/
+environments/*
+!environments/chicken-store/
