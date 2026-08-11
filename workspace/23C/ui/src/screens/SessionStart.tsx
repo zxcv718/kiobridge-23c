@@ -47,7 +47,7 @@ export function SessionStart() {
   const settingLine = [
     a11y.largeText ? "큰 글씨" : "기본 크기",
     a11y.highContrast ? "고대비 화면" : "기본 화면",
-    a11y.visualGuidance ? "그림 안내 켬" : "그림 안내 끔",
+    a11y.visualGuidance ? "화면 안내 켬" : "화면 안내 끔",
     a11y.preferredInput === "ASSISTED" ? "옆에서 도와주기" : "직접 누르기",
     storeToggle ? "이 기기에 저장" : "이번만 사용",
   ].join(" · ");

@@ -37,7 +37,7 @@ const VIEW_ROWS: {
 }[] = [
   { key: "largeText", label: "글씨 크기", on: "큰 글씨", off: "기본 크기" },
   { key: "highContrast", label: "고대비", on: "고대비 화면", off: "기본 화면" },
-  { key: "visualGuidance", label: "화면 안내", on: "그림 함께 보기", off: "기본" },
+  { key: "visualGuidance", label: "화면 안내", on: "안내 켜짐", off: "기본" },
 ];
 
 export function CartEdit() {
@@ -136,7 +136,7 @@ export function CartEdit() {
                   />
                 ) : (
                   <ChoiceGrid q={qq} answers={answers} setAnswers={setAnswers}
-                    onPicked={() => setEditOpen(null)} showIcons={a11y.visualGuidance} />
+                    onPicked={() => setEditOpen(null)} />
                 )}
               </div>
             )}

@@ -62,6 +62,23 @@ function 선택지(page: Page, label: string) {
   };
 }
 
+/**
+ * 재방문 홈에서 저장된 내용을 펼친다.
+ *
+ * 시안(150:190)의 재방문 홈에는 카드가 없어서 조회·수정을 «저장된 내용 보기»로 접어
+ * 두었다. 조회할 수 있다는 사실은 그대로지만 **한 걸음이 늘었으므로**, 그 걸음을 아는
+ * 곳도 한 곳이어야 한다 — 스펙마다 summary 선택자를 적으면 접는 방식을 바꿀 때
+ * 여섯 파일이 같이 틀린다.
+ */
+export async function 저장된내용펼치기(page: Page): Promise<void> {
+  const 접힘 = page.locator("details.home-saved");
+  await expect(접힘, "재방문 홈에 «저장된 내용 보기»가 없습니다").toHaveCount(1);
+  if (!(await 접힘.evaluate((el) => (el as HTMLDetailsElement).open))) {
+    await page.locator("details.home-saved > summary").click();
+  }
+  await expect(page.getByRole("region", { name: "이 기기에 저장된 기록" })).toBeVisible();
+}
+
 /** 홈을 연다. 저장본을 비우므로 늘 «최초 방문» 상태에서 시작한다. */
 export async function openHome(page: Page): Promise<void> {
   await page.goto(HOME);
@@ -76,7 +93,7 @@ export async function openHome(page: Page): Promise<void> {
  * @param store 저장 방식에서 «이 기기에 저장하기»를 고를지. 기본은 «이번만 사용하기».
  */
 export async function enterWizard(page: Page, store = false): Promise<void> {
-  await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
+  await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
 
   // S02 프로필 생성 — 글씨 크기 → 고대비 → 화면 안내
   for (let i = 0; i < 3; i++) {
@@ -103,7 +120,7 @@ export async function enterWizardByKeyboard(
   page: Page,
   pressOn: (page: Page, name: RegExp | string) => Promise<void>,
 ): Promise<void> {
-  await pressOn(page, /^(시작하기|처음부터 새로 시작하기)$/);
+  await pressOn(page, /^(시작하기|새로 설정하기)$/);
   for (let i = 0; i < 3; i++) await pressOn(page, /^다음$/);
   await pressOn(page, /^이번만 사용하기$/);
   await pressOn(page, /^QR 없이 계속하기$/);

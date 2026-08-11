@@ -1,15 +1,21 @@
 import React from "react";
 import type { Question } from "../model";
 
-/** 마법사와 조건 수정 화면이 공유하는 선택지 그리드 — 같은 동작은 같은 부품으로 (UI 통일성). */
-export function ChoiceGrid({ q, answers, setAnswers, onPicked, showIcons, icons, marks }: {
+/**
+ * 마법사와 조건 수정 화면이 공유하는 선택지 그리드 — 같은 동작은 같은 부품으로 (UI 통일성).
+ *
+ * **그림은 조건 없이 그린다.** 한때 `showIcons` 로 «화면 안내» 설정에 묶어 두었는데,
+ * 시안(99:1228 알레르기 · 99:1264 맵기 · 99:1270 뼈/순살 · 99:1281 포장/매장)에서 그림은
+ * 켜고 끄는 것이 아니라 선택지의 일부다. 묶어 둔 탓에 기본 설정으로 들어온 사람은
+ * 시안과 다른 화면을 봤고, 「안내 켜짐」 자리에는 시안에 없는 기능이 들어가 있었다.
+ * 아이콘만 남는 일은 없다 — 라벨은 언제나 함께 그려진다.
+ */
+export function ChoiceGrid({ q, answers, setAnswers, onPicked, icons, marks }: {
   q: Question;
   answers: Record<string, unknown>;
   setAnswers: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
   /** 단일 선택을 고른 직후 호출 — 수정 화면에서 행 자동 접기에 사용 (다중 선택은 호출 안 함) */
   onPicked?: () => void;
-  /** 그림 함께 보기 — 아이콘만 두지 않고 반드시 글자를 병기한다 */
-  showIcons?: boolean;
   /**
    * 선택지 값 → Figma 에서 내려받은 그림 파일. 있으면 이모지 대신 이것을 그린다.
    *
@@ -48,12 +54,12 @@ export function ChoiceGrid({ q, answers, setAnswers, onPicked, showIcons, icons,
               });
               if (!q.multi) onPicked?.();
             }}>
-            {showIcons && icons?.[String(o.value)]
+            {icons?.[String(o.value)]
               ? <img className="ico" src={icons[String(o.value)]} alt="" aria-hidden="true" />
-              : showIcons && o.icon && <span className="ico" aria-hidden="true">{o.icon}</span>}
+              : o.icon && <span className="ico" aria-hidden="true">{o.icon}</span>}
             {o.label}
             {(() => {
-              const m = showIcons ? marks?.[String(o.value)] : undefined;
+              const m = marks?.[String(o.value)];
               if (!m || m.count < 1) return null;
               return (
                 <span className="kb-marks" aria-hidden="true">

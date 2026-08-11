@@ -31,7 +31,10 @@ export const UI_GUARANTEES = {
      선언도 바꾼다 — 지키지 않는 것을 지킨다고 적지 않는다. */
   staffHelpReachableFromEveryStep: false,
   staffHelpShownWhenUserOptsIn: true,
+  /* 선택지 그림은 시안대로 **늘 표시**되며(설정과 무관), 그림 옆에는 언제나 글자가 있다.
+     한때 이 그림이 «화면 안내» 토글에 묶여 있었는데 시안에서 그 토글은 다른 일을 한다. */
   iconsAlwaysPairedWithText: true,
+  choiceIconsAlwaysVisible: true,
 } as const;
 
 export function buildAccessibilityEvidence(raw: RawLike): Record<string, unknown> {
@@ -90,7 +93,9 @@ export function buildTeamExtensions(raw: RawLike, signals: ContextSignal[]): Rec
         "accessibility-7-flags",
         "explainable-recommendation",
         "context-signals-time-of-day",
-        "staff-help-every-step",
+        /* 상시 노출을 걷어냈으므로 이름도 바꾼다 — «every-step» 은 더 이상 사실이 아니다.
+           켠 사람에게는 여전히 모든 화면 최상단에 따라다닌다. */
+        "staff-help-on-demand",
         "safety-injection-demo",
       ],
       recommendationData: {

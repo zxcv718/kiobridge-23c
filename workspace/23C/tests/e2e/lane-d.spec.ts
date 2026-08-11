@@ -150,7 +150,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(app).toHaveClass(/contrast/);
 
     await page.getByRole("button", { name: "화면 안내 수정" }).click();
-    await expect(app).toHaveClass(/icons/);
+    await expect(app).toHaveClass(/guide/);
 
     await page.getByRole("button", { name: "글씨 크기 수정" }).click();
     await expect(app).not.toHaveClass(/large/);

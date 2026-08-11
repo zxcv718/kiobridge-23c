@@ -54,11 +54,12 @@ const DESIGN_ICON: Record<string, Record<string, string>> = {
  * 제목에서 크게 보여 줄 어절 (Figma 는 한 문장 안에서 핵심만 28px, 나머지를 22px 로 둔다).
  * 문장 자체는 model.ts 것을 그대로 쓰고, 여기서는 **어디를 키울지만** 정한다.
  */
-const EMPHASIS: Record<string, string> = {
+const EMPHASIS: Record<string, string | string[]> = {
   allergies: "알레르기",
   spicyLevel: "맵기",
-  boneType: "뼈와 순살",
-  serviceType: "어떻게",
+  // 시안은 한 제목에서 둘을 키운다 — 99:1276 「뼈 있는 것 / 없는 것」, 99:1282 「드시고 / 포장」
+  boneType: ["뼈 있는 것", "없는 것"],
+  serviceType: ["드시고", "포장"],
   quantity: "얼마나",
   cupOption: "컵",
   budgetKrw: "예산",
@@ -104,7 +105,7 @@ const LAYOUT: Record<string, "tiles" | "rows"> = {
 export function QuestionScreen() {
   const {
     q, qIndex, setQIndex, answers, setAnswers, askPos, askTotal, carried,
-    simple, a11y, answered, advance, setStep, setEditOpen, nextToAsk, allergyOpen, setAllergyOpen,
+    simple, answered, advance, setStep, setEditOpen, nextToAsk, allergyOpen, setAllergyOpen,
   } = useFlow();
 
   if (!q) return null;
@@ -169,9 +170,8 @@ export function QuestionScreen() {
                 <button key={o.value} type="button" className="choice"
                   aria-pressed={Array.isArray(answers.allergies) && answers.allergies[0] === o.value}
                   onClick={() => 알레르기선택(o.value)}>
-                  {a11y.visualGuidance && (
-                    <img className="ico" src={o.value === "없음" ? safeIcon : dangerIcon} alt="" aria-hidden="true" />
-                  )}
+                  {/* 시안 99:1228 은 타일 두 장에 방패 그림을 늘 그린다 — 설정과 무관하다 */}
+                  <img className="ico" src={o.value === "없음" ? safeIcon : dangerIcon} alt="" aria-hidden="true" />
                   {o.label}
                 </button>
               ))}
@@ -203,7 +203,7 @@ export function QuestionScreen() {
               ? { ...q, options: q.options.filter((o) => (ALLERGY_ITEMS as readonly string[]).includes(String(o.value))) }
               : q}
             answers={answers} setAnswers={setAnswers}
-            showIcons={a11y.visualGuidance} icons={DESIGN_ICON[q.key]} marks={DESIGN_MARK[q.key]} />
+            icons={DESIGN_ICON[q.key]} marks={DESIGN_MARK[q.key]} />
         </div>
       )}
 

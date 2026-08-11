@@ -61,10 +61,12 @@
   border: 1.5px solid var(--line-soft); background: var(--card);
   font-size: 11px; font-weight: 700; color: var(--muted); line-height: 1;
 }
+/* 시안(180:173~178)의 StepCircle: 완료·현재는 브랜드 주황 바탕에 흰 ✓/번호,
+   예정은 흰 바탕에 1.5px 연회색. 한때 여기에 «현재» 표시로 옅은 주황 후광을 하나 더
+   둘렀는데 시안에 없는 것이라 걷어냈다 — 완료는 ✓, 현재는 번호로 이미 갈린다. */
 .kb-step.done .kb-dot, .kb-step.now .kb-dot {
-  background: var(--brand-strong); border-color: var(--brand-strong); color: var(--on-brand);
+  background: var(--brand); border-color: var(--brand); color: var(--on-brand);
 }
-.kb-step.now .kb-dot { box-shadow: 0 0 0 3px var(--brand-weak); }
 .kb-steplabel { margin-top: 6px; font-size: 0.55em; line-height: 1.3; text-align: center; color: var(--muted); }
 .kb-step.now .kb-steplabel { color: var(--fg); font-weight: 700; }
 .kb-steps.mini { max-width: 220px; }
@@ -113,7 +115,8 @@
 .kb-radioico { width: 24px; height: 24px; flex: 0 0 auto; }
 .kb-radiotext { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .kb-radiolabel { font-weight: 800; }
-.kb-radiodesc { font-size: 0.8em; font-weight: 500; color: var(--muted); line-height: 1.45; }
+/* 시안 172:2370 — caption 15px(=0.83em) · Regular · text/tertiary */
+.kb-radiodesc { font-size: 0.83em; font-weight: 400; color: var(--muted-strong); line-height: 1.45; }
 /* 미리보기 상자 (Preview 172:2371) — 고른 결과가 어떻게 보이는지 그 자리에서 보여준다 */
 .kb-preview {
   display: flex; align-items: center; justify-content: center;
@@ -147,11 +150,18 @@
   margin-inline: -6px;
 }
 
-.kb-eyebrow { color: var(--muted); font-size: 0.9em; margin: var(--kb-spacing-sm) 0 2px; }
-/* 디자인의 display(28px) — 본문 18px 기준 약 1.55배. 큰 글씨를 켜면 함께 커진다. */
-.kb-title { font-size: 1.55em; line-height: var(--kb-line-height-tight); margin: 0 0 var(--kb-spacing-sm); word-break: keep-all; }
-.kb-title-key { font-size: 1.24em; }
-.kb-subtitle { color: var(--muted); margin: 0 0 var(--kb-spacing-lg); word-break: keep-all; }
+/* 글자 크기는 전부 시안 값이다. em 으로 두는 것은 «큰 글씨»를 켜면 함께 커져야 하기
+   때문이고, 기준(--fs)이 18px 이므로 배수는 시안 px 을 18로 나눈 값이다.
+     고객님,  18px body      = 1em      (99:1275)
+     제목     22px heading   = 1.22em   (150:184 · 150:212 · 150:254 · 99:1276 의 작은 쪽)
+     강조어   28px display   = 1.27em×  (99:1276 의 큰 쪽 — 제목에 대해 28/22)
+     부제     15px caption   = 0.83em   (150:185 · 150:213)
+   한때 제목이 1.55em(≈28px)이라 문장 전체가 시안의 강조어 크기였고, 강조어는 34px 로
+   한 칸 더 커져 있었다. 시안은 «한 문장 안에서 핵심만 28, 나머지는 22»다. */
+.kb-eyebrow { color: var(--muted); font-size: 1em; margin: var(--kb-spacing-sm) 0 2px; }
+.kb-title { font-size: 1.22em; line-height: var(--kb-line-height-tight); margin: 0 0 var(--kb-spacing-sm); word-break: keep-all; }
+.kb-title-key { font-size: 1.27em; }
+.kb-subtitle { color: var(--muted); font-size: 0.83em; margin: 0 0 var(--kb-spacing-lg); word-break: keep-all; }
 
 /* CTA 는 화면 아래에 붙는다. 내용이 길어져도 «다음»을 찾으러 스크롤하지 않아도 되고,
    홈 인디케이터가 있는 기기에서 가려지지 않도록 안전 영역만큼 띄운다. */
@@ -164,7 +174,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--kb-spacing-sm);
-  padding: var(--kb-spacing-md) 0 calc(var(--kb-spacing-md) + env(safe-area-inset-bottom, 0px));
+  /* 아래 40px 은 시안 프레임의 py-40 이다 (.shell 은 위 40px 만 쥔다 — 아래를 거기서 주면
+     스크롤 상자가 그만큼 짧아져 버튼바와 본문 사이에 빈 띠가 생긴다). */
+  padding: var(--kb-spacing-md) 0 calc(40px + env(safe-area-inset-bottom, 0px));
   margin-top: var(--kb-spacing-lg);
   background: var(--bg);
 }
@@ -196,8 +208,10 @@
   border: 1.5px solid var(--line); border-radius: 999px;
   cursor: pointer;
 }
-/* 더 못 누르는 것을 색만으로 말하지 않는다 — 커서와 테두리도 함께 바뀐다 */
-.stepbtn:disabled { color: var(--muted); background: var(--sunken); border-style: dashed; cursor: not-allowed; }
+/* 더 못 누르는 것을 색만으로 말하지 않는다 — 커서와 테두리도 함께 바뀐다.
+   글씨색이 --muted 였을 때 가라앉은 바탕 위에서 3.00:1 이었다. 못 누른다는 것은
+   점선 테두리와 커서가 이미 말하고 있으므로, 색까지 흐릴 이유가 없다. */
+.stepbtn:disabled { color: var(--muted-strong); background: var(--sunken); border-style: dashed; cursor: not-allowed; }
 .stepval {
   min-width: 2.6em; text-align: center;
   font-size: 2em; font-weight: 800; color: var(--brand-strong); line-height: 1.1;

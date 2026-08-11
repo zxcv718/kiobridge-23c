@@ -10,7 +10,7 @@
  * 자기 자리를 차지하므로 아무것도 가리지 않는다.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { 아무거나답하고다음, HOME, enterWizard, openHome } from "./nav";
+import { 아무거나답하고다음, 저장된내용펼치기, HOME, enterWizard, openHome } from "./nav";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -34,8 +34,8 @@ test("재방문 홈의 아래 버튼은 시안대로 둘뿐이다", async ({ pag
   await 재방문홈(page);
   const 버튼 = await 아래버튼(page);
   expect(버튼.length, `아래 버튼이 ${버튼.length}장입니다: ${버튼.join(" / ")}`).toBe(2);
-  expect(버튼[0]).toMatch(/지난번과 똑같이 주문하기|저장된 설정으로 시작하기/);
-  expect(버튼[1]).toMatch(/처음부터 새로 시작하기/);
+  expect(버튼[0]).toMatch(/지난번과 똑같이 주문하기|이전 화면 설정 사용/);
+  expect(버튼[1]).toMatch(/새로 설정하기/);
 });
 
 test("아래 버튼바가 화면을 반쯤 먹지 않는다", async ({ page }) => {
@@ -51,17 +51,18 @@ test("삭제와 수정 둘 다 닿는다 — 아래 버튼 자리를 쓰지 않�
   await 재방문홈(page);
 
   /* 무로그인 가이드 4번은 «조회·수정·삭제»를 요구한다. 셋 다 있어야 하지만, 그렇다고
-     아래 버튼을 셋으로 늘리면 시안의 두 장이 무너진다. 삭제는 「처음부터 새로 시작하기」가
-     겸하고(이름이 이미 그 뜻이다), 수정은 고칠 대상인 카드 바로 아래 둔다. */
+     아래 버튼을 셋으로 늘리면 시안의 두 장이 무너진다. 삭제는 「새로 설정하기」가
+     겸하고(이름이 이미 그 뜻이다), 조회와 수정은 «저장된 내용 보기» 안에 접어 둔다. */
+  await 저장된내용펼치기(page);
   const 수정 = page.getByRole("button", { name: /저장된 내용 수정/ });
   await expect(수정, "저장된 내용을 고칠 길이 없습니다").toBeVisible();
   const 본문안 = await 수정.evaluate((el) => !!el.closest(".kb-screen-body") && !el.closest(".kb-actions"));
   expect(본문안, "수정 버튼이 아래 버튼 더미에 있습니다").toBe(true);
 
   // 삭제는 아래 버튼이 겸한다 — 되돌릴 수 없으므로 한 번 되묻는다
-  await page.getByRole("button", { name: "처음부터 새로 시작하기" }).click();
+  await page.getByRole("button", { name: "새로 설정하기" }).click();
   await expect(page.getByRole("alert")).toContainText("되돌릴 수 없습니다");
   await page.getByRole("button", { name: /네, 지우고 새로 시작할게요/ }).click();
   const 남았나 = await page.evaluate(() => localStorage.getItem("kb23c-saved-settings-v4"));
-  expect(남았나, "«처음부터 새로 시작»인데 기록이 남아 있습니다").toBeNull();
+  expect(남았나, "«새로 설정»인데 기록이 남아 있습니다").toBeNull();
 });

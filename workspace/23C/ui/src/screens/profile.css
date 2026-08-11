@@ -28,7 +28,7 @@
   border: 1.5px solid var(--line-soft); background: var(--card);
   font-size: 10px; font-weight: 700; line-height: 1; color: var(--muted);
 }
-.p-minidot.on { background: var(--brand-strong); border-color: var(--brand-strong); color: var(--on-brand); }
+.p-minidot.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 .p-minitext { margin-left: 5px; }
 
 /* 카드 위에 붙는 작은 설명 (S05 «지난 주문» · S03 «저장 방식을 선택해주세요») */
@@ -94,6 +94,25 @@
   border-radius: 10px; background: var(--sunken);
   font-weight: 700;
 }
+
+/* ───────── 저장된 내용 보기 (접어 둔 조회·수정) ─────────
+ * 시안(150:190)의 재방문 홈에는 제목·부제·버튼 둘뿐이다. 조회·수정은 무로그인 가이드
+ * 4번이 요구하는 것이라 없앨 수 없어서, 펴기 전에는 한 줄만 차지하게 접어 둔다.
+ * 요약 줄도 누르는 것이므로 48px 을 지킨다. */
+.home-saved { margin: 4px 0 0; }
+.home-saved > summary {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 48px; padding: 10px 0; cursor: pointer; list-style: none;
+  font-size: 0.86em; font-weight: 700; color: var(--fg);
+}
+.home-saved > summary::-webkit-details-marker { display: none; }
+.home-savedcount {
+  padding: 2px 10px; border-radius: 999px;
+  background: var(--sunken); color: var(--muted-strong);
+  font-size: 0.86em; font-weight: 700;
+}
+.home-saved[open] > summary > [aria-hidden] { transform: rotate(180deg); }
+.home-savedbody { padding-bottom: 4px; }
 
 /* 저장된 내용을 고치는 자리 — 고칠 대상(카드) 바로 아래 */
 .home-edit {

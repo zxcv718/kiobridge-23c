@@ -70,7 +70,10 @@ export function App() {
         a11y.largeText ? "large" : "",
         a11y.highContrast ? "contrast" : "",
         a11y.mobilitySupport ? "roomy" : "",
-        a11y.visualGuidance ? "icons" : "",
+        /* 시안 150:509 의 「안내 켜짐」 = «다음에 누를 버튼을 테두리와 화살표로 강조».
+           예전 이름은 `icons` 였고 하는 일도 «선택지에 그림 병기»였다 — 시안에 없는
+           기능이 시안에 있는 기능의 자리를 차지하고 있었다(styles.css .app.guide). */
+        a11y.visualGuidance ? "guide" : "",
       ].join(" ").trim()}>
         <div className="shell">
           {/* 진행 상황을 화면 낭독기에 알린다. 눈에는 보이지 않는다. */}

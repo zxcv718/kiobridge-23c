@@ -62,7 +62,7 @@ test("가장 큰 것도 부족하면 — 더 큰 척하지 않고, 대신 정해
   const app = page.locator(".app");
   await expect(app, "가장 큰 글씨를 켜지 않았습니다").toHaveClass(/large/);
   await expect(app, "묻지도 않고 고대비를 켰습니다").not.toHaveClass(/contrast/);
-  await expect(app, "묻지도 않고 그림 안내를 켰습니다").not.toHaveClass(/icons/);
+  await expect(app, "묻지도 않고 화면 안내를 켰습니다").not.toHaveClass(/guide/);
   await expect(page.getByText(/다음 단계에서 고대비 화면/)).toBeVisible();
 });
 

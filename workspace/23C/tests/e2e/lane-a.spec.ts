@@ -125,7 +125,7 @@ test.describe("A계열 — 프로필 흐름", () => {
 
     await page.getByRole("button", { name: "다음", exact: true }).click();
     await radio(page, "안내 켜짐").click();
-    await expect(app).toHaveClass(/icons/);
+    await expect(app).toHaveClass(/guide/);
   });
 
   test("A4 접근성 7종과 입력 방식이 프로필 화면에 그대로 남아 있다", async ({ page }) => {
@@ -169,12 +169,12 @@ test.describe("A계열 — 프로필 흐름", () => {
     const app = page.locator(".app");
     await expect(app).toHaveClass(/large/);
 
-    /* 한때 마지막 단계에서 고대비·그림 안내까지 함께 켰다. 고대비는 **바로 다음 걸음의
+    /* 한때 마지막 단계에서 고대비·화면 안내까지 함께 켰다. 고대비는 **바로 다음 걸음의
        질문**이고 화면 안내는 그 다음 걸음의 질문인데, 1단계 문답이 손을 뻗어 대신 답해
        버리면 글씨 크기를 고르던 사람 눈앞에서 화면이 통째로 반전된다. 실제로 그렇게
        보고됐다. 신호는 «권유 문장»으로 넘기고, 켜는 것은 사용자가 한다. */
     await expect(app, "묻지도 않고 고대비를 켰습니다").not.toHaveClass(/contrast/);
-    await expect(app, "묻지도 않고 그림 안내를 켰습니다").not.toHaveClass(/icons/);
+    await expect(app, "묻지도 않고 화면 안내를 켰습니다").not.toHaveClass(/guide/);
     await expect(page.getByText(/다음 단계에서 고대비 화면/)).toBeVisible();
 
     // 문답 결과가 1단계 라디오에도 그대로 비친다 (두 곳이 같은 값을 본다)

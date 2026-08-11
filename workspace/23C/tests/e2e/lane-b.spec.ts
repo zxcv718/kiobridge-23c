@@ -37,7 +37,7 @@ async function openQr(page: Page) {
   await page.goto("http://localhost:5173/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
+  await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "이번만 사용하기" }).click();
   await expect(screen(page)).toBeVisible();

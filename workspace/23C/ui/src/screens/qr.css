@@ -39,7 +39,9 @@
 .qr-mark {
   font-size: 44px;
   line-height: 1;
-  color: var(--muted);
+  /* --muted 였을 때 가라앉은 바탕 위에서 3.00:1 이었다. 큰 글자라 기준은 넘지만,
+     기준을 겨우 맞추는 것과 잘 보이는 것은 다르다. */
+  color: var(--muted-strong);
   background: var(--sunken);
 }
 

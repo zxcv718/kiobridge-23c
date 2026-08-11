@@ -16,6 +16,30 @@ import { allCss, cssFiles, colorPairs, paletteOf, varsIn } from "./ui-source";
 const BASE = paletteOf(":root");
 const CONTRAST = { ...BASE, ...paletteOf(".app.contrast") };
 
+/**
+ * **시안 값을 그대로 써서 생긴 본문 기준 미달 — 전부, 수치까지.**
+ *
+ * 기획이 «시안에 있는 것은 시안 그대로»를 요청했고 그 판단은 우리 것이 아니다. 다만
+ * 미달이라는 사실은 숨기지 않는다. 한때 이 자리에 «#8c8c8c 하나만» 눈감아 주는 필터가
+ * 있었는데, 그러면 예외를 하나 더 받아들일 때마다 필터를 슬쩍 넓히게 되고 무엇을
+ * 봐줬는지 아무도 세지 않게 된다.
+ *
+ * 그래서 목록으로 둔다. 여기 적힌 쌍만, **여기 적힌 수치일 때만** 통과한다:
+ *  · 새 미달이 다른 자리에서 생기면 아래 전수 검사가 잡는다.
+ *  · 이 색들이 조용히 더 나빠지면 수치가 어긋나 여기서 잡힌다.
+ *  · README 알려진 제한사항에 같은 숫자가 적혀 있어, 문서와 코드가 갈라질 수 없다.
+ *
+ * 고대비 팔레트에는 예외가 **하나도 없다** — 대비가 필요한 사용자에게 이 서비스가 주는
+ * 답이 그쪽이므로, 거기서 미달이 나면 그건 남길 이유가 없는 결함이다.
+ */
+const 시안예외 = [
+  { fg: "#8c8c8c", bg: "#ffffff", ratio: 3.36, where: "보조 글씨색 — 부제·설명 (150:185 · 150:213)" },
+  { fg: "#ffffff", bg: "#ff5a1f", ratio: 3.12, where: "브랜드 주황 위 흰 글씨 — 주 버튼·진행 표시 원 (208:754 · 180:173)" },
+] as const;
+
+const 시안이정한미달 = (p: { fg: string; bg: string }) =>
+  시안예외.some((e) => e.fg === p.fg.toLowerCase() && e.bg === p.bg.toLowerCase());
+
 describe("토큰 정의", () => {
   it("tokens.css 가 존재하고 --kb- 토큰을 정의한다", () => {
     const tokens = cssFiles().find((f) => f.name === "tokens.css");
@@ -35,32 +59,30 @@ describe("토큰 정의", () => {
   });
 
   /**
-   * 보조 글씨색은 **시안 값(#8c8c8c)을 쓴다.** 기획이 «시안에 있는 것은 시안 그대로»를
-   * 요청했고, 그 판단은 우리 것이 아니다.
-   *
-   * 다만 미달이라는 사실은 숨기지 않는다. 한때 이 자리에 «#8c8c8c 가 되돌아오면 실패»
-   * 하는 검사가 있었는데, 그건 우리가 내린 결정을 지키는 검사였다. 결정이 바뀌었으니
-   * 검사가 지킬 것도 바뀐다 — **얼마나 미달인지를 숫자로 못 박는다.** 값이 조용히
-   * 더 나빠지면 여기서 걸리고, README 알려진 제한사항의 숫자와도 어긋나지 않는다.
+   * 시안 값을 그대로 써서 생긴 미달은 **목록과 수치가 정확해야** 한다.
+   * 여기가 README 알려진 제한사항과 코드를 묶어 두는 자리다.
    */
-  it("보조 글씨색은 시안 값이고, 미달 폭을 숫자로 기록한다", () => {
-    expect(BASE["--kb-color-text-secondary"]).toBe("#8c8c8c");
-    const ratio = contrastRatio("#8c8c8c", "#ffffff");
-    expect(Math.round(ratio * 100) / 100, "README 에 적은 3.36:1 과 달라졌습니다").toBe(3.36);
-    expect(ratio, "본문 기준을 넘었다면 이 검사와 README 를 같이 고쳐야 합니다").toBeLessThan(AA_TEXT);
+  it("시안이 정한 미달은 목록에 적힌 색·수치와 정확히 같다", () => {
+    expect(BASE["--kb-color-text-secondary"], "보조 글씨색이 시안 값에서 벗어났습니다").toBe("#8c8c8c");
+    expect(BASE["--kb-color-accent-primary"], "브랜드 주황이 시안 값에서 벗어났습니다").toBe("#ff5a1f");
+    for (const e of 시안예외) {
+      const ratio = contrastRatio(e.fg, e.bg);
+      expect(Math.round(ratio * 100) / 100, `${e.where} — README 에 적은 ${e.ratio}:1 과 달라졌습니다`)
+        .toBe(e.ratio);
+      expect(ratio, `${e.where} — 본문 기준을 넘었다면 예외 목록에서 빼야 합니다`).toBeLessThan(AA_TEXT);
+    }
   });
 
-  it("흰 글씨를 얹는 강조색이 따로 있고, 그 위에서 본문 기준을 넘는다", () => {
+  /** 밝은 바탕 위의 «주황 글씨»(포커스 테두리·수량 숫자) 자리 — 여기서는 기준을 지킨다 */
+  it("밝은 바탕에 얹는 짙은 주황이 따로 있고, 흰 바탕에서 본문 기준을 넘는다", () => {
     const strong = BASE["--kb-color-accent-strong"];
     expect(strong, "--kb-color-accent-strong 가 없습니다").toBeDefined();
-    expect(contrastRatio(BASE["--kb-color-text-inverse"], strong)).toBeGreaterThanOrEqual(AA_TEXT);
+    expect(contrastRatio(strong, BASE["--kb-color-bg-canvas"])).toBeGreaterThanOrEqual(AA_TEXT);
   });
 
-  it("브랜드 주황은 글자를 얹지 않는 자리용이며 UI 경계 기준(3:1)은 넘는다", () => {
+  it("브랜드 주황은 UI 경계 기준(3:1)은 넘는다 — 버튼이 바탕에서 구분된다", () => {
     const primary = BASE["--kb-color-accent-primary"];
-    expect(primary).toBe("#ff5a1f");
     expect(contrastRatio(primary, "#ffffff")).toBeGreaterThanOrEqual(AA_NON_TEXT);
-    expect(contrastRatio(primary, "#ffffff")).toBeLessThan(AA_TEXT); // 그래서 strong 이 필요하다
   });
 
   it("누를 수 있는 것의 경계는 바탕과 3:1 이상이다", () => {
@@ -76,19 +98,16 @@ describe("토큰 정의", () => {
 
 describe("화면에 실제로 나오는 색쌍 — CSS 에서 뽑아 전수 검사", () => {
   for (const [modeName, palette] of [["기본", BASE], ["고대비", CONTRAST]] as const) {
-    it(`${modeName} 팔레트의 글씨/바탕 쌍 — 시안이 정한 보조색 말고는 4.5:1 이상이다`, () => {
+    it(`${modeName} 팔레트의 글씨/바탕 쌍 — 시안이 정한 예외 말고는 4.5:1 이상이다`, () => {
       const pairs = colorPairs(palette);
       expect(pairs.length, "색쌍을 하나도 못 찾았습니다 — 파서가 고장났을 수 있습니다").toBeGreaterThan(5);
       const bad = pairs
         .map((p) => ({ ...p, ratio: contrastRatio(p.fg, p.bg) }))
         .filter((p) => p.ratio < AA_TEXT);
 
-      /* 예외는 **하나뿐이다** — 시안이 정한 보조 글씨색(#8c8c8c, 3.36:1).
-         기획이 «시안에 있는 것은 시안 그대로»를 요청해 받아들인 값이고, README 알려진
-         제한사항에 적혀 있다. 그 하나를 통째로 눈감아 주면 다른 미달까지 같이 숨으므로,
-         **«보조색이 글씨인 경우»만** 빼고 나머지는 그대로 잡는다. */
-      const 시안보조색 = (p: { fg: string }) => p.fg.toLowerCase() === "#8c8c8c";
-      const 그밖에 = bad.filter((p) => !(modeName === "기본" && 시안보조색(p)))
+      /* 통째로 눈감아 주지 않는다 — 위 `시안예외` 표에 **색쌍까지 정확히 적힌 것만** 뺀다.
+         같은 색이라도 다른 바탕에 얹히면 그건 새 미달이므로 여기서 잡힌다. */
+      const 그밖에 = bad.filter((p) => !(modeName === "기본" && 시안이정한미달(p)))
         .map((p) => `${p.file} ${p.selector} — ${p.fg} on ${p.bg} = ${p.ratio.toFixed(2)}:1`);
       expect(그밖에, `대비 미달:\n  ${그밖에.join("\n  ")}`).toEqual([]);
 

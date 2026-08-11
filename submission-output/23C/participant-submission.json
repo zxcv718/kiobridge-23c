@@ -9,7 +9,7 @@
     "source": {
       "collectionChannel": "WEB_FORM",
       "providerId": "23C",
-      "collectedAt": "2026-08-11T02:15:24.729Z"
+      "collectedAt": "2026-08-11T06:58:39.057Z"
     },
     "accessibility": {
       "largeText": true,
@@ -91,10 +91,10 @@
         {
           "type": "TIME_OF_DAY",
           "key": "slot",
-          "value": "LUNCH_PEAK",
+          "value": "OFF_PEAK",
           "source": "DEVICE_CLOCK",
-          "observedAt": "2026-08-11T02:15:24.717Z",
-          "expiresAt": "2026-08-11T03:15:24.717Z",
+          "observedAt": "2026-08-11T06:58:39.045Z",
+          "expiresAt": "2026-08-11T07:58:39.045Z",
           "confidence": 1
         },
         {
@@ -102,8 +102,8 @@
           "key": "soldOutCount",
           "value": "1",
           "source": "FIXTURE",
-          "observedAt": "2026-08-11T02:15:24.717Z",
-          "expiresAt": "2026-08-11T03:15:24.717Z",
+          "observedAt": "2026-08-11T06:58:39.045Z",
+          "expiresAt": "2026-08-11T07:58:39.045Z",
           "confidence": 1
         }
       ]
@@ -147,7 +147,7 @@
       "등록하신 알레르기와 겹치는 메뉴 1개를 제외했습니다.",
       "품절된 메뉴 1개를 제외했습니다.",
       "원하시는 이용 방식이 불가능한 메뉴 1개를 제외했습니다.",
-      "이용 방식을 직접 골라 주셔서, 시간대(점심 붐빔)는 순서에 반영하지 않았습니다."
+      "이용 방식을 직접 골라 주셔서, 시간대(한산한 시간)는 순서에 반영하지 않았습니다."
     ],
     "unmetConditions": [],
     "confidence": 0.7,
@@ -156,7 +156,7 @@
   "userDecision": {
     "approved": true,
     "decision": "APPROVE",
-    "confirmedAt": "2026-08-11T02:15:24.729Z"
+    "confirmedAt": "2026-08-11T06:58:39.057Z"
   },
   "executionPlan": {
     "planId": "PLAN-23C-chicken-store",
@@ -281,7 +281,7 @@
         "accessibility-7-flags",
         "explainable-recommendation",
         "context-signals-time-of-day",
-        "staff-help-every-step",
+        "staff-help-on-demand",
         "safety-injection-demo"
       ],
       "recommendationData": {
@@ -330,8 +330,10 @@
       "keyboardOnlyFlowSupported": true,
       "focusVisibleOutlinePx": 3,
       "respectsPrefersReducedMotion": true,
-      "staffHelpReachableFromEveryStep": true,
-      "iconsAlwaysPairedWithText": true
+      "staffHelpReachableFromEveryStep": false,
+      "staffHelpShownWhenUserOptsIn": true,
+      "iconsAlwaysPairedWithText": true,
+      "choiceIconsAlwaysVisible": true
     },
     "notImplemented": [
       "VOICE_INPUT"

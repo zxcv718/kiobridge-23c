@@ -72,17 +72,34 @@ export function Screen({
 
 /**
  * 제목 안에서 **핵심 어절만 크게** 보여 준다 (Figma 는 한 문장 안에서 강조어를 28px,
- * 나머지를 22px 로 둔다).
+ * 나머지를 22px 로 둔다 — 99:1276 · 99:1282).
  *
  * 문장을 쪼개 배열로 넘기지 않는 이유는, 조각 사이에 공백이 끼면 화면 낭독기에서
  * «알레르기 가 있으세요»처럼 끊겨 읽히기 때문이다. 문장은 그대로 두고 위치만 찾는다.
+ *
+ * 강조어는 **여럿일 수 있다.** 시안은 한 문장에서 둘을 키우는 일이 잦다 —
+ * 「**드시고** 가나요, **포장**하나요?」 · 「**뼈 있는 것**과 **없는 것** 중 …」.
+ * 하나만 받던 때는 그런 제목을 어느 한쪽만 키워 옮겼고, 결국 시안과 다른 문장이 됐다.
+ * 찾는 순서는 앞에서 뒤로 한 번뿐이라, 같은 말이 두 번 나와도 엉뚱한 자리를 키우지 않는다.
  */
-export function Emphasize({ text, word }: { text: string; word?: string }) {
-  const at = word ? text.indexOf(word) : -1;
-  if (at < 0 || !word) return <>{text}</>;
+export function Emphasize({ text, word }: { text: string; word?: string | string[] }) {
+  const words = (Array.isArray(word) ? word : word ? [word] : []).filter(Boolean);
+  const parts: { s: string; big: boolean }[] = [];
+  let rest = text;
+  for (const w of words) {
+    const at = rest.indexOf(w);
+    if (at < 0) continue;
+    if (at > 0) parts.push({ s: rest.slice(0, at), big: false });
+    parts.push({ s: w, big: true });
+    rest = rest.slice(at + w.length);
+  }
+  if (rest) parts.push({ s: rest, big: false });
+  if (!parts.some((p) => p.big)) return <>{text}</>;
   return (
     <>
-      {text.slice(0, at)}<span className="kb-title-key">{word}</span>{text.slice(at + word.length)}
+      {parts.map((p, i) => (p.big
+        ? <span key={i} className="kb-title-key">{p.s}</span>
+        : <React.Fragment key={i}>{p.s}</React.Fragment>))}
     </>
   );
 }

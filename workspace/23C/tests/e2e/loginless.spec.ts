@@ -9,7 +9,7 @@
  * 손봐야 하는지 바로 보인다.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { 아무거나답하고다음, HOME, approveToCartReview, enterWizard, finishOrder, openHome } from "./nav";
+import { 아무거나답하고다음, 저장된내용펼치기, HOME, approveToCartReview, enterWizard, finishOrder, openHome } from "./nav";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -53,9 +53,11 @@ test("3번 — 실제 개인정보를 받는 칸이 없다", async ({ page }) =>
 
 test("4번 — 저장된 것을 홈에서 조회할 수 있다", async ({ page }) => {
   await 저장하고재방문(page);
-  /* 카드 이름은 aria-label 이라 눈에 보이는 글자가 아니다 — 화면 낭독기에게 «이 덩어리가
-     무엇인지»를 알려주는 이름이다. 그래서 글자가 아니라 영역으로 찾는다. */
-  await expect(page.getByRole("region", { name: "이 기기에 저장된 기록" })).toBeVisible();
+  /* 시안의 재방문 홈에는 카드가 없어 «저장된 내용 보기»로 접었다. 4번이 요구하는 것은
+     «조회할 수 있을 것»이지 «첫 화면에 펼쳐져 있을 것»이 아니므로 한 걸음은 괜찮다.
+     다만 그 한 걸음이 홈에서 바로 닿는지는 여기서 잰다 — 흐름 깊숙이 묻히면 안 된다.
+     카드 이름은 aria-label 이라 눈에 보이는 글자가 아니다. 그래서 영역으로 찾는다. */
+  await 저장된내용펼치기(page);
   // 무엇이 들어 있는지 항목으로 보여준다 — «설정이 있습니다» 한 줄로 때우지 않는다
   const 줄수 = await page.locator(".kb-row").count();
   expect(줄수, "저장된 내용을 항목으로 보여주지 않습니다").toBeGreaterThan(1);
@@ -76,10 +78,10 @@ test("6번 — 한 번의 조작으로 지워지고, 지웠다고 알린다", as
   await 저장하고재방문(page);
 
   /* «한 번의 조작» — 버튼 하나로 끝나야 한다.
-     한때 지우기 버튼이 따로 한 장 있었는데, 「처음부터 새로 시작하기」와 뜻이 겹쳐
+     한때 지우기 버튼이 따로 한 장 있었는데, 「새로 설정하기」와 뜻이 겹쳐
      같은 일처럼 읽혔다. 이름이 이미 «지난 것을 버리고 시작한다»는 뜻이므로 그 버튼이
      지우게 하고 한 장으로 합쳤다. 조작 수는 그대로 하나다. */
-  await page.getByRole("button", { name: "처음부터 새로 시작하기" }).click();
+  await page.getByRole("button", { name: "새로 설정하기" }).click();
   /* 되묻기가 한 번 들어간다. 6번이 막는 것은 «삭제가 흐름 깊숙이 묻히는 것»이지
      되돌릴 수 없는 일을 확인받는 것이 아니다 — 삭제는 여전히 첫 화면에서 바로 닿는다. */
   await page.getByRole("button", { name: /네, 지우고 새로 시작할게요/ }).click();
@@ -92,10 +94,15 @@ test("6번 — 한 번의 조작으로 지워지고, 지웠다고 알린다", as
 
 test("8번 — 저장된 설정을 조용히 적용하지 않는다", async ({ page }) => {
   await 저장하고재방문(page);
-  /* 되살리기는 «보여준 뒤 누르는 것»이어야 한다. 홈에 내용이 보이고, 누르기 전까지는
-     아무 화면도 그 설정으로 바뀌지 않는다. 공용 기기라면 앞사람 설정일 수 있다. */
-  await expect(page.getByText("자동으로 적용하지 않으니")).toBeVisible();
-  await expect(page.getByRole("button", { name: /지난번과 똑같이 주문하기|저장된 설정으로 시작하기/ }))
+  /* 되살리기는 «보여준 뒤 누르는 것»이어야 한다. 홈이 저장본이 있다고 먼저 말하고,
+     내용은 한 걸음 안에서 볼 수 있으며, 누르기 전까지는 아무 화면도 그 설정으로
+     바뀌지 않는다. 공용 기기라면 앞사람 설정일 수 있다. */
+  await expect(page.locator(".kb-subtitle"), "저장본이 있다는 말을 화면이 하지 않습니다")
+    .toContainText(/남아 있어요|저장된/);
+  await 저장된내용펼치기(page);
+  // 저장본이 있다는 이유로 흐름이 저절로 진행되지 않는다 — 홈에 머물러 있다
+  await expect(page.locator("#qtitle"), "묻지도 않고 주문 흐름으로 넘어갔습니다").toHaveCount(0);
+  await expect(page.getByRole("button", { name: /지난번과 똑같이 주문하기|이전 화면 설정 사용/ }))
     .toBeVisible();
 });
 

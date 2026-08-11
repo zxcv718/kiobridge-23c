@@ -58,7 +58,7 @@ export const A11Y_ITEMS: { key: keyof A11y; label: string; effect: string }[] = 
   { key: "largeText", label: "큰 글씨", effect: "글자와 버튼이 커집니다" },
   { key: "highContrast", label: "고대비", effect: "검은 배경에 밝은 글씨로 바뀝니다" },
   { key: "simpleSteps", label: "쉬운 말", effect: "설명이 짧고 쉬운 문장으로 바뀝니다" },
-  { key: "visualGuidance", label: "그림 함께 보기", effect: "선택지에 그림이 함께 표시됩니다" },
+  { key: "visualGuidance", label: "화면 안내", effect: "다음에 누를 버튼을 테두리와 화살표로 강조합니다" },
   { key: "hearingSupport", label: "소리 없이 보기", effect: "모든 안내를 화면 글자로만 드립니다" },
   { key: "mobilitySupport", label: "누르기 편하게", effect: "버튼이 더 커지고 간격이 넓어집니다" },
   { key: "staffAssistancePreferred", label: "직원 도움 먼저", effect: "직원 부르기 버튼이 맨 위에 크게 나옵니다" },
@@ -177,10 +177,13 @@ export const QUESTIONS: Question[] = [
   // 정도(degree)라 그림을 두지 않는다 — 순한→보통→매운은 글자가 이미 순서로 말한다
   { key: "spicyLevel", title: "맵기는 어느 정도가 좋으세요?", options: [
     { value: "순한맛", label: "순한맛" }, { value: "보통", label: "보통맛" }, { value: "매운맛", label: "매운맛" }, { value: "상관없음", label: "상관없어요" } ] },
-  { key: "boneType", title: "뼈와 순살 중 어떤 것이 편하세요?", options: [
-    { value: "순살", label: "순살" }, { value: "뼈", label: "뼈" }, { value: "상관없음", label: "상관없어요" } ] },
-  { key: "serviceType", title: "어떻게 이용하시겠어요?", options: [
-    { value: "포장", label: "포장하기" }, { value: "매장", label: "먹고 가기" }, { value: "상관없음", label: "상관없어요" } ] },
+  /* 제목과 순서 모두 시안 그대로다(99:1270 · 99:1281).
+     타일 두 장은 좌우 위치가 곧 그 선택지의 자리라, 순서가 뒤집히면 시안을 본 사람이
+     기억한 자리와 어긋난다. 둘 다 반대로 두고 있었고 제목도 우리가 지어 쓴 문장이었다. */
+  { key: "boneType", title: "뼈 있는 것과 없는 것 중 어떤 걸 드시나요?", options: [
+    { value: "뼈", label: "뼈" }, { value: "순살", label: "순살" }, { value: "상관없음", label: "상관없어요" } ] },
+  { key: "serviceType", title: "드시고 가나요, 포장하나요?", options: [
+    { value: "매장", label: "먹고 가기" }, { value: "포장", label: "포장하기" }, { value: "상관없음", label: "상관없어요" } ] },
   /* 수량은 선택지가 아니라 «− 1 +» 증감으로 묻는다 (디자인 S10 99:1292). 계약이
      `integer, minimum 1` 이라 상한이 없는데 버튼 셋으로 두면 화면이 계약을 좁힌다.
      아래 options 는 남겨 둔다 — 「1개」 같은 라벨과 시연 프리셋이 참조한다. */

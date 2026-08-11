@@ -9,7 +9,7 @@
  * 단위 테스트로는 잡히지 않는 회귀(저장본 마이그레이션·재확인 카운터·선언 일치)가 대상이다.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { 아무거나답하고다음, approveToCartReview, enterWizard, openHome } from "./nav";
+import { 아무거나답하고다음, 저장된내용펼치기, approveToCartReview, enterWizard, openHome } from "./nav";
 
 const start = openHome;
 
@@ -103,7 +103,7 @@ test.describe("B계열 — 신규 동작", () => {
 
   test("B5 화면 글씨 문답은 글씨 크기만 정하고, 나머지는 권유에 그친다", async ({ page }) => {
     await start(page);
-    await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
+    await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
     await page.getByRole("button", { name: "화면 글씨 맞춰보기" }).click();
     /* 문답은 두 걸음이다 — 예시가 실제로 적용되는 두 크기(기본·큰 글씨)뿐이기 때문이다.
        예전에는 «지금 크기의 1.9배»까지 세 걸음을 보여줬는데, 그 크기는 적용할 수가 없어서
@@ -116,7 +116,7 @@ test.describe("B계열 — 신규 동작", () => {
     await expect(app).toHaveClass(/large/);
     // 아직 묻지 않은 것(고대비·화면 안내)을 대신 답해 버리지 않는다
     await expect(app, "묻지도 않고 고대비를 켰습니다").not.toHaveClass(/contrast/);
-    await expect(app, "묻지도 않고 그림 안내를 켰습니다").not.toHaveClass(/icons/);
+    await expect(app, "묻지도 않고 화면 안내를 켰습니다").not.toHaveClass(/guide/);
     await expect(page.getByText(/다음 단계에서 고대비 화면/)).toBeVisible();
 
     // 다음 걸음에서 사용자가 직접 켜면 그때 적용된다
@@ -137,6 +137,7 @@ test.describe("B계열 — 신규 동작", () => {
     });
     await page.reload();
     await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
+    await 저장된내용펼치기(page);
     await expect(page.getByText(/땅콩/)).toBeVisible();
 
     const moved = await page.evaluate(() => ({
@@ -197,9 +198,9 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: "처음으로" }).first().click();
     await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
 
-    // 저장된 것은 카드 하나에만 모인다 — "새로 시작"이 여러 곳에 흩어지지 않는다
+    // 저장된 것은 카드 하나에만 모이고, 새로 시작하는 길도 하나뿐이다 — 흩어지지 않는다
     await expect(page.locator("section[aria-label='이 기기에 저장된 기록']")).toHaveCount(1);
-    await expect(page.getByRole("button", { name: /시작하기/ })).toHaveCount(1);
+    await expect(page.getByRole("button", { name: /^새로 설정하기$/ })).toHaveCount(1);
 
     await page.getByRole("button", { name: /지난번과 똑같이 주문하기/ }).click();
     // 실행으로 직행하지 않는다 — 확인을 거쳐야 한다
@@ -211,7 +212,7 @@ test.describe("B계열 — 신규 동작", () => {
      수기 검토(MANUAL_REVIEW) 대상이라 선언과 화면이 어긋나면 그 자체가 감점이다. */
   test("C1 선언한 접근성 채널이 전부 화면을 실제로 바꾼다", async ({ page }) => {
     await start(page);
-    await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
+    await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
     /* 설정 목록은 프로필 3/3 의 «자세한 설정» 안에 있다 — 상단바 토글이 없어지면서
        여기가 8종에 닿는 유일한 자리가 됐다. 선언한 채널이 화면에서 닿지 않으면
        «없는 기능을 있다고 말한 것»이 되므로, 이 검사는 그 자리까지 걸어가서 잰다. */
@@ -233,8 +234,8 @@ test.describe("B계열 — 신규 동작", () => {
     await row("누르기 편하게").click();
     await expect(app).toHaveClass(/roomy/);   // LARGER_TOUCH_TARGETS
 
-    await row("그림 함께 보기").click();
-    await expect(app).toHaveClass(/icons/);   // VISUAL_GUIDANCE
+    await row("화면 안내").click();
+    await expect(app).toHaveClass(/guide/);   // VISUAL_GUIDANCE
 
     await row("직원 도움 먼저").click();
     await expect(page.locator(".staffbar")).toBeVisible(); // STAFF_HELP
@@ -262,7 +263,7 @@ test.describe("B계열 — 신규 동작", () => {
    */
   test("C3 QR 은 읽기만 하며, 하지 않은 일을 한 것처럼 말하지 않는다", async ({ page }) => {
     await start(page);
-    await page.getByRole("button", { name: /^(시작하기|처음부터 새로 시작하기)$/ }).click();
+    await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
     for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
     // S03 은 라디오+«다음»이 아니라 저장 방식 CTA 를 고르는 순간 QR 로 간다
     await page.getByRole("button", { name: "이번만 사용하기" }).click();

@@ -40,7 +40,7 @@ const openWizard = async (page: Page, a11y: Record<string, boolean> = {}) => {
     }));
   }, a11y);
   await page.reload();
-  await page.getByRole("button", { name: /저장된 설정으로 시작하기|지난번과 똑같이 주문하기/ }).click();
+  await page.getByRole("button", { name: /이전 화면 설정 사용|지난번과 똑같이 주문하기/ }).click();
   await expect(page.locator("#qtitle")).toBeVisible();
 };
 
@@ -152,17 +152,20 @@ test.describe("레인 C — 질문 화면", () => {
     expect(flames.map((f) => f.label)).toEqual(["순한맛", "보통맛", "매운맛", "상관없어요"]);
     await pick(page, 3);
 
-    /* 형태·이용 방식은 «종류»다 — 서로 다른 그림이 맞다. */
-    await expect(page.locator("#qtitle")).toHaveText(/뼈와 순살/);
-    expect(await iconOf(page, 1)).toMatch(/boneless[-.\w]*\.svg/);
-    const bone = await iconOf(page, 2);
+    /* 형태·이용 방식은 «종류»다 — 서로 다른 그림이 맞다.
+       좌우 순서도 시안 그대로여야 한다: 뼈 → 순살(99:1270), 먹고 가기 → 포장하기(99:1281).
+       타일 두 장은 좌우 위치가 곧 그 선택지의 자리라, 뒤집히면 시안을 본 사람이 기억한
+       자리와 어긋난다. 둘 다 반대로 두고 있었다. */
+    await expect(page.locator("#qtitle")).toHaveText(/뼈 있는 것과 없는 것/);
+    const bone = await iconOf(page, 1);
     expect(bone).toMatch(/bone[-.\w]*\.svg/);
-    expect(bone).not.toMatch(/boneless/); // 뼈와 순살이 같은 그림을 쓰면 구분이 사라진다
+    expect(bone, "첫 타일이 뼈가 아닙니다 — 시안과 좌우가 뒤집혔습니다").not.toMatch(/boneless/);
+    expect(await iconOf(page, 2)).toMatch(/boneless[-.\w]*\.svg/);
     await pick(page, 1);
 
-    await expect(page.locator("#qtitle")).toHaveText(/어떻게/);
-    expect(await iconOf(page, 1)).toMatch(/takeout[-.\w]*\.svg/);
-    expect(await iconOf(page, 2)).toMatch(/here[-.\w]*\.svg/);
+    await expect(page.locator("#qtitle")).toHaveText(/드시고 가나요, 포장하나요\?/);
+    expect(await iconOf(page, 1)).toMatch(/here[-.\w]*\.svg/);
+    expect(await iconOf(page, 2)).toMatch(/takeout[-.\w]*\.svg/);
   });
 
   test("C-L5 7문항 어디에도 글자 없는 선택지가 없다", async ({ page }) => {

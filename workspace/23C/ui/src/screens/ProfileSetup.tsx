@@ -1,7 +1,7 @@
 import React from "react";
 import { useFlow } from "../flow";
 import { A11Y_ITEMS, FLOW_STEPS, PROBE_NOT_ENOUGH, PROBE_RESULT, PROBE_SAMPLE, PROBE_SIZES, type A11y } from "../model";
-import { Cta, Emphasize, RadioCard, Screen } from "../components";
+import { Cta, RadioCard, Screen } from "../components";
 import "./profile.css";
 
 /**
@@ -25,38 +25,44 @@ import "./profile.css";
  * 문장을 보여주고 보이는지만 묻는 것이 이 화면의 핵심이기 때문이다.
  */
 
-/** 한 걸음 = 제목 + 라디오 두 장. 바꾸는 플래그는 하나뿐이다. */
+/**
+ * 한 걸음 = 제목 + 라디오 두 장. 바꾸는 플래그는 하나뿐이다.
+ *
+ * 제목과 설명은 **시안 문구 그대로**다(150:254 · 150:488 · 150:543 및 각 Radio Card).
+ * 한 글자도 바꾸지 않는다 — 여기 적힌 말이 곧 그 설정이 하는 일이라는 뜻이므로,
+ * 문구를 지키려면 **동작을 문구에 맞춰야** 한다. 실제로 두 곳을 그렇게 고쳤다:
+ *  · «글자를 20% 크게» → --fs-large 를 calc(--fs-base × 1.2) 로 (예전엔 약 1.28배)
+ *  · «다음에 누를 버튼을 테두리와 화살표로 강조» → .app.guide 로 구현 (예전엔 이 자리에
+ *    시안에 없는 «선택지에 그림 병기»가 들어가 있었다. 시안에서 선택지 그림은 늘 있다.)
+ */
 const SUBSTEPS: {
   key: keyof A11y;
   title: string;
-  /** 제목 안에서 크게 읽힐 어절 (Figma 는 한 문장 안에서 강조어만 키운다) */
-  word: string;
   group: string;
   options: { on: boolean; label: string; desc: string; preview: string; previewSize?: string }[];
 }[] = [
   {
-    key: "largeText", title: "더 읽기 편한 크기를 선택해주세요", word: "크기", group: "글씨 크기",
+    key: "largeText", title: "더 읽기 편한 크기를 선택해주세요", group: "글씨 크기",
     options: [
-      { on: false, label: "기본 크기", desc: "지금 화면과 같은 크기로 보여드려요", preview: "가", previewSize: "16px" },
-      // 디자인 문구는 «20% 크게»지만 우리 화면은 18px→23px(약 28%)이고 버튼도 함께 커진다.
-      // 숫자를 옮겨 적으면 화면과 다른 말이 되므로 실제로 일어나는 일을 적는다.
-      { on: true, label: "큰 글씨", desc: "글자와 버튼이 한 단계 커집니다", preview: "가", previewSize: "21px" },
+      /* 시안은 미리보기 「가」를 양쪽 다 16px 로 그렸다. 우리는 각 선택지가 만들 실제
+         크기로 그린다 — 같은 글자를 같은 크기로 두 번 보여주는 상자는 «고른 결과가
+         어떻게 보이는지»를 보여주지 못한다. 크기 값은 화면이 실제로 쓰는 그 변수다. */
+      { on: false, label: "기본 크기", desc: "지금 화면과 같은 크기로 보여드려요", preview: "가", previewSize: "var(--fs-base)" },
+      { on: true, label: "큰 글씨", desc: "글자를 20% 크게 표시해서 더 편하게 읽을 수 있어요", preview: "가", previewSize: "var(--fs-large)" },
     ],
   },
   {
-    key: "highContrast", title: "더 또렷하게 보이는 화면을 선택해주세요", word: "또렷하게", group: "고대비",
+    key: "highContrast", title: "더 또렷하게 보이는 화면을 선택해주세요", group: "고대비",
     options: [
       { on: false, label: "기본 화면", desc: "지금과 같은 밝기·색상으로 보여드려요", preview: "가" },
-      { on: true, label: "고대비 화면", desc: "검은 배경에 밝은 글씨로 바뀝니다", preview: "가" },
+      { on: true, label: "고대비 화면", desc: "배경과 글자의 명암 차이를 크게 높여 또렷하게 보여드려요", preview: "가" },
     ],
   },
   {
-    key: "visualGuidance", title: "필요한 안내 방식을 선택해주세요", word: "안내 방식", group: "화면 안내",
+    key: "visualGuidance", title: "필요한 안내 방식을 선택해주세요", group: "화면 안내",
     options: [
       { on: false, label: "기본", desc: "추가 안내 없이 진행해요", preview: "○" },
-      // 디자인은 «다음에 누를 버튼을 테두리와 화살표로 강조»라고 적혀 있으나 그 기능은
-      // 만들지 않았다. 이 플래그가 실제로 하는 일(선택지에 그림 병기)을 적는다.
-      { on: true, label: "안내 켜짐", desc: "선택지에 그림이 함께 표시됩니다", preview: "🍗" },
+      { on: true, label: "안내 켜짐", desc: "다음에 누를 버튼을 테두리와 화살표로 강조해서 알려드려요", preview: "↓" },
     ],
   },
 ];
@@ -100,8 +106,10 @@ export function ProfileSetup() {
       steps={{ labels: FLOW_STEPS, current: 2 }}
       label="화면과 안내 설정"
       eyebrow={miniSteps}
-      title={<Emphasize text={here.title} word={here.word} />}
-      subtitle="고르시면 이 화면이 바로 바뀝니다. 언제든 다시 바꾸실 수 있습니다."
+      /* 시안의 TitleBlock 은 22px Bold 한 문장뿐이다 — 강조어를 키우지 않고, 부제도 없다.
+         한때 «고르시면 이 화면이 바로 바뀝니다…»를 부제로 두었는데, 세 시안 어디에도
+         그 자리가 없다(TitleBlock 다음이 곧바로 Radio Card 다). */
+      title={here.title}
       actions={<>
         <Cta tone="primary" label="다음" onClick={next} />
       </>}
