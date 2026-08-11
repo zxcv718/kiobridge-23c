@@ -82,6 +82,29 @@ export function QrConnect() {
   const [typed, setTyped] = useState("");
   const [typedError, setTypedError] = useState("");
 
+  /**
+   * 주소에 매장 코드가 실려 왔는가 — 폰 **기본 카메라 앱**으로 QR을 찍으면 이 주소로 열린다.
+   *
+   * iOS 에는 QR 을 해독하는 웹 API(`BarcodeDetector`)가 없다. 그런데 아이폰은 카메라 앱
+   * 자체가 이미 훌륭한 해독기다. QR 을 링크로 만들어 두면 그 해독기가 우리 대신 읽고
+   * 주소로 넘겨준다 — 해독기를 우리가 들고 다니지 않아도 되는 것이다.
+   *
+   * **자동으로 연결하지는 않는다.** 읽은 코드를 화면에 보여주고 «이 매장으로 계속하기»를
+   * 받는다(무로그인 가이드 8번 — 자동으로 불러온 정보는 보여주고 확인받는다).
+   */
+  const [urlCode] = useState(() => {
+    try {
+      const u = new URL(window.location.href);
+      for (const k of ["environmentId", "env", "store", "storeId"]) {
+        const v = u.searchParams.get(k);
+        if (v?.trim()) return v.trim();
+      }
+    } catch { /* 주소를 못 읽으면 없는 것으로 본다 */ }
+    return "";
+  });
+  /** 주소에서 온 코드를 아직 쓰지 않았는가 — 한 번만 쓴다(«다시 스캔»을 눌렀는데 되돌아가면 안 된다) */
+  const urlPending = useRef(urlCode !== "");
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   /* fixture 는 비동기로 도착한다. 카메라 루프는 한 번만 켜지므로 그때의 값을 붙잡고 있으면
      늦게 온 매장 정보를 못 본다 — ref 로 «지금 값»을 보게 한다. */
@@ -98,7 +121,15 @@ export function QrConnect() {
 
   /* 카메라가 켜져 있어야 하는 국면. 이 값이 false 로 바뀌는 순간 아래 정리 함수가 돌면서
      트랙이 꺼진다 — 읽기에 성공했을 때도, 사용자가 화면을 떠날 때도 같은 길이다. */
-  const cameraWanted = phase === "checking" || phase === "scanning";
+  const cameraWanted = (phase === "checking" || phase === "scanning") && !urlPending.current;
+
+  /* 주소에 실려 온 코드를 매장 정보가 도착한 뒤에 맞춰 본다. 먼저 맞추면 매장 이름이
+     아직 없어서 «모르는 매장»이 되어 버린다. */
+  useEffect(() => {
+    if (!urlPending.current || envId === "") return;
+    urlPending.current = false;
+    decide(urlCode, "폰 카메라로 QR을 찍어 열린 주소");
+  }, [urlCode, envId, decide]);
 
   useEffect(() => {
     if (!cameraWanted) return;
