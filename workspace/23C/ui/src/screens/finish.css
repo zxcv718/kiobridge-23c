@@ -32,11 +32,14 @@
    기준(--fs)이 18px 이므로 1em 이다. */
 .kb-screen:has(.stop-figma) .kb-subtitle { font-size: 1em; margin: 0; }
 
-/* 에러 라벨 (99:1340) — 22px Bold, 시안 색은 #fa520f 다.
-   글자에 얹는 강조색은 --brand-strong 을 쓴다: 흰 배경 위 브랜드 주황은 본문 기준(4.5)에
-   못 미치고, 이 화면의 라벨은 «무슨 일이 났는지»를 말하는 글자라 읽히지 못하면 뜻이 없다.
-   (tokens.css ② · cart.css ① 과 같은 판단이다) */
-.stop-figma-label { display: block; font-size: 1.22em; font-weight: 700; color: var(--brand-strong); }
+/* 에러 라벨 (99:1340) — 22px Bold, 시안 색 #fa520f 그대로다.
+   한때 여기에 --brand-strong 을 썼다. «흰 바탕 위 주황은 본문 기준(4.5)에 못 미친다»는
+   이유였는데, 그 판단은 본문 크기를 전제한 것이었다. 이 라벨은 22px Bold 라 WCAG 1.4.3 의
+   **큰 글씨**(18.66px 이상 Bold)에 해당하고 기준은 3:1 이다 — #fa520f 는 3.34:1 로 넘는다.
+   시안이 틀린 것이 아니라 우리 검사가 모든 글씨를 4.5 로 재고 있었던 것이다.
+   `--brand-vivid` 는 이렇게 크기·굵기가 받쳐 주는 자리 전용이며, 작은 글씨에 갖다 쓰면
+   tests/tokens.test.ts 의 «큰 글씨 기준으로 재는 자리는 실제로 큰 글씨다» 가 잡는다. */
+.stop-figma-label { display: block; font-size: 1.22em; font-weight: 700; color: var(--brand-vivid); }
 
 /* 일러스트 (99:1341) — 192.3×170. 상자에 폭·높이를 둘 다 주고 그림이 그것을 채운다.
    `auto` 로 두면 원본 크기(193×170)로 튀고, 좁은 화면에서 넘친다. */

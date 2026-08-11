@@ -41,6 +41,37 @@ const 시안예외 = [
 const 시안이정한미달 = (p: { fg: string; bg: string }) =>
   시안예외.some((e) => e.fg === p.fg.toLowerCase() && e.bg === p.bg.toLowerCase());
 
+/**
+ * **큰 글씨 기준(3:1)으로 재는 자리 — 미달이 아니다.**
+ *
+ * WCAG 1.4.3 은 24px 이상, 또는 **18.66px 이상 Bold** 를 «큰 글씨»로 보고 3:1 을 요구한다.
+ * 우리 전수 검사는 오랫동안 모든 글씨를 4.5 로 쟀다. 그래서 시안이 큰 글씨에만 쓰는
+ * #fa520f(3.30:1)를 «쓸 수 없는 색»으로 판정했고, 실제로 한 번은 그 이유로 시안 색 대신
+ * 다른 주황을 쓴 자리가 생겼다. 시안이 틀린 것이 아니라 **검사가 덜 정확했던 것이다.**
+ *
+ * 그렇다고 «큰 글씨니까 봐준다»를 목록으로 두면 목록이 곧 거짓말이 된다 — 나중에 그 규칙의
+ * 글씨가 작아져도 목록은 그대로일 것이기 때문이다. 그래서 아래 검사는 **CSS 에서 크기와
+ * 굵기를 실제로 읽어** 큰 글씨 조건을 만족하는지 먼저 확인하고, 그 다음에야 3:1 로 잰다.
+ *
+ * `minEm` 은 18.66px ÷ 18px = 1.037 이다. 좁은 화면에서 기준이 17px 로 줄어도
+ * 1.22em × 17 = 20.7px 라 조건은 그대로 성립한다.
+ */
+const 큰글씨판정 = [
+  {
+    selector: ".stop-figma-label", fg: "#fa520f", bg: "#ffffff", ratio: 3.34,
+    where: "안전 중단의 «ERROR» — 22px Bold (99:1340)",
+  },
+] as const;
+
+const 큰글씨자리 = (p: { fg: string; bg: string }) =>
+  큰글씨판정.some((e) => e.fg === p.fg.toLowerCase() && e.bg === p.bg.toLowerCase());
+
+/** 선택자 하나의 선언 블록을 통째로 꺼낸다 — 크기·굵기를 눈이 아니라 검사가 읽게. */
+function ruleBody(selector: string): string | null {
+  const re = new RegExp(`(^|[,}])\\s*${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{([^}]*)\\}`, "m");
+  return re.exec(allCss())?.[2] ?? null;
+}
+
 describe("토큰 정의", () => {
   it("tokens.css 가 존재하고 --kb- 토큰을 정의한다", () => {
     const tokens = cssFiles().find((f) => f.name === "tokens.css");
@@ -107,8 +138,11 @@ describe("화면에 실제로 나오는 색쌍 — CSS 에서 뽑아 전수 검�
         .filter((p) => p.ratio < AA_TEXT);
 
       /* 통째로 눈감아 주지 않는다 — 위 `시안예외` 표에 **색쌍까지 정확히 적힌 것만** 뺀다.
-         같은 색이라도 다른 바탕에 얹히면 그건 새 미달이므로 여기서 잡힌다. */
-      const 그밖에 = bad.filter((p) => !(modeName === "기본" && 시안이정한미달(p)))
+         같은 색이라도 다른 바탕에 얹히면 그건 새 미달이므로 여기서 잡힌다.
+         `큰글씨판정` 자리는 미달이 아니라 **다른 기준으로 재는 곳**이라 함께 뺀다
+         (아래 «큰 글씨 기준으로 재는 자리는 …» 검사가 크기·굵기·3:1 을 따로 확인한다). */
+      const 그밖에 = bad
+        .filter((p) => !(modeName === "기본" && (시안이정한미달(p) || 큰글씨자리(p))))
         .map((p) => `${p.file} ${p.selector} — ${p.fg} on ${p.bg} = ${p.ratio.toFixed(2)}:1`);
       expect(그밖에, `대비 미달:\n  ${그밖에.join("\n  ")}`).toEqual([]);
 
@@ -117,6 +151,35 @@ describe("화면에 실제로 나오는 색쌍 — CSS 에서 뽑아 전수 검�
       }
     });
   }
+
+  it("큰 글씨 기준으로 재는 자리는 실제로 큰 글씨다 — 그리고 3:1 을 넘는다", () => {
+    for (const e of 큰글씨판정) {
+      const body = ruleBody(e.selector);
+      expect(body, `${e.selector} 규칙을 못 찾았습니다 — 자리가 사라졌으면 표에서도 빼야 합니다`)
+        .not.toBeNull();
+
+      /* ① 정말 큰 글씨인가. WCAG 1.4.3 — 18.66px 이상 Bold(700+) 또는 24px 이상.
+         em 으로 적혀 있으므로 기준 글씨(18px)를 곱해 판정한다. */
+      const em = /font-size:\s*([\d.]+)em/.exec(body!);
+      const weight = /font-weight:\s*(\d+)/.exec(body!);
+      expect(em, `${e.selector} 에 em 단위 font-size 가 없습니다 — 큰 글씨인지 잴 수 없습니다`).not.toBeNull();
+      expect(weight, `${e.selector} 에 font-weight 선언이 없습니다`).not.toBeNull();
+
+      const px = Number(em![1]) * 18;
+      const bold = Number(weight![1]) >= 700;
+      expect(bold && px >= 18.66 || px >= 24,
+        `${e.where} — ${px.toFixed(1)}px / weight ${weight![1]} 는 큰 글씨가 아닙니다. ` +
+        `본문 기준(4.5:1)으로 재야 하므로 ${e.fg} 를 쓸 수 없습니다`).toBe(true);
+
+      /* ② 큰 글씨 기준을 넘는가. 그리고 README 에 적은 수치와 같은가. */
+      const ratio = contrastRatio(e.fg, e.bg);
+      expect(ratio, `${e.where} — 큰 글씨 기준(3:1)에도 미치지 못합니다`).toBeGreaterThanOrEqual(AA_NON_TEXT);
+      expect(Math.round(ratio * 100) / 100, `${e.where} — 적어 둔 ${e.ratio}:1 과 달라졌습니다`).toBe(e.ratio);
+
+      /* ③ 본문 기준을 넘었다면 이 표에 있을 이유가 없다 — 예외는 늘 최소로 둔다. */
+      expect(ratio, `${e.where} — 본문 기준을 넘으므로 이 표에서 빼도 됩니다`).toBeLessThan(AA_TEXT);
+    }
+  });
 
   it("포커스 테두리가 바탕과 3:1 이상이다 — 키보드 사용자가 어디 있는지 보여야 한다", () => {
     const decl = /:focus-visible\s*\{[^}]*outline:\s*\d+px\s+solid\s+([^;]+);/.exec(allCss());

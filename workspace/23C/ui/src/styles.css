@@ -25,6 +25,9 @@
   /* 브랜드 주황은 «면»이고, 글자를 얹는 자리는 strong 이다 (tokens.css ②) */
   --brand: var(--kb-color-accent-primary);
   --brand-strong: var(--kb-color-accent-strong);
+  /* 큰 글씨에만 얹는 제3의 주황 (tokens.css 참조). 본문 크기에 쓰면 안 된다 —
+     `.stop-figma-label` 처럼 22px Bold 인 자리 전용이고, 검사가 크기·굵기를 확인한다. */
+  --brand-vivid: var(--kb-color-accent-vivid);
   --brand-weak: var(--kb-color-accent-weak);
   --on-brand: var(--kb-color-text-inverse);
   /* 고른 것의 바탕 — 디자인은 강조 바탕(연노랑)을 쓴다. 주황 테두리와 색이 겹치지 않아
@@ -61,7 +64,7 @@
 .app.contrast {
   --bg: #000000; --card: #101010; --fg: #ffffff; --muted: #d8d8d8; --muted-strong: #ededed;
   --line: #9a9a9a; --line-card: #7d7d7d; --line-soft: #6b6b6b;
-  --brand: #ffd400; --brand-strong: #ffd400; --brand-weak: #333000; --selected: #3a3300; --sunken: #1c1c1c;
+  --brand: #ffd400; --brand-strong: #ffd400; --brand-vivid: #ffd400; --brand-weak: #333000; --selected: #3a3300; --sunken: #1c1c1c;
   --on-brand: #000000;
   --danger: #ff7b6e; --danger-weak: #3a1512; --warn: #ffc861; --warn-weak: #332711;
 }
