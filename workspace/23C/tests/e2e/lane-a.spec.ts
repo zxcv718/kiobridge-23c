@@ -159,9 +159,12 @@ test.describe("A계열 — 프로필 흐름", () => {
   test("A5 「화면 글씨 맞춰보기」 문답은 글씨 크기만 정한다", async ({ page }) => {
     await toProfile(page);
     await page.getByRole("button", { name: "화면 글씨 맞춰보기" }).click();
+    /* 문답은 두 걸음이다 — 예시가 실제로 적용되는 두 크기(기본·큰 글씨)뿐이기 때문이다.
+       예전에는 «지금 크기의 1.9배»까지 세 걸음을 보여줬는데, 그 크기는 적용할 수가 없어서
+       가장 큰 것을 고르고도 화면이 안 바뀌었다(probe.spec.ts). 마지막에서 더 작다고 하면
+       버튼 이름이 «그래도 작아요»가 된다 — 더 큰 것이 있는 척하지 않는다. */
     await page.getByRole("button", { name: "조금 작아요" }).click();
-    await page.getByRole("button", { name: "조금 작아요" }).click();
-    await page.getByRole("button", { name: "잘 보여요" }).click();
+    await page.getByRole("button", { name: "그래도 작아요" }).click();
 
     const app = page.locator(".app");
     await expect(app).toHaveClass(/large/);

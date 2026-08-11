@@ -1,6 +1,6 @@
 import React from "react";
 import { useFlow } from "../flow";
-import { A11Y_ITEMS, FLOW_STEPS, PROBE_RESULT, PROBE_SAMPLE, PROBE_SIZES, type A11y } from "../model";
+import { A11Y_ITEMS, FLOW_STEPS, PROBE_NOT_ENOUGH, PROBE_RESULT, PROBE_SAMPLE, PROBE_SIZES, type A11y } from "../model";
 import { Cta, Emphasize, RadioCard, Screen } from "../components";
 import "./profile.css";
 
@@ -119,7 +119,7 @@ export function ProfileSetup() {
               {" "}위에서 언제든 바꾸실 수 있습니다.
               {/* 가장 크게 해도 부족했다면 글씨 외의 도움이 필요할 수 있다. 다만 그것을
                   여기서 대신 켜지는 않는다 — 바로 다음 걸음에서 여쭤볼 질문이다. */}
-              {probeResult === 2 && (
+              {probeResult === PROBE_NOT_ENOUGH && (
                 <> 글씨를 가장 크게 해도 불편하시면, <b>다음 단계에서 고대비 화면</b>도 함께 보시겠어요?</>
               )}
             </span>
@@ -137,10 +137,11 @@ export function ProfileSetup() {
             }}>잘 보여요</button>
             <button type="button" className="choice" onClick={() => {
               if (probeStep < PROBE_SIZES.length - 1) { setProbeStep(probeStep + 1); return; }
-              const end = PROBE_SIZES.length - 1;
-              setA11y((s) => ({ ...s, ...PROBE_RESULT[end] }));
-              setProbeResult(end); setProbeStep(null);
-            }}>조금 작아요</button>
+              /* 마지막 크기에서도 작다고 하셨다. 우리가 줄 수 있는 가장 큰 글씨를 켜 두되,
+                 «크기로는 여기까지»라는 사실을 결말로 남긴다(고대비는 다음 걸음의 질문이다). */
+              setA11y((s) => ({ ...s, ...PROBE_RESULT[PROBE_SIZES.length - 1] }));
+              setProbeResult(PROBE_NOT_ENOUGH); setProbeStep(null);
+            }}>{probeStep < PROBE_SIZES.length - 1 ? "조금 작아요" : "그래도 작아요"}</button>
           </div>
         </div>
       ))}

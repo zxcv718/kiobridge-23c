@@ -73,7 +73,19 @@ export const A11Y_ITEMS: { key: keyof A11y; label: string; effect: string }[] = 
  *
  * 산출 결과는 곧바로 화면에 반영되고, 아래 토글에서 언제든 바꿀 수 있다.
  * (자동으로 정해 놓고 못 바꾸게 하면 «자동으로 불러온 정보의 재확인» 원칙에 어긋난다) */
-export const PROBE_SIZES = ["1em", "1.4em", "1.9em"];
+/**
+ * 문답이 보여주는 예시 크기 — **실제로 적용되는 값 그대로.**
+ *
+ * 한때 «지금 크기의 1배·1.4배·1.9배»였다. 그런데 큰 글씨가 기본으로 켜져 있어 지금
+ * 크기가 이미 20px 이었고, 적용할 수 있는 것은 17px 과 20px 두 개뿐이었다. 그래서
+ * 3단계에서 38px 짜리 문장을 보고 「잘 보여요」를 눌러도 화면은 20px 그대로였고,
+ * 1단계에서 「잘 보여요」를 누르면 방금 승인한 것보다 **작아졌다.**
+ * «고르시면 이 화면이 바로 바뀝니다»라고 적어 놓고 지키지 못한 것이다.
+ *
+ * 이제 예시는 styles.css 의 두 값을 그대로 참조한다. 보여준 것이 곧 적용되는 것이라
+ * 어긋날 자리가 없다 — 숫자를 여기 다시 적지 않기 때문이다.
+ */
+export const PROBE_SIZES = ["var(--fs-base)", "var(--fs-large)"];
 export const PROBE_SAMPLE = "매운 순살 닭강정 6,000원";
 
 /**
@@ -92,8 +104,16 @@ export const PROBE_SAMPLE = "매운 순살 닭강정 6,000원";
 export const PROBE_RESULT: Partial<A11y>[] = [
   { largeText: false },
   { largeText: true },
-  { largeText: true },
 ];
+
+/**
+ * 문답의 결말 셋 — 앞의 둘은 PROBE_RESULT 의 순번이고, 2 는 «가장 큰 것도 부족하다»이다.
+ *
+ * 크기로 해결되지 않는 경우를 결말로 남겨 둔다. 여기서 고대비를 대신 켜지는 않는다 —
+ * 그건 바로 다음 걸음에서 물어볼 질문이고, 글씨 크기를 고르던 사람 눈앞에서 화면이
+ * 통째로 반전되면 놀랄 수밖에 없다. 권하는 문장으로만 넘긴다.
+ */
+export const PROBE_NOT_ENOUGH = 2;
 
 /** 오류 주입 시연 — 공식 7종 전부(API_CONTRACT). 한국어 제목이 기본, 코드는 참조용 병기. */
 export const INJECTIONS: { code: string; label: string; desc: string }[] = [

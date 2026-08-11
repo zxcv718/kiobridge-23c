@@ -98,7 +98,16 @@ describe("화면에 실제로 나오는 색쌍 — CSS 에서 뽑아 전수 검�
 describe("모드 전환이 색을 빠뜨리지 않는다", () => {
   it("고대비 모드가 기본 팔레트의 의미색을 전부 다시 정의한다", () => {
     // 하나라도 빠지면 검은 배경에 밝은 배경용 색이 남아 읽을 수 없게 된다
-    const semantic = Object.keys(paletteOf(":root")).filter((n) => !n.startsWith("--kb-") && n !== "--fs");
+    /* «색인 것»만 고른다. 예전에는 색이 아닌 변수를 이름으로 하나씩 빼 두었는데(--fs),
+       그러면 크기 변수를 하나 더 만들 때마다 이 검사가 «고대비에서 --fs-base 를 다시
+       정의하지 않았다»고 틀린 실패를 낸다. 실제로 그렇게 났다. 이름이 아니라 **값**을
+       보면 목록을 손볼 일이 없다 — 색을 새로 만들면 저절로 검사 대상이 되고, 크기·간격을
+       만들면 저절로 빠진다. */
+    const base = paletteOf(":root");
+    const 색인가 = (v: string) => /#[0-9a-f]{3,8}\b|--kb-color-|\brgba?\(|\bhsla?\(/i.test(v);
+    const semantic = Object.keys(base).filter((n) => !n.startsWith("--kb-") && 색인가(base[n]));
+    expect(semantic.length, "의미색을 하나도 못 찾았습니다 — 이 검사가 공짜로 통과하고 있습니다")
+      .toBeGreaterThan(8);
     const overridden = new Set(Object.keys(paletteOf(".app.contrast")));
     const missing = semantic.filter((n) => !overridden.has(n));
     expect(missing, `고대비 모드에서 다시 정의하지 않은 색: ${missing.join(", ")}`).toEqual([]);

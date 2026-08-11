@@ -28,9 +28,21 @@
   --danger: #b73e33; --danger-weak: #f9e9e7;
   /* #a56a12 는 제 옅은 바탕 위에서 3.94:1 이라 본문 기준 미달이었다 → 4.62:1 로 낮춘다 */
   --warn: #96600f; --warn-weak: #f8efdd;
-  --fs: var(--kb-font-size-body);
+  /* 본문 크기 두 벌을 **이름으로** 둔다. 「화면 글씨 맞춰보기」가 예시를 그릴 때
+     이 값을 그대로 쓰기 위해서다 — 예전에는 예시를 «지금 크기의 1.9배»로 그렸는데
+     실제로 적용되는 것은 아래 두 값뿐이라, 가장 큰 예시를 고르고 «잘 보여요»를 눌러도
+     화면이 그대로였다. 보여준 크기와 적용되는 크기가 어긋나면 그 문답은 거짓말이 된다.
+     숫자를 여기 한 곳에만 두면 다시 어긋날 수 없다. */
+  --fs-base: var(--kb-font-size-body);
+  --fs-large: 23px;
 }
-.app.large { --fs: 23px; }
+/* --fs 를 :root 가 아니라 .app 에 선언한다. 커스텀 프로퍼티의 간접 참조는 **선언한
+   자리에서** 풀리기 때문이다 — :root 에 `--fs: var(--fs-base)` 를 두면 거기서 18px 로
+   굳고, 좁은 화면에서 .app 이 --fs-base 를 17px 로 덮어도 이미 굳은 18px 이 상속된다.
+   그러면 문답이 17px 짜리 예시를 보여주고 화면은 18px 이 되는, 눈으로는 «뭔가 안
+   맞는데» 정도로만 보이는 어긋남이 생긴다(probe.spec.ts 가 이걸 잡았다). */
+.app { --fs: var(--fs-base); }
+.app.large { --fs: var(--fs-large); }
 .app.contrast {
   --bg: #000000; --card: #101010; --fg: #ffffff; --muted: #d8d8d8;
   --line: #9a9a9a; --line-soft: #6b6b6b;
@@ -149,8 +161,7 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
 /* 모바일 — 좁은 화면에서 카드·그리드가 1열로 접히고 여백이 줄어든다 */
 @media (max-width: 560px) {
   .shell { padding: 12px 14px 0; }
-  .app { --fs: 17px; }
-  .app.large { --fs: 20px; }
+  .app { --fs-base: 17px; --fs-large: 20px; }
   .evgrid { grid-template-columns: 1fr; }
   .choices { grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); }
   .errpanel .choices { grid-template-columns: 1fr; }
