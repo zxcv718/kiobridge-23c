@@ -13,7 +13,10 @@ on:
     branches-ignore: [main]
 
 permissions:
-  contents: read
+  # 자동 병합 «예약» 도 병합 동작이라 contents: write 가 있어야 한다.
+  # read 로 두면 PR 은 열리는데 예약에서 «Resource not accessible by integration
+  # (mergePullRequest)» 로 조용히 넘어간다 — PR 만 쌓이고 아무것도 병합되지 않는다.
+  contents: write
   pull-requests: write
 
 jobs:
