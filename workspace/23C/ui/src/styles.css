@@ -277,17 +277,39 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
  * 끼워 버튼과 띄우고, 안내가 켜진 버튼의 초점 테두리는 그 바깥으로 밀어 둘 다 보이게 한다.
  * 화살표는 눈으로만 읽는다(«↓» / "" — 낭독기에는 빈 문자열). 버튼 이름이 이미 무엇을
  * 누르는지 말하고 있어서, 화살표까지 읽어 주면 같은 말을 두 번 듣게 된다. */
-.app.guide .kb-actions { padding-top: 44px; }
+/* 화살표가 지나갈 통로. **한 곳에서 계산한다** — 통로 높이와 화살표 크기·흔들림 폭이
+   따로 적혀 있으면 한쪽만 바뀌는 날 화살표가 고리를 파고든다. 실제로 그랬다:
+   통로가 44px 고정인데 화살표는 1.5em 이라 «큰 글씨»(기본값이다)에서 32.4px 로 커졌고,
+   고리 위끝(44 − spread 7 = 37)을 4.4px 넘어섰다. 겹치면 화살표와 고리가 한 덩어리로
+   읽혀 «가리키는 것»이 «버튼에 붙은 장식»이 된다.
+
+   통로 = 시작 여백 + 글자 상자(1.5em) + 흔들림 + 고리와 띄울 여백, 그 바깥에 고리 7px.
+   앞의 넷은 --fs 에 비례하고 고리만 굵기라서 px 다.
+
+   이름에 --kb- 를 붙이지 않는다. 그 접두사는 tokens.css 가 쥔 원시 토큰의 이름공간이고
+   (tests/tokens.test.ts 가 정의 없는 --kb- 사용을 전수로 잡는다), 아래 셋은 토큰이 아니라
+   이 한 줄 계산에만 쓰는 지역 값이다. */
+.app.guide .kb-actions {
+  --guide-top: calc(var(--fs) * 0.2);   /* 화살표 시작 자리 */
+  --guide-bob: calc(var(--fs) * 0.25);  /* 흔들리는 폭 */
+  --guide-gap: calc(var(--fs) * 0.4);   /* 가장 내려왔을 때 고리와 남길 거리 */
+  padding-top: calc(
+    var(--guide-top) + var(--fs) * 1.5 + var(--guide-bob) + var(--guide-gap) + 7px
+  );
+}
 .app.guide .kb-actions::after {
   content: "↓";
   content: "↓" / "";
-  position: absolute; left: 0; right: 0; top: 4px;
+  position: absolute; left: 0; right: 0; top: var(--guide-top);
   text-align: center; line-height: 1; font-size: 1.5em; font-weight: 800;
   color: var(--brand-strong);
   pointer-events: none;
   animation: kb-guide-bob 1.4s ease-in-out infinite;
 }
-@keyframes kb-guide-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+@keyframes kb-guide-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(var(--guide-bob)); }
+}
 .app.guide .kb-actions .btn.primary {
   box-shadow: 0 0 0 4px var(--bg), 0 0 0 7px var(--brand-strong), var(--kb-shadow-cta-glow);
 }

@@ -78,6 +78,40 @@ test("안내를 켜면 고르기 전에는 선택지 영역을 가리키고, 고
     .not.toMatch(고리있음);
 });
 
+/**
+ * 화살표가 흔들려도 고리를 파고들지 않는가.
+ *
+ * 화살표는 1.5em 이라 «큰 글씨»(기본값이다)를 켜면 같이 커지는데, 지나갈 통로가 44px
+ * 고정이던 때는 그 커진 만큼이 그대로 고리 위로 넘어갔다. 겹치면 화살표와 고리가 한
+ * 덩어리로 읽혀, «저기를 누르세요»가 «버튼에 붙은 장식»이 된다.
+ *
+ * 그래서 통로를 --fs 에 비례해 잡고(styles.css .app.guide .kb-actions), 여기서는 그
+ * 계산이 실제로 여유를 남기는지 **가장 내려온 순간**에 잰다. 흔들림을 그 프레임에
+ * 세워 두고 재는 이유는, 안 세우면 우연히 위에 있을 때 통과하기 때문이다.
+ */
+test("안내 화살표는 가장 내려왔을 때도 고리를 파고들지 않는다", async ({ page }) => {
+  await 안내켜고(page, true);
+  await page.addStyleTag({ content: `.app.guide .kb-actions::after {
+    animation-delay: -0.7s !important; animation-play-state: paused !important; }` });
+
+  const m = await page.locator(".kb-actions").evaluate((el) => {
+    const cs = getComputedStyle(el);
+    const after = getComputedStyle(el, "::after");
+    const px = (v: string) => parseFloat(v);
+    /* 흔들림 폭은 커스텀 속성이라 calc() 문자열로 나온다 — 멈춘 프레임의 transform 에서
+       실제 적용량을 읽는다. keyframes 안의 var() 가 도는지도 이 줄이 함께 지킨다. */
+    const t = new DOMMatrixReadOnly(after.transform === "none" ? undefined : after.transform);
+    return {
+      화살표아래끝: px(after.top) + px(after.fontSize) + t.m42, // line-height: 1 이라 글자상자 = font-size
+      고리위끝: px(cs.paddingTop) - 7,                          // box-shadow spread 7px
+    };
+  });
+
+  expect(m.고리위끝 - m.화살표아래끝,
+    `화살표가 고리에 ${(m.화살표아래끝 - m.고리위끝).toFixed(1)}px 까지 닿습니다`)
+    .toBeGreaterThan(0);
+});
+
 test("안내를 끄면 선택지 영역에도 테두리가 없다", async ({ page }) => {
   await 안내켜고(page, false);
   expect(await 선택지고리(page), "묻지도 않고 선택지 영역을 가리킵니다").not.toMatch(고리있음);
