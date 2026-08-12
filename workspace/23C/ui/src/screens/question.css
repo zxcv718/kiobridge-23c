@@ -94,16 +94,10 @@
   border-radius: 50%;
   background: var(--line-soft);
 }
-/* 「상관없어요」가 한 줄을 다 쓰는 변형은 시안에 없는 우리 것이고, 거기서는 그림이
-   글자 **옆에** 온다 — «아이콘 아래»가 성립하지 않으므로 그리지 않는다. */
-.q-tiles .choice:last-child:nth-child(odd)::before { content: none; }
-/* 선택지가 홀수면 마지막 하나가 한 줄을 다 쓴다 — 「상관없어요」가 반 칸으로 남아
-   빈자리와 나란히 서면 무언가 빠진 화면처럼 보인다. */
-.q-tiles .choice:last-child:nth-child(odd) {
-  grid-column: 1 / -1;
-  min-height: 72px;
-  flex-direction: row; gap: 12px;
-}
+/* 홀수 변형(마지막 하나가 한 줄을 다 쓰던 규칙)은 지웠다. 타일 질문 셋이 모두 두 장씩
+   이라 걸릴 데가 없다 — 뼈/순살과 먹고가기/포장에서 「상관없어요」를 뺐고(model.ts),
+   알레르기 첫 걸음은 원래 두 장이다(ALLERGY_GATE). 걸리지 않는 규칙을 남겨 두면
+   그 주석이 «지금도 상관없어요가 타일에 있다»고 말하게 된다. */
 
 /* 접어 둔 설명의 본문 (알레르기 첫 걸음 «어떻게 반영되나요?»).
    접는 줄 자체는 홈·S03·S05 와 같은 `.home-saved` 를 그대로 쓴다 — 접는 방식이
@@ -126,6 +120,28 @@
 .q-tiles .choice[aria-pressed="true"]::after {
   position: absolute; top: 10px; right: 12px; margin: 0;
 }
+
+/* ───────── 화면 안내 — 고르기 전에는 «고를 곳»을 가리킨다 (시안 150:509) ─────────
+ *
+ * 「안내 켜짐」의 뜻은 «다음에 누를 것을 테두리와 화살표로 강조»다. styles.css 의
+ * `.app.guide` 가 그 대상을 화면 아래 CTA 로 두는데, 질문 화면에는 그것만으로 덮이지
+ * 않는 구간이 있다 — **아직 아무것도 고르지 않은 동안**이다. 그때 다음에 누를 것은
+ * CTA 가 아니라 선택지이고, 실제로 CTA 는 눌리지 않는 상태다(`disabled={!answered}`).
+ * styles.css 도 그 동안은 화살표를 감춘다. 그래서 안내를 켠 사람이 «지금 어디를 봐야
+ * 하는가»를 가장 모르는 첫 순간에, 화면 어디에도 표시가 없었다.
+ *
+ * 고르기 전에는 선택지 영역에 테두리를 두고, 하나라도 고르면 거둔다. 거두는 이유는
+ * 그 순간 CTA 쪽 화살표가 켜지기 때문이다 — 둘을 같이 두면 화면이 두 곳을 동시에
+ * 가리키고, 안내가 필요한 사람에게 «어느 쪽이 먼저인가»라는 질문을 하나 더 준다.
+ *
+ * 테두리는 CTA 와 **같은 문법**으로 그린다(outline 이 아니라 box-shadow 두 겹, 사이에
+ * 바탕색 고리). outline 자리는 키보드 초점의 몫이라 거기에 안내를 겹치면 «지금 초점이
+ * 어디인가»가 안내에 묻힌다. box-shadow 는 자리를 차지하지 않아 선택지 배치도 그대로다. */
+.app.guide .q-choices .choices {
+  border-radius: var(--kb-radius-lg);
+  box-shadow: 0 0 0 4px var(--bg), 0 0 0 7px var(--brand-strong);
+}
+.app.guide .q-choices .choices:has(.choice[aria-pressed="true"]) { box-shadow: none; }
 
 /* 선택지 그림 — 이모지든 Figma SVG 든 같은 자리·같은 크기로 그린다.
  * 높이를 본문 크기(--fs)로 재는 이유는 «큰 글씨»를 켰을 때 그림도 함께 커져야 하기 때문이다.
