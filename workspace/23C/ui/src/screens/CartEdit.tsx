@@ -157,8 +157,9 @@ export function CartEdit() {
         </div>
       ))}
 
-      {/* ── 기획 목업에 없는 항목 — 접어 둔다 (§2.1) ── */}
-      <details className="home-saved" open={extraOpen}
+      {/* ── 기획 목업에 없는 항목 — 접어 둔다 (§2.1). edit-extra 는 이 화면의 본문을
+          세로 가운데로 모으는 CSS 갈고리를 겸한다(cart.css). ── */}
+      <details className="home-saved edit-extra" open={extraOpen}
         onToggle={(e) => setExtraOpen((e.target as HTMLDetailsElement).open)}>
         <summary>다른 항목 수정<span aria-hidden="true">▾</span></summary>
         <div className="home-savedbody">

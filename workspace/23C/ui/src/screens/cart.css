@@ -148,3 +148,14 @@ h3.cart-cap { margin: 22px 0 8px; font-size: 0.78em; }
 /* S12 안전 중단은 이제 finish.css 가 그린다(`.stop-figma`).
    여기 있던 `.stopwrap`·`.stoplabel`·`.stopalert` 는 일러스트를 못 그린다는 전제 위에
    세워진 것이라, 시안대로 다시 그리면서 함께 걷어냈다. */
+
+/* ───────── S14 수정 — 본문 덩어리를 세로 가운데에 둔다 (기획 목업 2026-08-12) ─────────
+ * 인사말·제목·4행 카드·«다른 항목 수정»이 한 덩어리로 화면 가운데에 선다.
+ * `safe center` 라 내용이 길어지면(접힘이 저절로 펴지는 재확인·저장본 수정·조건 없음
+ * 경로) 가운데를 포기하고 위에서부터 흐른다 — 가운데 정렬은 넘칠 때 위쪽을 스크롤로
+ * 되돌아갈 수 없게 자른다는 함정을 안전 중단 화면에서 배웠다(lane-d D12 실측). */
+.kb-screen-body:has(.edit-extra) {
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+}
