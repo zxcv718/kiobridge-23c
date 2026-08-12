@@ -71,7 +71,7 @@ export function Home() {
 
   return (
     <Screen
-      steps={{ labels: FLOW_STEPS, current: 1 }}
+      steps={{ labels: FLOW_STEPS, current: 2 }}
       label={saved ? "다시 오신 것을 확인하는 시작 화면" : "시작 화면"}
       /* 시안 150:184 · 150:212 — 한 문장이 통째로 22px Bold 다. 강조어를 키우는 것은
          질문 화면(99:1276)의 문법이지 여기 것이 아니다. */

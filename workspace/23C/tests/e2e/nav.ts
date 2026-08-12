@@ -1,9 +1,9 @@
 /**
  * 홈에서 질문·추천까지 가는 길 (테스트 전용).
  *
- * 시작 화면과 질문 사이의 걸음 — 프로필 생성(3걸음) · 저장 방식 · 세션 시작.
- * QR 걸음(S04)은 기획(2026-08-12)으로 흐름에서 빠졌다 — QR 은 앱 밖에서 폰 기본
- * 카메라로 찍는 행위이고, 그 확인은 홈이 한다(qr-url.spec.ts 가 잰다).
+ * 시작 화면과 질문 사이의 걸음 — 프로필 생성(3단계) · 저장 방식 · 세션 시작.
+ * QR 연동은 흐름의 1걸음이다(기획 확정 2026-08-12, 시안 S01-B) — 홈보다 앞이라
+ * openHome 이 «QR 없이 계속하기»로 지나고, 그 화면 자체는 lane-b.spec.ts 가 잰다.
  *
  * 이 길을 스펙마다 따로 적으면 화면이 하나 늘 때마다 여섯 파일을 같이 고쳐야 하고,
  * 그중 하나를 빠뜨리면 «왜 실패하는지 알 수 없는» 테스트가 남는다. 한 곳에 둔다.
@@ -102,7 +102,7 @@ export async function enterWizard(page: Page, store = false): Promise<void> {
   for (let i = 0; i < 3; i++) {
     await page.getByRole("button", { name: "다음", exact: true }).click();
   }
-  // S03 저장 방식 — 고르는 즉시 다음 걸음(세션 시작)으로 간다. QR 걸음은 없다.
+  // S03 저장 방식 — 고르는 즉시 다음 걸음(세션 시작)으로 간다. QR 걸음은 맨 앞이라 여기 없다.
   await page.getByRole("button", { name: store ? "저장하기" : "이번만 사용" }).click();
   // S05 세션 시작
   await page.getByRole("button", { name: /^(주문 시작하기|아니오)$/ }).click();

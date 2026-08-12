@@ -39,6 +39,9 @@
   --danger: #b73e33; --danger-weak: #f9e9e7;
   /* #a56a12 는 제 옅은 바탕 위에서 3.94:1 이라 본문 기준 미달이었다 → 4.62:1 로 낮춘다 */
   --warn: #96600f; --warn-weak: #f8efdd;
+  /* 성공(초록) — QR 연동 완료의 확인 원(확정 시안 S01-B). 키트 토큰에 초록이 없어
+     여기서 정한다. 제 옅은 바탕 위 4.69:1 — 본문 기준(4.5)을 넘긴 값으로 골랐다. */
+  --ok: #1a7a3d; --ok-weak: #dcf5e3;
 }
 /* 본문 크기 두 벌을 **이름으로** 둔다. 프로필 1단계의 라디오 카드가 각 선택지를 실제
    크기로 미리 보여줄 때 이 값을 그대로 참조하기 위해서다 — 미리보기가 «지금 크기의
@@ -67,6 +70,7 @@
   --brand: #ffd400; --brand-strong: #ffd400; --brand-vivid: #ffd400; --brand-weak: #333000; --selected: #3a3300; --sunken: #1c1c1c;
   --on-brand: #000000;
   --danger: #ff7b6e; --danger-weak: #3a1512; --warn: #ffc861; --warn-weak: #332711;
+  --ok: #7dffab; --ok-weak: #0f2b1a;
 }
 * { box-sizing: border-box; }
 body { margin: 0; }

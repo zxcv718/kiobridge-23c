@@ -15,20 +15,21 @@ import { migrateSaved, type SavedSettings as CoreSaved } from "../../src/core/sa
  * (`Record<Step, …>`) — 새 화면을 만들면 표에 넣지 않고는 타입이 통과하지 않는다.
  */
 export type Step =
-  | "connect"                                          // 매장 연동 관문 — 흐름(4걸음) 밖, 홈보다 앞
+  | "connect"                                          // QR 연동 — 흐름의 1걸음 (매장 QR 링크로 열리면 건너뛴다)
   | "start" | "profile" | "saveChoice" | "sessionStart"
   | "wizard" | "calculating" | "menuConfirm" | "menuSelect"
   | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
 
 /**
- * 프로필 흐름 네 걸음의 이름 (Figma StepIndicator 181:177 의 문법).
- * 홈·프로필·저장방식·세션시작 네 화면이 같은 표를 봐야 해서 여기 둔다.
+ * 흐름 다섯 걸음의 이름 (Figma StepIndicator 181:177 의 문법).
+ * QR 연동·홈·프로필·저장방식·세션시작 다섯 화면이 같은 표를 봐야 해서 여기 둔다.
  *
- * QR 걸음은 기획(2026-08-12)으로 흐름에서 빠졌다 — QR 은 앱 **밖**에서 폰 기본
- * 카메라로 찍는 행위이고, 찍으면 이 앱이 매장 코드(?env=)를 담은 주소로 열린다.
- * 그 확인은 홈(S01)이 한다.
+ * **QR 연동이 1걸음으로 돌아왔다(기획 확정 2026-08-12, 시안 S01-B).** 한때 흐름 밖
+ * 관문으로 뺐지만, 확정 시안의 진행 표시가 «QR 연동»을 첫 걸음으로 그린다. 매장 QR
+ * 링크(?env=)로 열리면 1걸음을 마친 것으로 보고 홈(2걸음)부터 시작하며, 그 확인은
+ * 홈의 매장 배너가 한다.
  */
-export const FLOW_STEPS = ["홈", "프로필 생성", "저장 방식", "세션 시작"];
+export const FLOW_STEPS = ["QR 연동", "홈", "프로필 생성", "저장 방식", "세션 시작"];
 
 /** 추천 계산 화면(S11)을 보여주는 시간. 진행 중임을 알리는 최소한이며, 결과를 늦추려는 것이 아니다. */
 export const CALC_MS = 600;

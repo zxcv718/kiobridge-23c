@@ -4,9 +4,9 @@
  * 실행: npx playwright test -c workspace/23C/tests/e2e/playwright.config.ts lane-b
  * 전제: 데모 UI가 http://localhost:5173 에서 떠 있어야 한다.
  *
- * 기획(2026-08-12): 관문은 흐름의 4걸음(홈·프로필·저장 방식·세션 시작) 밖, 홈보다
- * 앞에 선다. 앱을 그냥 열면 이 관문이 먼저 나오고, QR 을 찍거나 코드를 넣으면 홈이
- * 나온다. 매장 QR 링크(?env=)로 열리면 관문을 건너뛴다 — 그 경로는 qr-url.spec.ts 가 잰다.
+ * 기획 확정(2026-08-12): QR 연동은 흐름 다섯 걸음의 **1걸음**이다(시안 S01-B) — 앱을
+ * 그냥 열면 이 화면이 먼저 나오고, QR 을 찍거나 코드를 넣으면 홈(2걸음)이 나온다.
+ * 매장 QR 링크(?env=)로 열리면 이 걸음을 건너뛴다 — 그 경로는 qr-url.spec.ts 가 잰다.
  *
  * 이 화면의 핵심은 «읽히는 경우»가 아니라 **읽히지 않는 경우**다. BarcodeDetector 는
  * Safari·Firefox 에 없고, 카메라 권한은 거부될 수 있고, 카메라가 아예 없는 기기도 있다.
@@ -29,12 +29,12 @@ const STEPS = [
 ];
 
 const screen = (page: Page) => page.locator("section[aria-label^='매장 QR 연동']");
-/** 4단계 인디케이터의 현재 라벨 — 내부 상태를 훔쳐보지 않고 화면에 보이는 것으로 잰다. */
+/** 5단계 인디케이터의 현재 라벨 — 내부 상태를 훔쳐보지 않고 화면에 보이는 것으로 잰다. */
 const nowStep = (page: Page) => page.locator(".kb-steps:not(.mini) .kb-step.now .kb-steplabel");
 const 홈도착 = async (page: Page) => {
   await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요|다시 오셨네요/ }),
-    "관문을 지나면 홈이어야 합니다").toBeVisible();
-  await expect(nowStep(page)).toHaveText("홈"); // 흐름의 1걸음이 여기서 시작된다
+    "QR 연동을 지나면 홈이어야 합니다").toBeVisible();
+  await expect(nowStep(page)).toHaveText("홈"); // 2걸음 — QR 연동 다음이다
 };
 
 /** 그냥 연다 — 관문이 첫 화면이다. 카메라 판단이 끝날 때까지 기다린다. */
@@ -108,8 +108,11 @@ test.describe("레인 B — 매장 연동 관문", () => {
       await openQr(page);
     });
 
-    test("관문이 홈보다 먼저 나온다 — 진행 표시는 아직 없다", async ({ page }) => {
-      await expect(page.locator(".kb-steps:not(.mini)")).toHaveCount(0);
+    test("QR 연동이 홈보다 먼저 나오고, 진행 표시의 1걸음이 여기다", async ({ page }) => {
+      /* 흐름 밖 관문이던 때는 진행 표시가 없는 것을 지켰다. 기획 확정(2026-08-12,
+         시안 S01-B)으로 다섯 걸음의 첫째가 됐다 — 표시가 있고, 지금 위치가 «QR 연동»이다. */
+      await expect(nowStep(page)).toHaveText("QR 연동");
+      await expect(page.locator(".kb-steps:not(.mini) .srline")).toContainText("5단계 중 1단계");
       await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요/ })).toHaveCount(0);
     });
 
@@ -146,10 +149,12 @@ test.describe("레인 B — 매장 연동 관문", () => {
       await expect(screen(page)).toContainText("닭강정 가게");
       await expect(screen(page)).toContainText("chicken-store");
 
-      /* 없는 것을 있다고 하지 않는다 — 세션을 발급받은 것도, 확인한 것도 아니다.
-         시안 부제(150:392)가 「매장 정보와 **세션을 모두 확인했어요**」라서, «발급»만
-         막으면 시안 문구를 그대로 되돌려 놓아도 검사가 통과해 버린다. */
-      await expect(screen(page)).not.toContainText(/세션[을이]?\s*(모두\s*)?(발급|생성|확인)/);
+      /* 부제는 확정 시안 그대로 «매장 정보와 세션을 모두 확인했어요»다(기획 확정
+         2026-08-12 — FIGMA_RULES §2.8 에 번복 기록). 한동안 «세션» 낱말을 빼고 지켰던
+         가드는 그 결정과 함께 걷었다. «발급·생성»처럼 일이 일어난 것으로 읽히는 말은
+         여전히 막는다 — 세션은 만들어지지 않는다. */
+      await expect(screen(page)).toContainText("매장 정보와 세션을 모두 확인했어요");
+      await expect(screen(page)).not.toContainText(/세션[을이]?\s*(발급|생성)/);
 
       await page.getByRole("button", { name: /이 매장으로 계속하기/ }).click();
       await 홈도착(page);

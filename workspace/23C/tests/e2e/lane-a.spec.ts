@@ -37,7 +37,7 @@ async function toSaveChoice(page: Page) {
   await expect(page.getByRole("heading", { name: "선택하신 내용을 확인해주세요" })).toBeVisible();
 }
 
-/** S03 에서 저장 방식을 고르면 곧장 세션 시작이다 — QR 은 걸음이 아니라 관문이 됐다. */
+/** S03 에서 저장 방식을 고르면 곧장 세션 시작이다 — QR 걸음은 흐름 맨 앞(1걸음)이라 여기 안 낀다. */
 async function chooseStorage(page: Page, store = false) {
   await page.getByRole("button", { name: store ? "저장하기" : "이번만 사용" }).click();
 }
@@ -49,17 +49,18 @@ const nowStep = (page: Page) => page.locator(".kb-steps:not(.mini) .kb-step.now 
 const radio = (page: Page, name: string) => page.locator(".kb-radio", { hasText: name });
 
 test.describe("A계열 — 프로필 흐름", () => {
-  test("A1 홈은 한 화면이다 — 4단계 인디케이터가 있고 시연 사례 카드는 없다", async ({ page }) => {
+  test("A1 홈은 한 화면이다 — 5단계 인디케이터가 있고 시연 사례 카드는 없다", async ({ page }) => {
     await home(page);
 
     const steps = page.locator(".kb-steps:not(.mini)").first();
+    await expect(steps).toContainText("QR 연동"); // 1걸음 — 기획 확정(2026-08-12)으로 흐름에 복귀했다
     await expect(steps).toContainText("홈");
     await expect(steps).toContainText("프로필 생성");
     await expect(steps).toContainText("저장 방식");
     await expect(steps).toContainText("세션 시작");
     await expect(nowStep(page)).toHaveText("홈");
     // 색만으로 현재 위치를 말하지 않는다 — 낭독기용 문장이 함께 있다
-    await expect(steps.locator(".srline")).toContainText("4단계 중 1단계");
+    await expect(steps.locator(".srline")).toContainText("5단계 중 2단계");
 
     /* 단정이 뒤집혔다 — 예전에는 «시연 사례 카드가 5줄 그대로 있는가»를 지켰다.
        그 카드는 없앴다. 첫 화면에서 «주문»과 «시연»이 나란히 서면 처음 온 사람이

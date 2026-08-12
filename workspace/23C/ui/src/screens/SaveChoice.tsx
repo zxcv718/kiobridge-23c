@@ -44,7 +44,7 @@ export function SaveChoice() {
   return (
     <Screen
       onBack={() => setStep("profile")}
-      steps={{ labels: FLOW_STEPS, current: 3 }}
+      steps={{ labels: FLOW_STEPS, current: 4 }}
       label="저장 방식"
       /* 제목·부제·버튼 문구 전부 시안 그대로다 (150:301 · 150:302 · 208:754/756).
          부제 색도 시안을 따른다 — 이 화면만 secondary 가 아니라 tertiary 다. */

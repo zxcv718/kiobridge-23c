@@ -94,7 +94,7 @@ export function ProfileSetup() {
   return (
     <Screen
       onBack={back}
-      steps={{ labels: FLOW_STEPS, current: 2 }}
+      steps={{ labels: FLOW_STEPS, current: 3 }}
       label="화면과 안내 설정"
       eyebrow={miniSteps}
       /* 시안의 TitleBlock 은 22px Bold 한 문장뿐이다 — 강조어를 키우지 않고, 부제도 없다.
