@@ -13,19 +13,19 @@ import { answerWizard, approveToCartReview, enterWizard, finishOrder as goFinish
 const start = openHome;
 
 /**
- * 질문 7개를 답해 추천 화면까지 간다.
+ * 질문 6개를 답해 추천 화면까지 간다.
  *
  * 예전에는 시연 프리셋 버튼 하나로 갔지만 그 카드를 없앴다. 이제는 사용자와 **같은 길**을
  * 걷는다 — 느리지만, 앞단이 깨지면 여기서도 깨지는 편이 낫다. 프리셋으로 건너뛰면
  * 「추천 이후는 멀쩡한데 거기 갈 수가 없는」 상태를 못 잡는다.
  */
 const CASE = {
-  /** 땅콩 알레르기 · 매운맛 · 순살 · 포장 · 1개 · 종이컵 · 7,000원 — 정상 경로 */
-  normal: ["땅콩", "매운맛", "순살", "포장하기", "1개", "종이컵", "7,000원"],
-  /** 알레르기 없음 · 순한맛 · 순살 · 먹고 가기 · 2개 · 일반컵 · 예산 없음 — 수량 2개 */
-  twoQty: ["없어요", "순한맛", "순살", "먹고 가기", "2개", "일반컵", "없어요"],
+  /** 땅콩 알레르기 · 매운맛 · 순살 · 포장 · 1개 · 7,000원 — 정상 경로 */
+  normal: ["땅콩", "매운맛", "순살", "포장하기", "1개", "7,000원"],
+  /** 알레르기 없음 · 순한맛 · 순살 · 먹고 가기 · 2개 · 예산 없음 — 수량 2개 */
+  twoQty: ["없어요", "순한맛", "순살", "먹고 가기", "2개", "없어요"],
   /** 예산 5,000원 — 이 가게 최저가(5,500원)보다 낮아 조건에 맞는 메뉴가 없다 */
-  noMatch: ["없어요", "매운맛", "순살", "포장하기", "1개", "상관없어요", "5,000원"],
+  noMatch: ["없어요", "매운맛", "순살", "포장하기", "1개", "5,000원"],
 } as const;
 
 async function toRecommend(page: Page, picks: readonly string[]) {
@@ -111,19 +111,22 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await toRecommend(page, CASE.normal);
     await page.getByRole("button", { name: "조건 수정" }).click();
 
-    // 매운맛 + 뼈 로 바꾸면 «매운 뼈 닭강정»이 뽑히는데, 그 메뉴에는 일반컵이 없다
+    /* 순한맛 + 뼈 로 바꾸면 «매운 뼈 닭강정»이 뽑히는데, 그 메뉴는 매운맛뿐이라 맵기를
+       못 맞춘다. 뼈를 내는 메뉴가 이 가게에 그것 하나뿐이라 «뼈»를 지키면 맵기가 밀린다.
+       (한때 이 자리를 컵으로 쟀다. 컵 질문을 빼면서 사용자가 컵 선호를 말할 길이 없어져
+        같은 것을 맵기로 옮겨 잰다 — 재는 대상은 «못 맞춘 옵션을 밝히는가»로 같다.) */
+    await page.getByRole("button", { name: /^맵기/ }).click();
+    await page.getByRole("button", { name: "순한맛", exact: true }).click();
     await page.getByRole("button", { name: /^형태/ }).click();
     await page.getByRole("button", { name: "뼈", exact: true }).click();
-    await page.getByRole("button", { name: /^컵/ }).click();
-    await page.getByRole("button", { name: "일반컵" }).click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
     await page.getByRole("button", { name: "네, 좋아요" }).click();
     await page.getByRole("button", { name: "이대로 담기" }).click();
 
     const sub = page.locator('.sellist li[data-origin="SUBSTITUTED"]');
     await expect(sub).toHaveCount(1);
-    // 조사가 앞말에 맞아야 한다 — «일반컵는» 이 아니라 «일반컵은»
-    await expect(sub).toContainText("원하신 일반컵은 이 메뉴에 없어 바꿨습니다");
+    // 조사가 앞말에 맞아야 한다 — «순한맛는» 이 아니라 «순한맛은»
+    await expect(sub).toContainText("원하신 순한맛은 이 메뉴에 없어 바꿨습니다");
     // 대체가 있으면 다른 메뉴를 볼 길을 함께 준다
     await expect(page.getByRole("button", { name: "다른 메뉴 보기" })).toBeVisible();
   });

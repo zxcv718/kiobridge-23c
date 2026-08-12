@@ -128,9 +128,9 @@ export async function enterWizardByKeyboard(
   await expect(page.locator("#qtitle")).toBeVisible();
 }
 
-/** 질문 7개를 첫 선택지로 답해 추천까지 간다. */
+/** 질문 6개를 첫 선택지로 답해 추천까지 간다. */
 export async function answerAllFirst(page: Page): Promise<void> {
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 6; i++) {
     const c = page.locator(".choices .choice").first();
     if (!(await c.isVisible().catch(() => false))) break;
     await c.click();
@@ -145,11 +145,11 @@ export async function answerAllFirst(page: Page): Promise<void> {
  * 시연 프리셋이 사라져서, 특정 상황(알레르기 있음·예산 부족)을 만들려면 이제 실제로
  * 답을 골라야 한다 — 사용자가 걷는 길과 같은 길이라 오히려 검사로서 낫다.
  *
- * 순서는 model.ts 의 QUESTIONS 와 같다: 알레르기 → 맵기 → 형태 → 이용방식 → 수량 → 컵 → 예산.
+ * 순서는 model.ts 의 QUESTIONS 와 같다: 알레르기 → 맵기 → 형태 → 이용방식 → 수량 → 예산.
  * 배열 원소가 `null` 이면 그 질문은 첫 선택지로 답한다.
  */
 export async function answerWizard(page: Page, picks: (string | string[] | null)[]): Promise<void> {
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 6; i++) {
     if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
     const pick = picks[i] ?? null;
     /* 수량은 선택지가 아니라 «− 1 +» 증감이다(디자인 S10). 고를 버튼이 없으므로

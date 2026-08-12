@@ -14,7 +14,7 @@ import { 아무거나답하고다음, 저장된내용펼치기, approveToCartRev
 const start = openHome;
 
 /**
- * 7문항을 끝까지 답한다 (알레르기 땅콩·콩 → 매운맛 → 뼈 → 나머지는 첫 선택지).
+ * 6문항을 끝까지 답한다 (알레르기 땅콩·콩 → 매운맛 → 뼈 → 나머지는 첫 선택지).
  * 질문은 고정이므로 어떤 조합이든 추천 화면에 닿으려면 전부 답해야 한다.
  */
 async function answerAll(page: Page) {
@@ -28,14 +28,14 @@ async function answerAll(page: Page) {
   await page.getByRole("button", { name: /다음/ }).click();
   await page.getByRole("button", { name: "뼈", exact: true }).click();
   await page.getByRole("button", { name: /다음/ }).click();
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
     await 아무거나답하고다음(page);
   }
 }
 
 test.describe("B계열 — 신규 동작", () => {
-  test("B1 질문은 7개 고정이고 생략 고지가 없다", async ({ page }) => {
+  test("B1 질문은 6개 고정이고 생략 고지가 없다", async ({ page }) => {
     await start(page);
     await answerAll(page);
 
@@ -61,8 +61,6 @@ test.describe("B계열 — 신규 동작", () => {
     }
     // 수량은 증감이고 1이 이미 떠 있다 — 그 값이 곧 답이므로 누를 것이 없다
     await page.getByRole("button", { name: /다음/ }).click();
-    await page.getByRole("button", { name: "상관없어요" }).click(); // 컵
-    await page.getByRole("button", { name: /다음/ }).click();
     await page.getByRole("button", { name: "없어요", exact: true }).click(); // 예산
     await page.getByRole("button", { name: /추천 보기|다음/ }).click();
 
@@ -80,7 +78,7 @@ test.describe("B계열 — 신규 동작", () => {
        추천을 만들지 못하는 상태이고, 그것이 «확정되지 않은 추천»의 한 갈래다.
        한때 여기서 알레르기 «잘 모르겠어요»를 썼는데 그 선택지는 시안에 없어 걷어냈다 —
        화면에서 재확인(하드 제약 미확인) 경로로 들어가는 입구는 이제 없다. */
-    for (let i = 0; i < 6; i++) await 아무거나답하고다음(page);
+    for (let i = 0; i < 5; i++) await 아무거나답하고다음(page);
     await page.getByRole("button", { name: "5,000원" }).click();
     await page.getByRole("button", { name: /추천 보기|다음/ }).click();
 
@@ -148,7 +146,7 @@ test.describe("B계열 — 신규 동작", () => {
     await page.reload();
 
     await enterWizard(page);
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 6; i++) {
       if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
       await 아무거나답하고다음(page);
     }

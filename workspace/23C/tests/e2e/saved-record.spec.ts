@@ -30,7 +30,7 @@ const 저장본 = (page: Page) =>
 async function 저장본만들기(page: Page): Promise<void> {
   await openHome(page);
   await enterWizard(page, true);
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 6; i++) {
     if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
     await 아무거나답하고다음(page);
   }
@@ -77,9 +77,9 @@ test("저장된 내용을 지우지 않고 고칠 수 있다 — 가이드 4번�
   await page.getByRole("button", { name: /저장된 내용 수정/ }).click();
   await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
 
-  // 고치러 왔는데 절반이 숨어 있으면 안 된다 — 일곱 항목이 전부 있어야 한다
+  // 고치러 왔는데 절반이 숨어 있으면 안 된다 — 여섯 항목이 전부 있어야 한다
   const 행 = await page.locator(".editrow .editlabel").allInnerTexts();
-  expect(행.length, `수정 화면에 항목이 ${행.length}개뿐입니다`).toBeGreaterThanOrEqual(7);
+  expect(행.length, `수정 화면에 항목이 ${행.length}개뿐입니다`).toBeGreaterThanOrEqual(6);
 
   // 여는 것만으로는 아무것도 지워지지 않는다
   expect((await 저장본(page))!.answers).toEqual(원래);

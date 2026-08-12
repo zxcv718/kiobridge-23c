@@ -218,8 +218,8 @@ test.describe("A계열 — 프로필 흐름", () => {
     await chooseAndSkipQr(page, true);
     await page.getByRole("button", { name: /주문 시작하기/ }).click();
 
-    // 7문항을 첫 선택지로 답한다
-    for (let i = 0; i < 7; i++) {
+    // 6문항을 첫 선택지로 답한다
+    for (let i = 0; i < 6; i++) {
       if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
       await 아무거나답하고다음(page);
     }

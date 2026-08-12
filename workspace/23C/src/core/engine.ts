@@ -95,11 +95,17 @@ export function filterCandidatesCore(candidates: Candidate[], ctx: EngineContext
 }
 
 /* ───────────────────────── STEP 5: 랭킹 ─────────────────────────
- * 가중치 초안 (합 100) — 팀 킥오프에서 튜닝한다. 산정 근거:
+ * 가중치 (합 100) — 팀 킥오프에서 튜닝한다. 산정 근거:
  *  - 하드 제약은 이미 STEP 4에서 제거됐으므로 여기서는 "선호 일치"만 다룬다.
- *  - 맛 선호(맵기+형태) 45 > 이용방식 25 > 가격 여유 20 > 컵 10:
- *    "무엇을 먹는가"가 "어떻게 받는가"보다 만족도에 크다는 가정. */
-export const WEIGHTS = { spicy: 25, bone: 20, service: 25, cup: 10, price: 20 } as const;
+ *  - **네 축을 25씩 똑같이 둔다.** 컵을 질문에서 뺀 뒤로 남은 축 사이에 우열을
+ *    둘 근거가 없다. 옛 배분(맛 45 > 이용방식 25 > 가격 20 > 컵 10)은 «컵이
+ *    가장 덜 중요한 축»이라는 전제 위에 세운 순서였고, 그 축이 사라지면서
+ *    전제도 같이 사라졌다. 근거 없이 남은 순서를 유지하는 것보다 균등이 정직하다.
+ *  - **컵은 점수에 넣지 않는다.** 묻지 않는 것을 점수로 다루면, 모든 후보가
+ *    같은 중립점(weight*0.5)을 받아 순위에 아무 영향도 못 주면서 총점만 부풀린다.
+ *    다만 실행계획이 외부 입력(CLI raw input)으로 들어온 cupOption 을 존중하는
+ *    능력은 그대로다 — core/plan.ts 의 선택 그룹 처리. */
+export const WEIGHTS = { spicy: 25, bone: 25, service: 25, price: 25 } as const;
 
 export interface Scored {
   candidate: Candidate;
@@ -131,7 +137,6 @@ export function scoreCandidates(survivors: Candidate[], ctx: EngineContext): Sco
       spicy: matchScore(WEIGHTS.spicy, ctx.preferences.spicyLevel, c.supportedOptions?.SPICY_LEVEL, attrs.spicyLevel),
       bone: matchScore(WEIGHTS.bone, ctx.preferences.boneType, c.supportedOptions?.BONE_TYPE, attrs.boneType),
       service: matchScore(WEIGHTS.service, ctx.preferences.serviceType, c.supportedOptions?.SERVICE_TYPE),
-      cup: matchScore(WEIGHTS.cup, ctx.preferences.cupOption, c.supportedOptions?.CUP),
       price:
         price === undefined || maxP === minP
           ? WEIGHTS.price * 0.5

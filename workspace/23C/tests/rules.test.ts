@@ -36,7 +36,11 @@ const 확인한규칙: Record<string, { 처리: "제외" | "감점" | "계획이
   CHICKEN_SERVICE_TYPE_PREFERENCE: { 처리: "제외", 어디: "engine.ts:87 — 키트는 WARN 이지만 우리는 뺀다(못 하는 일을 권하지 않는다)" },
   CHICKEN_SPICY_LEVEL_PREFERENCE: { 처리: "감점", 어디: "engine.ts matchScore(spicy)" },
   CHICKEN_BONE_TYPE_PREFERENCE: { 처리: "감점", 어디: "engine.ts matchScore(bone) · 대체 시 SUBSTITUTED 표시 (RC5 추가)" },
-  CHICKEN_CUP_OPTION_PREFERENCE: { 처리: "감점", 어디: "engine.ts matchScore(cup) + 대체 안내 (RC5 추가)" },
+  /* 컵 질문을 뺐다(ui/src/model.ts QUESTIONS) — 화면에서 컵 선호를 말할 길이 없어
+     점수로 다룰 것도 없어졌다(engine.ts WEIGHTS 에서 제거). 코어는 여전히 이 필드를
+     읽을 수 있어(canonical.ts) CLI raw input 으로 들어오면 실행계획이 존중하고,
+     못 맞추면 대체를 밝힌다. 그래서 «감점»이 아니라 «계획이지킴»이다. */
+  CHICKEN_CUP_OPTION_PREFERENCE: { 처리: "계획이지킴", 어디: "plan.ts 옵션 선택 + 대체 안내 — 화면은 묻지 않는다" },
   CHICKEN_SELECTED_SERVICE_TYPE: { 처리: "계획이지킴", 어디: "plan.ts select_service" },
   CHICKEN_SELECTED_SPICY_LEVEL: { 처리: "계획이지킴", 어디: "plan.ts 옵션 선택" },
   CHICKEN_SELECTED_BONE_TYPE: { 처리: "계획이지킴", 어디: "plan.ts 옵션 선택" },

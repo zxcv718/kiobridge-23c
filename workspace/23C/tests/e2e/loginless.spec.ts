@@ -23,7 +23,7 @@ test.use({ viewport: { width: 390, height: 844 } });
 async function 저장하고재방문(page: Page): Promise<void> {
   await openHome(page);
   await enterWizard(page, true);
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 6; i++) {
     if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
     await 아무거나답하고다음(page);
   }

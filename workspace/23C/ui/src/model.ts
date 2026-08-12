@@ -100,7 +100,11 @@ export interface Question {
   options: { value: string | number; label: string; sub?: string; icon?: string }[];
 }
 
-/* 질문 순서 = 화면목록 S06~S10 (알레르기 → 맵기 → 뼈 → 포장 → 수량), 그 뒤 컵·예산.
+/* 질문 순서 = 화면목록 S06~S10 (알레르기 → 맵기 → 뼈 → 포장 → 수량), 그 뒤 예산.
+ *
+ * **질문은 6개다.** 컵은 7번째였다가 뺐다 — 안 물어도 사용자가 잃는 것이 없는 유일한
+ * 축이었기 때문이다(액션 자체가 안 만들어져 «우리가 대신 정하는» 값이 없다).
+ * 경위는 core/ask.ts 머리주석에 적어 두었다. 배점도 같이 옮겼다(core/engine.ts WEIGHTS).
  *
  * 알레르기가 맨 앞인 것은 편의가 아니라 **안전 요건**이다. 알레르기를 뒤에 두면
  * 그 질문에 닿기 전에 흐름이 끊길 여지가 생기고, 그때 allergenIds 는 UNKNOWN 이
@@ -124,7 +128,7 @@ export const QUESTIONS: Question[] = [
   /* ↑ 위 목록은 **저장된 답을 되살리고 조건을 수정하는 화면**이 쓴다. 질문 화면은 이것을
      그대로 그리지 않고 아래 두 걸음으로 나눠 묻는다(디자인 S06 기본 99:1228 / 확장 99:1246).
      한 벌로 두는 이유: 답이 담기는 자리(answers.allergies)는 하나뿐이고, 질문 개수도
-     7개 그대로여야 한다. 나뉘는 것은 «묻는 방법»이지 «답의 모양»이 아니다. */
+     6개 그대로여야 한다. 나뉘는 것은 «묻는 방법»이지 «답의 모양»이 아니다. */
   // 정도(degree)라 그림을 두지 않는다 — 순한→보통→매운은 글자가 이미 순서로 말한다
   /* 시안 99:1264 의 제목 그대로다 — 「맵기」 28px + 「는 어떻게 해드릴까요?」 22px. */
   { key: "spicyLevel", title: "맵기는 어떻게 해드릴까요?", options: [
@@ -141,9 +145,6 @@ export const QUESTIONS: Question[] = [
      아래 options 는 남겨 둔다 — 「1개」 같은 라벨과 시연 프리셋이 참조한다. */
   { key: "quantity", title: "얼마나 드실 건가요?", options: [
     { value: 1, label: "1개" }, { value: 2, label: "2개" }, { value: 3, label: "3개" } ] },
-  { key: "cupOption", title: "컵이 필요하세요?", hint: "메뉴에 따라 선택할 수 있는 컵이 다릅니다.", options: [
-    { value: "종이컵", label: "종이컵", icon: "🥤" }, { value: "일반컵", label: "일반컵", icon: "🥛" },
-    { value: "없음", label: "필요 없어요", icon: "🚫" }, { value: "상관없음", label: "상관없어요" } ] },
   /* 5,000원이 있어야 하는 이유: 이 가게의 최저가가 5,500원(매운 뼈 닭강정)이다.
    * 선택지가 6,000원부터 시작하면 «조건에 맞는 메뉴가 없습니다»가 **어떤 답변으로도
    * 일어나지 않는다.** 그 화면과 엔진 경로는 이미 다 만들어 두었는데 사용자만 못 갔다.
@@ -202,7 +203,7 @@ export const ALLERGY_ITEMS = ["땅콩", "콩", "우유", "계란", "밀", "새�
 
 export const EDIT_LABELS: Record<string, string> = {
   serviceType: "이용 방식", spicyLevel: "맵기", boneType: "형태",
-  quantity: "수량", cupOption: "컵", allergies: "알레르기", budgetKrw: "예산",
+  quantity: "수량", allergies: "알레르기", budgetKrw: "예산",
 };
 
 /** 요약 행에 보여줄 현재 값 (답변은 이미 한국어 라벨/숫자로 저장돼 있다) */
@@ -233,27 +234,27 @@ export interface Preset {
 export const PRESETS: Preset[] = [
   {
     id: "p-normal", title: "박순자 · 견과류 알레르기 · 포장", shows: "정상 추천",
-    answers: { serviceType: "포장", spicyLevel: "매운맛", boneType: "순살", quantity: 1, cupOption: "종이컵", allergies: ["땅콩"], budgetKrw: 7000 },
+    answers: { serviceType: "포장", spicyLevel: "매운맛", boneType: "순살", quantity: 1, allergies: ["땅콩"], budgetKrw: 7000 },
     a11y: { largeText: true, simpleSteps: true },
   },
   {
     id: "p-context", title: "같은 사람 · 이용 방식 미정 · 점심 붐빔", shows: "상황에 따라 순서가 달라짐",
-    answers: { serviceType: "상관없음", spicyLevel: "매운맛", boneType: "순살", quantity: 1, cupOption: "상관없음", allergies: ["땅콩"], budgetKrw: 7000 },
+    answers: { serviceType: "상관없음", spicyLevel: "매운맛", boneType: "순살", quantity: 1, allergies: ["땅콩"], budgetKrw: 7000 },
     a11y: { largeText: true, simpleSteps: true }, hour: 12,
   },
   {
     id: "p-a11y", title: "김영호 · 저시력 · 그림과 큰 글씨", shows: "다른 접근성 요구",
-    answers: { serviceType: "매장", spicyLevel: "순한맛", boneType: "순살", quantity: 2, cupOption: "일반컵", allergies: ["없음"], budgetKrw: "없음" },
+    answers: { serviceType: "매장", spicyLevel: "순한맛", boneType: "순살", quantity: 2, allergies: ["없음"], budgetKrw: "없음" },
     a11y: { largeText: true, highContrast: true, visualGuidance: true, mobilitySupport: true },
   },
   {
     id: "p-unknown", title: "알레르기를 모르는 경우", shows: "안전 중단 — 승인 차단",
-    answers: { serviceType: "포장", spicyLevel: "상관없음", boneType: "상관없음", quantity: 1, cupOption: "상관없음", allergies: ["모름"], budgetKrw: "없음" },
+    answers: { serviceType: "포장", spicyLevel: "상관없음", boneType: "상관없음", quantity: 1, allergies: ["모름"], budgetKrw: "없음" },
     a11y: { largeText: true, staffAssistancePreferred: true },
   },
   {
     id: "p-empty", title: "예산 5,000원 · 매운맛 · 순살", shows: "조건에 맞는 메뉴 없음",
-    answers: { serviceType: "포장", spicyLevel: "매운맛", boneType: "순살", quantity: 1, cupOption: "상관없음", allergies: ["없음"], budgetKrw: 5000 },
+    answers: { serviceType: "포장", spicyLevel: "매운맛", boneType: "순살", quantity: 1, allergies: ["없음"], budgetKrw: 5000 },
   },
 ];
 
@@ -324,7 +325,8 @@ export function buildRawInput(
     serviceType: a.serviceType,
     spicyLevel: a.spicyLevel,
     boneType: a.boneType,
-    cupOption: a.cupOption,
+    /* cupOption 은 화면이 만들지 않는다 — 컵 질문을 뺐다. 코어(canonical.ts)는 여전히
+       이 필드를 읽을 수 있고 CLI raw input 으로 들어오면 실행계획이 존중한다. */
     quantity: a.quantity,
     allergies: (a.allergies as unknown[] | undefined) === undefined ? undefined : allergies,
     budgetKrw: a.budgetKrw === "없음" ? undefined : a.budgetKrw,
