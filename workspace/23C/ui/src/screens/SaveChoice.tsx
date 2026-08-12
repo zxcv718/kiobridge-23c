@@ -37,8 +37,9 @@ export function SaveChoice() {
     ),
   });
 
-  /** 저장 방식을 정하고 그대로 다음 화면으로 — 결정과 이동이 같은 버튼이다. */
-  const choose = (store: boolean) => { setStoreIntent(store); setStep("qr"); };
+  /** 저장 방식을 정하고 그대로 다음 화면으로 — 결정과 이동이 같은 버튼이다.
+   *  QR 걸음(S04)은 기획(2026-08-12)으로 흐름에서 빠져 다음은 곧장 세션 시작이다. */
+  const choose = (store: boolean) => { setStoreIntent(store); setStep("sessionStart"); };
 
   return (
     <Screen

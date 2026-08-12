@@ -1,4 +1,4 @@
-/* S04a·S04b 매장 QR 읽기 — 이 화면에만 필요한 것.
+/* 매장 연동 관문(구 S04a·S04b) — 이 화면에만 필요한 것. 홈 배너의 매장 코드 표기도 여기 있다.
  *
  * 디자인 시스템의 `Viewfinder`(Figma 186:207 스캔중 · 186:209 완료)를 여기 옮긴다.
  * 공용 부품(components/)으로 올리지 않는 이유는 지금 이것을 쓰는 화면이 하나뿐이고,
@@ -78,6 +78,7 @@
 .qr-fallback .btnrow { margin-top: 10px; }
 .qr-fallback .field { margin: 6px 0; }
 
+/* 매장 코드 표기 — 사람이 읽고 옮겨 적는 값이라 고정폭으로 또렷하게. 홈 배너도 쓴다. */
 .qr-code {
   font-family: ui-monospace, monospace;
   font-size: 0.88em;

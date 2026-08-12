@@ -115,6 +115,7 @@ test.describe("B계열 — 신규 동작", () => {
       }));
     });
     await page.reload();
+    await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
     await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
     await 저장된내용펼치기(page);
     await expect(page.getByText(/땅콩/)).toBeVisible();
@@ -145,6 +146,7 @@ test.describe("B계열 — 신규 동작", () => {
     await page.goto("http://localhost:5173/");
     await page.evaluate(() => localStorage.clear());
     await page.reload();
+    await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 홈으로
 
     await enterWizard(page);
     for (let i = 0; i < 7; i++) {
@@ -240,21 +242,21 @@ test.describe("B계열 — 신규 동작", () => {
    * 말하지 않는가**를 본다. 서버가 없으므로 세션을 발급받을 수는 없고, 여기서 하는
    * 일은 QR 에 적힌 매장 코드를 우리가 가진 환경과 맞춰 보는 것까지다.
    */
-  test("C3 QR 은 읽기만 하며, 하지 않은 일을 한 것처럼 말하지 않는다", async ({ page }) => {
-    await start(page);
-    await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
-    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
-    // S03 은 라디오+«다음»이 아니라 저장 방식 CTA 를 고르는 순간 QR 로 간다
-    await page.getByRole("button", { name: "이번만 사용" }).click();
-
+  test("C3 연동 관문은 QR 을 읽기만 하며, 하지 않은 일을 한 것처럼 말하지 않는다", async ({ page }) => {
+    /* 관문은 홈보다 앞에 선다(기획 2026-08-12) — 그냥 열면 이것이 첫 화면이다. */
+    await page.goto("http://localhost:5173/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
     await expect(page.getByRole("heading", { name: /매장 QR|QR을 읽을 수 없습니다/ })).toBeVisible();
+    // 헤드리스에는 카메라가 없다 — 판단이 끝나면 직접 입력이 저절로 펴진다
+    await expect(page.getByRole("status").first()).not.toHaveText("카메라를 준비하고 있습니다.");
 
     const body = await page.locator("body").innerText();
     // 세션 발급·서버 연결처럼 우리가 하지 않는 일을 했다고 쓰지 않는다
     expect(body).not.toMatch(/세션이? (발급|생성)|서버에 (연결|등록)|로그인/);
     // 카메라를 못 쓰는 사람에게도 앞으로 갈 길이 같은 화면에 있어야 한다
     await expect(page.getByRole("button", { name: /QR 없이 계속하기/ })).toBeVisible();
-    await expect(page.getByRole("textbox")).toBeVisible(); // 매장 코드 직접 입력
+    await expect(page.getByRole("textbox")).toBeVisible(); // 매장 코드 직접 입력 (자동으로 펴짐)
   });
 
   test("B9 조건 수정의 메뉴 목록에 제외된 후보가 없다", async ({ page }) => {

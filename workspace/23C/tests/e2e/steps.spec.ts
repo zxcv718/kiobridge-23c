@@ -16,13 +16,13 @@ import { openHome } from "./nav";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-test("다섯 단계가 전부 화면 안에 있다 — 하나도 잘리지 않는다", async ({ page }) => {
+test("네 단계가 전부 화면 안에 있다 — 하나도 잘리지 않는다", async ({ page }) => {
   await openHome(page);
   const 점 = page.locator(".kb-dot");
-  await expect(점, "5단계 표시인데 점이 다섯 개가 아닙니다").toHaveCount(5);
+  await expect(점, "4단계 표시인데 점이 네 개가 아닙니다").toHaveCount(4);
 
   const 폭 = page.viewportSize()!.width;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 4; i++) {
     const box = (await 점.nth(i).boundingBox())!;
     expect(box.x, `${i + 1}번째 점이 화면 왼쪽 밖에 있습니다`).toBeGreaterThanOrEqual(0);
     expect(box.x + box.width, `${i + 1}번째 점이 화면 오른쪽 밖으로 잘렸습니다`).toBeLessThanOrEqual(폭);
@@ -33,7 +33,8 @@ test("단계 이름이 잘리지 않는다 — 그리고 문서가 가로로 밀
   await openHome(page);
   /* 양끝 라벨은 점 중심에 맞추느라 상자 밖으로 나간다. 자르면 「세션 시작」이 「세션 시」가
      되고(실제로 그렇게 났다), 안 자르면 화면이 가로로 밀릴 수 있다. 둘 다 아니어야 한다. */
-  for (const 이름 of ["홈", "프로필 생성", "저장 방식", "QR 연동", "세션 시작"]) {
+  // QR 걸음은 기획(2026-08-12)으로 빠졌다 — QR 은 앱 밖에서 찍고, 확인은 홈이 한다
+  for (const 이름 of ["홈", "프로필 생성", "저장 방식", "세션 시작"]) {
     const 잘렸나 = await page.locator(".kb-steplabel", { hasText: 이름 }).first()
       .evaluate((el) => el.scrollWidth > el.clientWidth + 1);
     expect(잘렸나, `단계 이름 «${이름}»이 잘려 있습니다`).toBe(false);
@@ -66,7 +67,7 @@ test("마지막 점은 오른쪽 선에 붙는다 — 사이 간격이 고르다
 
   const cta = (await page.locator(".kb-actions .btn").boundingBox())!;
   const 반지름 = (await page.locator(".kb-dot").first().boundingBox())!.width / 2;
-  expect(Math.round(중심[4] + 반지름), "마지막 점이 오른쪽 선에 붙지 않았습니다")
+  expect(Math.round(중심[중심.length - 1] + 반지름), "마지막 점이 오른쪽 선에 붙지 않았습니다")
     .toBe(Math.round(cta.x + cta.width));
 
   const 간격 = 중심.slice(1).map((c, i) => c - 중심[i]);

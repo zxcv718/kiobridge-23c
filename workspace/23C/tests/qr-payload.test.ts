@@ -5,7 +5,7 @@
  * 화면이 쓰는 바로 그 함수에 넣어 본다.
  */
 import { describe, expect, it } from "vitest";
-import { parseStoreCode } from "../ui/src/screens/QrConnect";
+import { parseStoreCode } from "../ui/src/logic";
 
 const ENV = "chicken-store";
 

@@ -14,6 +14,47 @@ import { buildAccessibilityEvidence, buildTeamExtensions, buildTeamMetadata } fr
 
 export const TEAM_ID = "23C";
 
+/**
+ * QR·주소 원문에서 매장 코드를 뽑는다. (구 QrConnect 화면에서 옮겨 왔다 —
+ * QR 걸음이 흐름에서 빠지면서 이 해석을 홈이 쓴다. tests/qr-payload.test.ts 가 실측.)
+ *
+ * 매장 QR에 무엇이 들어 있을지는 매장이 정한다 — 코드만 있을 수도, 링크일 수도 있다.
+ * 그래서 «링크면 매장을 가리키는 값을, 아니면 원문을» 쓰는 정도로만 해석한다.
+ * 여기서 더 똑똑하게 굴면, 실패했을 때 사용자가 무엇을 잘못했는지 알 수 없게 된다.
+ */
+export function parseStoreCode(raw: string): string {
+  const s = raw.trim();
+  if (!s) return "";
+  try {
+    const u = new URL(s);
+    for (const k of ["environmentId", "env", "store", "storeId"]) {
+      const v = u.searchParams.get(k);
+      if (v?.trim()) return v.trim();
+    }
+    const seg = u.pathname.split("/").filter(Boolean);
+    if (seg.length > 0) return decodeURIComponent(seg[seg.length - 1]);
+    return u.hostname;
+  } catch { /* URL 이 아니면 원문을 그대로 본다 */ }
+  return s;
+}
+
+/**
+ * 지금 주소에 실려 온 매장 코드 — 폰 기본 카메라로 매장 QR 을 찍으면 이 값이 실려 열린다.
+ *
+ * 두 곳이 같은 값을 봐야 한다: flow(첫 화면을 관문으로 할지 홈으로 할지)와
+ * 홈(어느 매장으로 도울지 밝히는 배너). 없으면 빈 문자열.
+ */
+export function readUrlStoreCode(): string {
+  try {
+    const u = new URL(window.location.href);
+    for (const k of ["environmentId", "env", "store", "storeId"]) {
+      const v = u.searchParams.get(k);
+      if (v?.trim()) return parseStoreCode(v.trim());
+    }
+  } catch { /* 주소를 못 읽으면 없는 것으로 본다 */ }
+  return "";
+}
+
 export type { RawUserInput, ContextSignal };
 
 export interface UiRecommendation {

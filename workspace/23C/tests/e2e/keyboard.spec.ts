@@ -35,6 +35,9 @@ async function pressOn(page: Page, name: RegExp | string): Promise<void> {
 test.describe("접근성 실측", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("http://localhost:5173/");
+    /* 연동 관문이 홈보다 앞에 선다(기획 2026-08-12) — 관문도 키보드만으로 지날 수
+       있어야 하므로 마우스 없이 지나서 홈에 선다. */
+    await pressOn(page, /^QR 없이 계속하기$/);
     await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요|다시 오셨네요/ })).toBeVisible();
   });
 

@@ -15,7 +15,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import type { Evidence, ParticipantSubmission, PublicFixture } from "@kiobridge/participant-sdk";
 import {
   computeRecommendation, withManualSelection, buildUiSubmission, runOnSimulator,
-  fetchFixture, type UiRecommendation, type RunOutcome,
+  fetchFixture, readUrlStoreCode, type UiRecommendation, type RunOutcome,
 } from "./logic";
 import { shouldSafetyStop, isUnresolved } from "../../src/core/ask";
 import { SAVED_VERSION } from "../../src/core/saved";
@@ -25,7 +25,9 @@ import {
 } from "./model";
 
 export function useFlowState() {
-  const [step, setStep] = useState<Step>("start");
+  /* 첫 화면 — 매장 QR 링크(?env=)로 열렸으면 홈, 아니면 연동 관문(기획 2026-08-12).
+     관문은 4걸음 흐름 밖이다: QR 을 찍거나 코드를 넣으면 홈이 나온다. */
+  const [step, setStep] = useState<Step>(() => (readUrlStoreCode() !== "" ? "start" : "connect"));
   const [a11y, setA11y] = useState<A11y>(A11Y_DEFAULT);
   const [fixture, setFixture] = useState<PublicFixture | null>(null);
   const [live, setLive] = useState(true);

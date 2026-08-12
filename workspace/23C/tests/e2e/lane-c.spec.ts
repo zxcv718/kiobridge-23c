@@ -40,6 +40,7 @@ const openWizard = async (page: Page, a11y: Record<string, boolean> = {}) => {
     }));
   }, a11y);
   await page.reload();
+  await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 홈으로
   await page.getByRole("button", { name: /이전 화면 설정 사용|지난번과 똑같이 주문하기/ }).click();
   await expect(page.locator("#qtitle")).toBeVisible();
 };

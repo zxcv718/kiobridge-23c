@@ -37,6 +37,7 @@ async function 저장본만들기(page: Page): Promise<void> {
   await approveToCartReview(page);
   await finishOrder(page);
   await page.goto(HOME);
+  await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
   await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
   expect((await 저장본(page))?.answers?.allergies, "저장본이 만들어지지 않았습니다").toBeDefined();
 }

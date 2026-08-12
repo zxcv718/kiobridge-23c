@@ -55,7 +55,7 @@ export function SessionStart() {
   return (
     <Screen
       onBack={() => setStep("saveChoice")}
-      steps={{ labels: FLOW_STEPS, current: 5 }}
+      steps={{ labels: FLOW_STEPS, current: 4 }}
       label="세션 시작"
       /* 시안 150:422·150:423·208:754/756 그대로. 강조어를 키우지 않고, 버튼은 「네」·「아니오」다.
          저장본이 없을 때(시안에 없는 상태)의 문구만 우리가 적는다. */

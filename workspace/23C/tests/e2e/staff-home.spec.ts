@@ -27,6 +27,7 @@ async function 재방문홈(page: Page): Promise<void> {
     await 아무거나답하고다음(page);
   }
   await page.goto(HOME);
+  await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
   await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
 }
 
