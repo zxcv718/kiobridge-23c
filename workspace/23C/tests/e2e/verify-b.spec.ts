@@ -212,9 +212,11 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
     /* 설정 목록은 프로필 3/3 의 «자세한 설정» 안에 있다 — 상단바 토글이 없어지면서
        여기가 8종에 닿는 유일한 자리가 됐다. 선언한 채널이 화면에서 닿지 않으면
-       «없는 기능을 있다고 말한 것»이 되므로, 이 검사는 그 자리까지 걸어가서 잰다. */
+       «없는 기능을 있다고 말한 것»이 되므로, 이 검사는 그 자리까지 걸어가서 잰다.
+       기본은 접힘이라(기획 2026-08-12) 한 번 펼치는 것까지가 «닿는 길»이다. */
     for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
     await expect(page.getByRole("heading", { name: "필요한 안내 방식을 선택해주세요" })).toBeVisible();
+    await page.locator("details.p-more > summary").click();
 
     const app = page.locator(".app");
     const row = (name: string) => page.locator(".a11ylist .a11yrow", { hasText: name });

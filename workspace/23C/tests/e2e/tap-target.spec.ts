@@ -51,6 +51,8 @@ test("프로필 3단계 — 자세한 설정을 펼쳐도 모든 토글이 눌�
   await page.getByRole("button", { name: /^시작하기$/ }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
+  // 기본은 접힘이다(기획 2026-08-12) — 접힌 채로 재면 토글 일곱이 검사에서 조용히 빠진다
+  await page.locator("details.p-more > summary").click();
   expect(await 가려진버튼(page)).toEqual([]);
 });
 

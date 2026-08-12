@@ -157,10 +157,11 @@ test.describe("접근성 실측", () => {
   test("상태를 색이 아니라 글자로도 알 수 있다", async ({ page }) => {
     await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
     /* 설정 목록은 프로필 3/3 의 «자세한 설정» 안으로 옮겨 갔다 — 걸음마다 붙여 두면
-       고를 것 두 장 아래로 목록이 늘 따라붙어 화면이 무너지기 때문이다. 옮겨졌을 뿐
-       접혀 있지도 사라지지도 않았으므로, 그 자리까지 가서 같은 것을 잰다. */
+       고를 것 두 장 아래로 목록이 늘 따라붙어 화면이 무너지기 때문이다. 기본은
+       접힘이므로(기획 2026-08-12) 그 자리까지 가서 펼친 뒤 같은 것을 잰다. */
     for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
     await expect(page.getByRole("heading", { name: "필요한 안내 방식을 선택해주세요" })).toBeVisible();
+    await page.locator("details.p-more > summary").click();
 
     // 각 설정 행이 켬/끔을 글자로 표시한다
     const states = await page.locator(".astate").allInnerTexts();

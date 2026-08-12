@@ -138,9 +138,11 @@ test.describe("A계열 — 프로필 흐름", () => {
     for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
     await expect(page.getByRole("heading", { name: "필요한 안내 방식을 선택해주세요" })).toBeVisible();
 
-    // 3단계 라디오 뒤에 «자세한 설정»으로 남긴다 — 채널을 선언만 하고 숨기지 않는다
-    // (접어 두지도 않는다 — 열린 채로 나온다)
-    await expect(page.locator("details.p-more")).toHaveAttribute("open", "");
+    /* 3단계 라디오 뒤에 «자세한 설정»으로 남긴다 — 채널을 선언만 하고 숨기지 않는다.
+       기본은 접힘이다(기획 2026-08-12) — 숨김이 아니라 접힘이므로, 접혀서 나오는 것과
+       한 번 눌러 일곱이 다 닿는 것을 **둘 다** 잰다. */
+    await expect(page.locator("details.p-more")).not.toHaveAttribute("open", "");
+    await page.locator("details.p-more > summary").click();
     await expect(page.locator(".a11ylist .a11yrow")).toHaveCount(7);
     const input = page.getByRole("group", { name: "입력 방식" });
     await expect(input.locator("button")).toHaveCount(2);
