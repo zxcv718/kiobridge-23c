@@ -22,7 +22,7 @@ const 아래버튼 = (page: Page) =>
 async function 재방문홈(page: Page): Promise<void> {
   await openHome(page);
   await enterWizard(page, true);
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 6; i++) {
     if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
     await 아무거나답하고다음(page);
   }

@@ -323,7 +323,10 @@ export function QrConnect() {
         {/* 접을 때 지우지 않고 `hidden` 으로 둔다 — 위 aria-controls 가 가리키는 것이
             늘 있어야 하고, 폼 자체는 카메라가 막힌 사람에게 유일한 길이다. */}
         <form id="qr-typed" className="qr-fallback" hidden={!typedOpen} onSubmit={submitTyped}>
-          <label className="field">
+          {/* 카메라가 막힌 것이 확인된 순간에는 이 칸이 앞으로 가는 본길이다 — 그때만
+              가리킨다. 카메라가 살아 있는데 사용자가 「직접 입력」을 펴 본 경우에는
+              여전히 창을 가리킨다(가리키는 곳은 한 화면에 하나다). */}
+          <label className={phase === "noCamera" ? "field kb-guide" : "field"}>
             {/* 안내를 라벨 안에 넣는다. 설명을 한 줄 더 두면 접힌 화면(390×844)에서
                 정작 눌러야 할 «이 코드로 연결하기»가 밖으로 밀린다. */}
             <span className="qr-label">매장 코드 직접 입력 — 키오스크 화면 아래쪽에 있습니다</span>
@@ -349,8 +352,12 @@ export function QrConnect() {
     >
       {/* 카메라를 못 쓸 때는 창을 그리지 않는다. 볼 것이 없는 200px 상자가 화면 절반을
           차지하면, 이때 실제로 써야 하는 입력칸이 아래로 밀려 접힌 화면 밖으로 나간다. */}
+      {/* 「화면 안내」가 가리킬 곳은 **지금 해야 할 일**이다. 카메라가 살아 있으면 그 일은
+          «QR을 창에 비추는 것»이라 창에 고리와 화살표를 둔다. 아래 바에 두면 안 되는
+          이유가 이 화면에 있다 — 거기 담긴 주 버튼은 «직접 입력»을 폈을 때 나오는 폼의
+          제출 버튼이라, 스캔하면 되는 사람에게는 아직 할 일이 아니다. */}
       {cameraWanted && (
-        <div className="qr-view">
+        <div className="qr-view kb-guide">
           <video ref={videoRef} className="qr-cam" muted playsInline autoPlay aria-hidden="true" />
         </div>
       )}

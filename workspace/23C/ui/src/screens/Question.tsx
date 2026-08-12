@@ -27,7 +27,7 @@ import dangerIcon from "../assets/icons/danger.svg";
  *  · 「보통맛」에도 hot 을 붙이지 않는다. 디자인은 보통에 불꽃 하나, 매운맛에 셋을 두어
  *    **개수로** 구분하는데 ChoiceGrid 는 선택지당 그림 하나만 그린다. 같은 불꽃을 둘 다에
  *    붙이면 두 선택지가 똑같아 보여, 구분이 되던 것이 오히려 없어진다.
- *  · 수량·컵·예산은 디자인에 그림이 없다.
+ *  · 수량·예산은 디자인에 그림이 없다.
  */
 /**
  * 정도를 «같은 표식의 개수»로 나타내는 자리 (Figma S07 99:1264).
@@ -61,7 +61,6 @@ const EMPHASIS: Record<string, string | string[]> = {
   boneType: ["뼈 있는 것", "없는 것"],
   serviceType: ["드시고", "포장"],
   quantity: "얼마나",
-  cupOption: "컵",
   budgetKrw: "예산",
 };
 

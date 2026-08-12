@@ -10,6 +10,14 @@ import {
 import type { EngineContext } from "./engine";
 import { CONTEXT_NAMESPACE, type ContextSignal } from "./context";
 
+/**
+ * 희망 금액이 계약에 실리는 자리.
+ *
+ * 팀 ID("23C")가 숫자로 시작해 확장 namespace 규칙(`/^[A-Z][A-Z0-9_]*\.…/`)을 통과하지
+ * 못하므로 TEAM_ 접두사를 붙인다 — 상황신호(CONTEXT_NAMESPACE)와 같은 사정이다.
+ */
+export const BUDGET_NAMESPACE = "TEAM_23C.budget";
+
 export type RawUserInput = Record<string, unknown>;
 
 const PREFERRED_INPUTS: string[] = Object.values(PREFERRED_INPUT);
@@ -83,7 +91,7 @@ export function buildChickenContext(
   const cupOption = toCupOption(raw.cupOption ?? raw["컵"]);
   const quantity = toQuantity(raw.quantity ?? raw["수량"]);
   const allergenIds = toAllergens(raw.allergies ?? raw["알레르기"]);
-  const maxPriceKrw = toBudgetKrw(raw.budgetKrw ?? raw["예산"]);
+  const budgetKrw = toBudgetKrw(raw.budgetKrw ?? raw["예산"]);
 
   const preferences: Record<string, unknown> = {};
   const hardConstraints: Record<string, unknown> = {};
@@ -101,7 +109,28 @@ export function buildChickenContext(
   set(preferences, "preferences", "cupOption", cupOption);
   set(preferences, "preferences", "quantity", quantity);
   set(hardConstraints, "hardConstraints", "allergenIds", allergenIds);
-  set(hardConstraints, "hardConstraints", "maxPriceKrw", maxPriceKrw);
+  /* 예산은 **hardConstraints 로 가지 않는다.**
+   *
+   * 그 자리(maxPriceKrw)는 환경 규칙 CHICKEN_PRICE_LIMIT 이 severity: BLOCK 으로 보는
+   * 곳이다 — 값이 있으면 초과 후보를 반드시 빼야 하고, 빼지 않으면 계약을 어긴 계획이
+   * 만들어진다(tests/rules.test.ts 가 «BLOCK 을 감점으로 다루면 안 된다» 로 못 박아 둔
+   * 그 줄이다). 그런데 화면이 이제 묻는 것은 상한이 아니라 «얼마쯤 생각하시나요»이고,
+   * 초과는 제외 사유가 아니다. 뜻이 다른 값을 그 자리에 두면 규칙이 우리 대신 «상한»
+   * 으로 읽는다.
+   *
+   * preferences 에도 못 넣는다 — 계약이 그 섹션을 닫아 두었다(chicken-store 는
+   * serviceType·spicyLevel·boneType·cupOption·quantity 다섯뿐, validator 의 checkClosed).
+   *
+   * 남는 자리가 extensions 이고, 계약이 그 자리를 마련한 이유가 정확히 이것이다 —
+   * «Core 계약이 모델링하지 않는 것을 팀 namespace 아래 둔다». 상황신호와 같은 길이다. */
+
+  const extensions: Record<string, unknown> = {};
+  if (budgetKrw !== undefined) {
+    /* 이름을 targetKrw 로 둔다 — maxKrw 였다면 읽는 사람이 다시 상한으로 읽는다.
+       증거 JSON 에 그대로 남는 값이라, 그 이름이 곧 우리가 무엇을 약속했는지가 된다. */
+    extensions[BUDGET_NAMESPACE] = { targetKrw: budgetKrw };
+    fieldMetadata[`/extensions/${BUDGET_NAMESPACE}/targetKrw`] = meta;
+  }
 
   const signals = contextSignals ?? [];
   const ctx = {
@@ -111,12 +140,15 @@ export function buildChickenContext(
     hardConstraints,
     capabilities: {},
     fieldMetadata,
-    // 신호가 없으면 키 자체를 만들지 않는다 — 빈 배열은 "수집했는데 없음"으로 오독된다.
-    ...(signals.length > 0 ? { extensions: { [CONTEXT_NAMESPACE]: signals } } : {}),
+    /* 확장은 있을 때만 키를 만든다 — 빈 배열·빈 객체는 "수집했는데 없음"으로 오독된다.
+       상황신호와 예산이 같은 자리를 나눠 쓴다(각자 팀 namespace). */
+    ...(signals.length > 0 || Object.keys(extensions).length > 0
+      ? { extensions: { ...extensions, ...(signals.length > 0 ? { [CONTEXT_NAMESPACE]: signals } : {}) } }
+      : {}),
   } as AnySessionContext;
 
   return {
     ctx,
-    engineCtx: { preferences, hardConstraints, fieldMetadata, contextSignals: signals } as EngineContext,
+    engineCtx: { preferences, hardConstraints, budgetKrw, fieldMetadata, contextSignals: signals } as EngineContext,
   };
 }

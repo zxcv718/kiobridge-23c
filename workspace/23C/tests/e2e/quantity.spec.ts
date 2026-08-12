@@ -18,7 +18,7 @@ test.use({ viewport: { width: 390, height: 844 } });
 async function 수량질문까지(page: Page): Promise<void> {
   await openHome(page);
   await enterWizard(page);
-  // 알레르기·맵기·형태·이용방식을 첫 선택지로 지나간다 (answerWizard 는 7문항을 다 채운다)
+  // 알레르기·맵기·형태·이용방식을 첫 선택지로 지나간다 (answerWizard 는 6문항을 다 채운다)
   await page.getByRole("button", { name: "없어요", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   for (let i = 0; i < 3; i++) {

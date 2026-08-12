@@ -77,7 +77,7 @@ export function SaveChoice() {
         <div className="p-willsave">
           <ul>
             <li>지금 고르신 <span>화면 설정</span> (글씨 크기·고대비·화면 안내 등)</li>
-            <li>주문을 마치면 <span>답해 주신 내용</span> — <b>알레르기</b>·맵기·형태·이용 방식·수량·컵·예산</li>
+            <li>주문을 마치면 <span>답해 주신 내용</span> — <b>알레르기</b>·맵기·형태·이용 방식·수량·예산</li>
             <li>주문을 마치면 <span>고르신 메뉴</span> 하나</li>
           </ul>
           <p>
