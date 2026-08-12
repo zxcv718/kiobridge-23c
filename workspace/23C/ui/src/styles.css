@@ -290,18 +290,26 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
    (tests/tokens.test.ts 가 정의 없는 --kb- 사용을 전수로 잡는다), 아래 셋은 토큰이 아니라
    이 한 줄 계산에만 쓰는 지역 값이다. */
 .app.guide .kb-actions {
+  --guide-size: 1.5;                    /* 화살표 글자 크기 (× --fs) */
   --guide-top: calc(var(--fs) * 0.2);   /* 화살표 시작 자리 */
   --guide-bob: calc(var(--fs) * 0.25);  /* 흔들리는 폭 */
   --guide-gap: calc(var(--fs) * 0.4);   /* 가장 내려왔을 때 고리와 남길 거리 */
   padding-top: calc(
-    var(--guide-top) + var(--fs) * 1.5 + var(--guide-bob) + var(--guide-gap) + 7px
+    var(--guide-top) + var(--fs) * var(--guide-size) + var(--guide-bob) + var(--guide-gap) + 7px
   );
+}
+/* 짧은 화면에서는 화살표를 줄인다 — 통로가 곧 본문에서 뺏는 높이라서다. 줄이는 것은
+   크기와 «고리와 띄울 거리»뿐이고, 흔들림 폭은 그대로 둔다(움직임이 곧 이 안내의 몫이다).
+   --guide-size 하나만 바꾸면 글자 크기와 통로 계산이 함께 따라온다. */
+@media (max-height: 720px) {
+  .app.guide .kb-actions { --guide-size: 1.15; --guide-gap: calc(var(--fs) * 0.25); }
 }
 .app.guide .kb-actions::after {
   content: "↓";
   content: "↓" / "";
   position: absolute; left: 0; right: 0; top: var(--guide-top);
-  text-align: center; line-height: 1; font-size: 1.5em; font-weight: 800;
+  text-align: center; line-height: 1; font-weight: 800;
+  font-size: calc(var(--fs) * var(--guide-size));
   color: var(--brand-strong);
   pointer-events: none;
   animation: kb-guide-bob 1.4s ease-in-out infinite;

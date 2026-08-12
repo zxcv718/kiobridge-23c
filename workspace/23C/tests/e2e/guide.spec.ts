@@ -89,7 +89,11 @@ test("안내를 켜면 고르기 전에는 선택지 영역을 가리키고, 고
  * 계산이 실제로 여유를 남기는지 **가장 내려온 순간**에 잰다. 흔들림을 그 프레임에
  * 세워 두고 재는 이유는, 안 세우면 우연히 위에 있을 때 통과하기 때문이다.
  */
-test("안내 화살표는 가장 내려왔을 때도 고리를 파고들지 않는다", async ({ page }) => {
+/* 720px 아래에서는 화살표를 줄인다(styles.css @media). 줄이는 쪽에서 여유가 사라지기
+   쉬우므로 긴 화면과 짧은 화면 **둘 다** 잰다 — 한쪽만 재면 나머지가 조용히 깨진다. */
+for (const 높이 of [844, 640]) {
+test(`안내 화살표는 가장 내려왔을 때도 고리를 파고들지 않는다 (높이 ${높이})`, async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 높이 });
   await 안내켜고(page, true);
   await page.addStyleTag({ content: `.app.guide .kb-actions::after {
     animation-delay: -0.7s !important; animation-play-state: paused !important; }` });
@@ -110,6 +114,35 @@ test("안내 화살표는 가장 내려왔을 때도 고리를 파고들지 않�
   expect(m.고리위끝 - m.화살표아래끝,
     `화살표가 고리에 ${(m.화살표아래끝 - m.고리위끝).toFixed(1)}px 까지 닿습니다`)
     .toBeGreaterThan(0);
+});
+}
+
+/* 아래 바가 짧은 화면에서 본문을 얼마나 먹는지 못 박는다. 시안 프레임(874)에서는
+   시안 값 그대로여야 하고, 짧아지면 줄어야 한다 — 둘 다 지켜지는지 함께 본다. */
+test("아래 버튼바는 시안 크기에서 시안 값 그대로, 짧은 화면에서만 줄어든다", async ({ page }) => {
+  const 재기 = async (높이: number) => {
+    await page.setViewportSize({ width: 390, height: 높이 });
+    await 안내켜고(page, true);
+    return page.locator(".kb-actions").evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        아래여백: Math.round(parseFloat(cs.paddingBottom)),
+        바깥여백: Math.round(parseFloat(cs.marginTop)),
+        바높이: Math.round(el.getBoundingClientRect().height),
+      };
+    });
+  };
+
+  const 시안 = await 재기(874);
+  expect(시안.아래여백, "시안 프레임에서 아래 여백이 py-40 이 아닙니다").toBe(40);
+  expect(시안.바깥여백, "시안 프레임에서 바깥 여백이 24px 이 아닙니다").toBe(24);
+
+  /* 짧은 화면에서는 «조금 줄었다»로는 부족하다 — 눈에 띄게 줄어야 본문이 한 줄이라도
+     더 보인다. 임의의 px 대신 시안 크기 대비 비율로 못 박는다: 한 자릿수 픽셀이 아니라
+     최소 10%는 돌려받아야 이 결정을 했다고 말할 수 있다. */
+  const 짧음 = await 재기(640);
+  expect(짧음.바높이, `짧은 화면에서 바가 ${시안.바높이}px → ${짧음.바높이}px 밖에 안 줄었습니다`)
+    .toBeLessThan(시안.바높이 * 0.9);
 });
 
 test("안내를 끄면 선택지 영역에도 테두리가 없다", async ({ page }) => {
