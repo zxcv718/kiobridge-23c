@@ -191,13 +191,13 @@ export async function answerWizard(page: Page, picks: (string | string[] | null)
 export async function approveToCartReview(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
   await page.getByRole("button", { name: "선택하기", exact: true }).click();
-  await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+  /* 장바구니 확인(S13)에는 시안대로 큰 제목 문장이 없다 — CTA «주문하기»가 도착 표식이다 */
+  await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 }
 
-/** 주문을 확정해 결과 화면까지 (라이브면 실행, 아니면 체험 모드 확정). */
+/** 주문을 확정해 결과 화면까지 (라이브·체험 모드 모두 시안 라벨 «주문하기» 하나다). */
 export async function finishOrder(page: Page): Promise<void> {
-  const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });
-  await ((await live.count()) > 0 ? live : page.getByRole("button", { name: /주문 확정하기/ })).click();
+  await page.getByRole("button", { name: "주문하기", exact: true }).click();
   /* level 2 를 지정한다 — 결과 화면 본문에 «주문 계획» 소제목(h3)이 생겨
      이름만으로 찾으면 둘이 걸린다. 화면 제목은 언제나 h2 하나뿐이다. */
   await expect(page.getByRole("heading", { level: 2, name: /실행 결과|주문이 완성되었습니다|실행하지 못했습니다/ }))

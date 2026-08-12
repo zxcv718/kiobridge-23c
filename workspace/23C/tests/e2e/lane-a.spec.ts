@@ -221,10 +221,9 @@ test.describe("A계열 — 프로필 흐름", () => {
       await 아무거나답하고다음(page);
     }
     await page.getByRole("button", { name: "선택하기", exact: true }).click(); // 추천·메뉴 확인이 한 화면으로 합쳐졌다
-    await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 
-    const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });
-    await ((await live.count()) > 0 ? live : page.getByRole("button", { name: /주문 확정하기/ })).click();
+    await page.getByRole("button", { name: "주문하기", exact: true }).click();
     /* 화면 제목(.kb-title)만 본다. 예전에는 role=heading 에 세 후보를 «|» 로 묶어 두었는데,
        그중 「주문 계획」은 화면 제목이 아니라 결과 화면 **안쪽 절 제목**(h3.cart-cap)이다.
        Simulation API 가 없는 체험 모드에서는 그 절이 함께 나오므로 heading 이 둘이 되고,

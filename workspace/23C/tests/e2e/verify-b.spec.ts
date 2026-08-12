@@ -156,12 +156,11 @@ test.describe("B계열 — 신규 동작", () => {
     await approveToCartReview(page);
 
     // 확인 화면에는 저장 얘기가 없다 — 결제 직전에 다음 방문 판단을 시키지 않는다
-    await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
     await expect(page.getByText(/저장/)).toHaveCount(0);
 
-    // 라이브(시뮬레이터 연결)면 "가상 키오스크에서 실행", 아니면 "주문 확정하기"
-    const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });
-    await ((await live.count()) > 0 ? live : page.getByRole("button", { name: /주문 확정하기/ })).click();
+    // CTA 는 시안 라벨 «주문하기» 하나다 — 라이브(실행)든 체험 모드(계획 보관)든 같다
+    await page.getByRole("button", { name: "주문하기", exact: true }).click();
 
     /* 결과 화면(S15)은 저장을 **다시 묻지 않는다.** 저장 여부는 프로필 단계(S03)에서
        이미 한 번 물었고, 같은 결정을 두 번 묻는 것은 통제권이 아니라 부담만 늘린다.

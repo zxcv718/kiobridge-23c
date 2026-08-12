@@ -61,12 +61,12 @@ h3.cart-cap { margin: 22px 0 8px; font-size: 0.78em; }
 .cart-legend { color: var(--muted); font-size: 0.82em; margin: 0 0 4px; word-break: keep-all; }
 
 /* ───────── S13 매장 이름 줄 (Figma 99:1798) ─────────
- * 시안의 이 줄은 15px Medium 본문색이다 — 공용 «고객님,» 줄(18px Regular 보조색)과 다르다.
- * .kb-eyebrow 는 열여섯 화면이 함께 쓰는 것이라 고치지 않고, 이 화면에만 걸리는
- * 스코프를 하나 더 씌운다. `Screen` 이 겉의 <p class="kb-eyebrow"> 를 직접 그리므로
- * 화면에서 붙일 수 있는 자리는 그 안쪽뿐이고, 그래서 자손 선택자다.
- * 크기는 px 이 아니라 em 이다 — 큰 글씨 설정과 함께 커져야 한다. */
-.kb-eyebrow .cart-store { font-size: 0.83em; font-weight: 500; color: var(--fg); }
+ * 시안의 이 줄은 15px Medium 본문색이고, 이 화면에는 큰 제목 문장이 따로 없다 —
+ * 매장 이름 줄이 화면 제목(h2)을 겸한다. .kb-title 은 열여섯 화면이 함께 쓰는 것이라
+ * 고치지 않고, 안쪽 span 에 이 화면만의 스코프를 씌워 크기를 내린다.
+ * 크기는 px 이 아니라 em 이다 — 큰 글씨 설정과 함께 커져야 한다.
+ * (0.68em = .kb-title 1.22em 기준 15px — 0.83em 은 본문 18px 기준값이라 여기선 다르다) */
+.kb-title .cart-store { font-size: 0.68em; font-weight: 500; color: var(--fg); }
 
 /* ───────── S13 선택 목록 (Figma 114:2116 «order option») ─────────
  * 디자인의 «✓ + 한 문장» 줄에 출처 한 줄을 더한 것. 고른 대로인 줄은 테두리 없이

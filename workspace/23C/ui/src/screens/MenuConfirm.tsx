@@ -131,7 +131,8 @@ export function MenuConfirm() {
         {/* 기획: «주의필요 — 반영되지 못한 사항. 없을 경우 표시 X» */}
         {rec.unmetConditions && rec.unmetConditions.length > 0 && (
           <section className="q-sec">
-            <p className="mc-badgeline"><Badge mark="!">주의하세요</Badge></p>
+            {/* 시안(메뉴 확인 신규)의 라벨·마크 그대로 — «✓ 주의 필요» */}
+            <p className="mc-badgeline"><Badge mark="✓">주의 필요</Badge></p>
             <ul className="reasons" aria-label="반영하지 못한 조건">
               {rec.unmetConditions.map((u, i) => <li key={i}>{u}</li>)}
             </ul>

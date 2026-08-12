@@ -71,7 +71,7 @@ test.describe("접근성 실측", () => {
     if (await approve.isVisible()) {
       await approve.focus();
       await page.keyboard.press("Enter");
-      await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+      await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
     }
   });
 

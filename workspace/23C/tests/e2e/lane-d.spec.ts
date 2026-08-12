@@ -56,7 +56,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.locator(".reasons").first()).toContainText("땅콩이 들어간 메뉴");
 
     await page.getByRole("button", { name: "선택하기", exact: true }).click();
-    await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
   });
 
   test("D2 메뉴 확인에는 되돌아갈 길이 있다", async ({ page }) => {
@@ -75,9 +75,11 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await start(page);
     await toCartReview(page);
 
+    /* 시안 재정렬(99:1798)로 목록에는 주문 방식(이용 방식·컵) 두 줄만 남고,
+       맵기·형태는 카드의 «옵션:» 줄이, 수량은 «x N개»가 말한다. */
     const rows = page.locator(".sellist li[data-origin]");
     await expect(rows.first()).toBeVisible();
-    expect(await rows.count()).toBeGreaterThan(2);
+    expect(await rows.count()).toBeGreaterThanOrEqual(2);
 
     // 출처는 세 가지뿐이며 전부 글자로 설명된다 (색만으로 말하지 않는다)
     for (const o of await rows.evaluateAll((els) => els.map((e) => e.getAttribute("data-origin")))) {
@@ -85,9 +87,9 @@ test.describe("D계열 — 확인·수정·결과", () => {
     }
     await expect(page.locator('.sellist li[data-origin="USER"]').first()).toContainText("고르신 대로");
 
-    // 직접 고른 수량을 «상관없다고 하셔서»로 말하지 않는다
-    const qty = page.locator(".sellist li", { hasText: "수량" });
-    await expect(qty).toHaveAttribute("data-origin", "USER");
+    /* 직접 고른 수량을 «상관없다고 하셔서»로 말하지 않는다 — 카드의 수량 보조줄은
+       우리가 정했거나 바꿨을 때만 붙는다(이 흐름에서는 사용자가 골랐으므로 없어야 한다) */
+    await expect(page.locator(".cart-box")).not.toContainText("수량:");
   });
 
   test("D4 장바구니 확인의 값이 실행계획과 어긋나지 않는다 (총 가격 = 단가 × 수량)", async ({ page }) => {
@@ -95,7 +97,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     // 수량 2개인 프리셋 — 곱셈이 실제로 일어나는 경우로 잰다
     await toRecommend(page, CASE.twoQty);
     await page.getByRole("button", { name: "선택하기", exact: true }).click();
-    await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 
     const won = (s: string) => Number(s.replace(/[^\d]/g, ""));
     const unit = won(await page.locator(".cart-price").innerText());
@@ -208,7 +210,9 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D11 내려받기 두 파일의 방향 안내와 오류 주입 7종이 그대로 있다", async ({ page }) => {
     await start(page);
     await toCartReview(page);
-    const live = await page.getByRole("button", { name: /가상 키오스크에서 실행/ }).count();
+    /* CTA 가 시안 라벨 «주문하기» 하나가 되면서, 라이브 여부는 라이브에서만 나오는
+       세션 ID 입력칸으로 잰다. */
+    const live = await page.getByText(/공식 시뮬레이터 세션에 제출하기/).count();
     /* 예전에는 여기서 test.skip 을 했다. 하지만 **스킵된 테스트는 증거가 아니다** —
        오류 주입 7종은 계약 시연의 핵심인데, API 가 꺼져 있다는 이유로 조용히 넘어가면
        그것이 사라져도 아무도 모른다. 공식 검증은 늘 API 를 띄운 채 돌리므로,

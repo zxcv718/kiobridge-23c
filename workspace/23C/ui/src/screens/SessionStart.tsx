@@ -83,6 +83,9 @@ export function SessionStart() {
               { label: "맵기 선호", value: answerLabel("spicyLevel", prev.answers.spicyLevel) },
               { label: "뼈/순살 선택", value: answerLabel("boneType", prev.answers.boneType) },
               { label: "수량", value: answerLabel("quantity", prev.answers.quantity) },
+              /* 시안(150:396)의 여섯 행을 그대로 — 먹고가기/포장·예산도 저장되는 값이다 */
+              { label: "먹고가기/포장 선택", value: answerLabel("serviceType", prev.answers.serviceType) },
+              { label: "예산", value: answerLabel("budgetKrw", prev.answers.budgetKrw) },
             ]}
           />
           {/* 시안(150:396)에는 이 줄이 없다 — 화면 설정은 바로 앞 걸음(S03)에서 카드로
