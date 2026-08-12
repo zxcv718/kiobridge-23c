@@ -46,9 +46,9 @@ test.describe("접근성 실측", () => {
     // 홈에서 질문까지 네 걸음이 늘었다 — 그 길도 마우스 없이 지나야 한다
     await enterWizardByKeyboard(page, pressOn);
 
-    // 질문은 7개 고정이다. 개수를 여기서 다시 세지는 않고(그건 아래 전용 검사가 한다)
+    // 질문은 6개 고정이다. 개수를 여기서 다시 세지는 않고(그건 아래 전용 검사가 한다)
     // 마법사 화면이 남아 있는 동안만 답한다.
-    for (let q = 0; q < 7; q++) {
+    for (let q = 0; q < 6; q++) {
       if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
       /* 수량은 «− 1 +» 증감이라 고를 선택지가 없다. 화면에 1이 떠 있고 그것이 곧
          답이므로, 마우스 없이도 아무것도 고르지 않고 다음으로 갈 수 있어야 한다. */
@@ -76,14 +76,14 @@ test.describe("접근성 실측", () => {
   });
 
   /**
-   * 질문은 7개 고정이다 — 시스템이 먼저 끝내지 않는다.
+   * 질문은 6개 고정이다 — 시스템이 먼저 끝내지 않는다.
    *
    * 답이 충분해 보여도(추천 신뢰도가 높아도) 남은 질문을 생략하지 않는다.
    * confidence 가 재는 것은 "1위 메뉴가 더 안 바뀐다"이지 "남은 질문이 무의미하다"가
-   * 아니기 때문이다 — 이용방식·수량·컵은 답에 따라 실행계획이 실제로 달라진다.
+   * 아니기 때문이다 — 이용방식·수량은 답에 따라 실행계획이 실제로 달라진다.
    * 무엇을 주문할지는 사용자가 정한다.
    */
-  test("답이 충분해 보여도 7문항을 전부 묻는다", async ({ page }) => {
+  test("답이 충분해 보여도 6문항을 전부 묻는다", async ({ page }) => {
     await enterWizard(page);
 
     // 예전에 3문항 만에 종료되던 조합
@@ -102,15 +102,15 @@ test.describe("접근성 실측", () => {
     /* 4번째 질문(이용 방식)이 그대로 나와야 한다.
        «몇 번째 질문인가»는 .stepmeta 글자에서 진행 표시(.kb-steps.mini)로 옮겨 갔다.
        점만 찍는 표시라 눈에는 번호가 없지만, 색만으로 위치를 말하지 않도록 낭독기용
-       문장(.srline)이 «질문 4 / 7» 을 그대로 들고 있다 — 세는 자리가 거기로 바뀌었을 뿐
+       문장(.srline)이 «질문 4 / 6» 을 그대로 들고 있다 — 세는 자리가 거기로 바뀌었을 뿐
        재는 것은 같다. */
     await expect(page.locator("#qtitle")).toBeVisible();
     const qcount = page.locator(".kb-steps.mini .srline");
-    await expect(qcount).toContainText("질문 4 / 7");
+    await expect(qcount).toContainText("질문 4 / 6");
 
-    // 끝까지 답한다 — 총 7문항
-    for (let i = 4; i <= 7; i++) {
-      await expect(qcount).toContainText(`질문 ${i} / 7`);
+    // 끝까지 답한다 — 총 6문항
+    for (let i = 4; i <= 6; i++) {
+      await expect(qcount).toContainText(`질문 ${i} / 6`);
       await 아무거나답하고다음(page);
     }
 

@@ -32,11 +32,19 @@ const rulesPath = fileURLToPath(
  */
 const 확인한규칙: Record<string, { 처리: "제외" | "감점" | "계획이지킴"; 어디: string }> = {
   CHICKEN_ALLERGEN_HARD_CONSTRAINT: { 처리: "제외", 어디: "engine.ts filterCandidatesCore — 점수를 깎지 않고 후보에서 뺀다" },
-  CHICKEN_PRICE_LIMIT: { 처리: "제외", 어디: "engine.ts filterCandidatesCore — 예산 초과" },
+  /* 엔진은 이 규칙을 그대로 지킨다(BLOCK 이므로 감점으로 낮추지 않는다). 다만 **화면이
+     그 값을 만들지 않는다** — 예산 질문은 상한이 아니라 희망 금액을 묻고, 그 값은
+     hardConstraints 가 아니라 팀 확장(TEAM_23C.budget)으로 간다. 뜻이 다른 값을 이 자리에
+     두면 규칙이 우리 대신 «상한»으로 읽는다. canonical.ts 의 주석에 경위를 적어 두었다. */
+  CHICKEN_PRICE_LIMIT: { 처리: "제외", 어디: "engine.ts filterCandidatesCore — 값이 오면 뺀다(화면은 만들지 않는다)" },
   CHICKEN_SERVICE_TYPE_PREFERENCE: { 처리: "제외", 어디: "engine.ts:87 — 키트는 WARN 이지만 우리는 뺀다(못 하는 일을 권하지 않는다)" },
   CHICKEN_SPICY_LEVEL_PREFERENCE: { 처리: "감점", 어디: "engine.ts matchScore(spicy)" },
   CHICKEN_BONE_TYPE_PREFERENCE: { 처리: "감점", 어디: "engine.ts matchScore(bone) · 대체 시 SUBSTITUTED 표시 (RC5 추가)" },
-  CHICKEN_CUP_OPTION_PREFERENCE: { 처리: "감점", 어디: "engine.ts matchScore(cup) + 대체 안내 (RC5 추가)" },
+  /* 컵 질문을 뺐다(ui/src/model.ts QUESTIONS) — 화면에서 컵 선호를 말할 길이 없어
+     점수로 다룰 것도 없어졌다(engine.ts WEIGHTS 에서 제거). 코어는 여전히 이 필드를
+     읽을 수 있어(canonical.ts) CLI raw input 으로 들어오면 실행계획이 존중하고,
+     못 맞추면 대체를 밝힌다. 그래서 «감점»이 아니라 «계획이지킴»이다. */
+  CHICKEN_CUP_OPTION_PREFERENCE: { 처리: "계획이지킴", 어디: "plan.ts 옵션 선택 + 대체 안내 — 화면은 묻지 않는다" },
   CHICKEN_SELECTED_SERVICE_TYPE: { 처리: "계획이지킴", 어디: "plan.ts select_service" },
   CHICKEN_SELECTED_SPICY_LEVEL: { 처리: "계획이지킴", 어디: "plan.ts 옵션 선택" },
   CHICKEN_SELECTED_BONE_TYPE: { 처리: "계획이지킴", 어디: "plan.ts 옵션 선택" },

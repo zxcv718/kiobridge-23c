@@ -54,8 +54,8 @@ export function useFlowState() {
   /**
    * 알레르기 질문의 둘째 걸음(항목 목록)에 들어와 있는가 — 디자인 S06 기본/확장.
    *
-   * 질문 자체는 하나다(QUESTIONS 7개는 그대로). 나뉘는 것은 묻는 방법뿐이라 질문
-   * 번호가 아니라 별도 상태로 둔다 — qIndex 를 늘리면 «질문 7개 고정»이 8개가 되고,
+   * 질문 자체는 하나다(QUESTIONS 6개는 그대로). 나뉘는 것은 묻는 방법뿐이라 질문
+   * 번호가 아니라 별도 상태로 둔다 — qIndex 를 늘리면 «질문 6개 고정»이 7개가 되고,
    * 진행 표시·저장본 되살리기·조건 수정이 전부 어긋난다.
    */
   const [allergyOpen, setAllergyOpen] = useState(false);
@@ -158,7 +158,7 @@ export function useFlowState() {
   const askTotal = askIdx.length;
   const askPos = Math.max(0, askIdx.indexOf(qIndex));
 
-  /** 답변 확정 후 다음 질문으로. 질문은 7개 고정이므로 시스템이 먼저 끝내지 않는다. */
+  /** 답변 확정 후 다음 질문으로. 질문은 6개 고정이므로 시스템이 먼저 끝내지 않는다. */
   const advance = () => {
     setAllergyOpen(false);   // 다음 질문으로 갈 때 알레르기는 늘 «있으신가요?»부터 다시
     const n = nextToAsk(qIndex + 1);
@@ -178,7 +178,7 @@ export function useFlowState() {
     const loaded = QUESTIONS.map((qq) => qq.key).filter((k) => next[k] !== undefined);
     const start = nextToAsk(0, loaded);
     if (start >= QUESTIONS.length) {
-      // 저장본에 7문항이 다 있어 더 여쭤볼 것이 없다 = 지난번 주문을 그대로 되살리는 경우다
+      // 저장본에 6문항이 다 있어 더 여쭤볼 것이 없다 = 지난번 주문을 그대로 되살리는 경우다
       const u = computeRecommendation(buildRawInput(next, saved.a11y, true, true, touchedA11y), fixture, new Date());
       /* 지난번에 직접 고른 메뉴를 되살린다.
        * 답변만 재현하면 엔진이 다시 1위를 뽑으므로, 대안을 골랐던 경우 지난번과 달라진다.
@@ -332,7 +332,7 @@ export function useFlowState() {
     }
   };
 
-  /* 저장본에 7문항이 다 들어 있으면 되살리는 순간 더 여쭤볼 것이 없다 = 지난번 주문 그대로다.
+  /* 저장본에 6문항이 다 들어 있으면 되살리는 순간 더 여쭤볼 것이 없다 = 지난번 주문 그대로다.
      저장해 둔 플래그가 아니라 **실제로 들어 있는 답변**을 보고 판단한다 — 옛 형식에서 옮겨온
      부분 저장본이라면 남은 질문을 다시 여쭤봐야 하고, 문구도 그에 맞아야 한다. */
   const savedCoversAll = !!saved && QUESTIONS.every((qq) => saved.answers[qq.key] !== undefined);

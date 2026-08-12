@@ -91,3 +91,30 @@
 
 /* 입력이 비었을 때처럼, 사용자가 바로 고칠 수 있는 것 */
 .qr-error { margin: 8px 0 0; font-weight: 700; color: var(--danger); }
+
+/* ───────── 「화면 안내」가 이 화면에서 가리키는 곳 ─────────
+ *
+ * 대상은 상태에 따라 다르다 — 카메라가 살아 있으면 창, 막혔으면 직접 입력 칸.
+ * 자리를 고르는 것은 QrConnect.tsx 이고(.kb-guide 를 어디에 붙이는지), 여기서는 그
+ * 자리에 고리가 **물건과 나란히** 돌게만 맞춘다.
+ *
+ * 모서리를 맞추는 이유: box-shadow 의 spread 는 모서리를 «요소 반경 + spread» 로
+ * 그린다. 반경이 다르면 직선에서 4px 이던 여백이 모서리에서 좁아져, 굵기가 일정한데도
+ * 틀이 모서리에서만 두꺼워 보인다. */
+.app.guide .qr-view.kb-guide {
+  --guide-radius: var(--kb-radius-lg); /* 창 자신의 모서리 */
+  /* 창은 영상 모서리를 다듬으려고 overflow: hidden 을 쓰는데, 그것이 창 **위**에 서는
+     화살표까지 같이 잘라낸다. 자르는 일을 영상 쪽으로 옮긴다 — 영상은 replaced 요소라
+     제 border-radius 로 스스로 잘린다. 1px 을 빼는 것은 창 테두리 안쪽에 맞추기 위해서다. */
+  overflow: visible;
+}
+.app.guide .qr-view.kb-guide .qr-cam { border-radius: calc(var(--kb-radius-lg) - 1px); }
+
+/* 입력칸을 가리킬 때는 고리를 **칸에** 두른다. 라벨 상자에 두르면 위의 설명 한 줄까지
+   함께 묶여, 가리키는 것이 «칸»이 아니라 «문단»이 된다. 화살표는 라벨이 쥔다 —
+   input 은 대체 요소라 ::before 를 못 그린다. */
+.app.guide .field.kb-guide { box-shadow: none; }
+.app.guide .field.kb-guide input {
+  border-radius: 10px; /* .field input 과 같은 값 — 고리가 칸과 나란히 돈다 */
+  box-shadow: 0 0 0 4px var(--bg), 0 0 0 var(--guide-ring) var(--brand-strong);
+}

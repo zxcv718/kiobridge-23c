@@ -105,7 +105,11 @@ export interface Question {
   options: { value: string | number; label: string; sub?: string; icon?: string }[];
 }
 
-/* 질문 순서 = 화면목록 S06~S10 (알레르기 → 맵기 → 뼈 → 포장 → 수량), 그 뒤 컵·예산.
+/* 질문 순서 = 화면목록 S06~S10 (알레르기 → 맵기 → 뼈 → 포장 → 수량), 그 뒤 예산.
+ *
+ * **질문은 6개다.** 컵은 7번째였다가 뺐다 — 안 물어도 사용자가 잃는 것이 없는 유일한
+ * 축이었기 때문이다(액션 자체가 안 만들어져 «우리가 대신 정하는» 값이 없다).
+ * 경위는 core/ask.ts 머리주석에 적어 두었다. 배점도 같이 옮겼다(core/engine.ts WEIGHTS).
  *
  * 알레르기가 맨 앞인 것은 편의가 아니라 **안전 요건**이다. 알레르기를 뒤에 두면
  * 그 질문에 닿기 전에 흐름이 끊길 여지가 생기고, 그때 allergenIds 는 UNKNOWN 이
@@ -129,7 +133,7 @@ export const QUESTIONS: Question[] = [
   /* ↑ 위 목록은 **저장된 답을 되살리고 조건을 수정하는 화면**이 쓴다. 질문 화면은 이것을
      그대로 그리지 않고 아래 두 걸음으로 나눠 묻는다(디자인 S06 기본 99:1228 / 확장 99:1246).
      한 벌로 두는 이유: 답이 담기는 자리(answers.allergies)는 하나뿐이고, 질문 개수도
-     7개 그대로여야 한다. 나뉘는 것은 «묻는 방법»이지 «답의 모양»이 아니다. */
+     6개 그대로여야 한다. 나뉘는 것은 «묻는 방법»이지 «답의 모양»이 아니다. */
   // 정도(degree)라 그림을 두지 않는다 — 순한→보통→매운은 글자가 이미 순서로 말한다
   /* 시안 99:1264 의 제목 그대로다 — 「맵기」 28px + 「는 어떻게 해드릴까요?」 22px. */
   { key: "spicyLevel", title: "맵기는 어떻게 해드릴까요?", options: [
@@ -137,27 +141,41 @@ export const QUESTIONS: Question[] = [
   /* 제목과 순서 모두 시안 그대로다(99:1270 · 99:1281).
      타일 두 장은 좌우 위치가 곧 그 선택지의 자리라, 순서가 뒤집히면 시안을 본 사람이
      기억한 자리와 어긋난다. 둘 다 반대로 두고 있었고 제목도 우리가 지어 쓴 문장이었다. */
+  /* 「상관없어요」를 두지 않는다 — 시안에 없는 우리 선택지였고, 타일 두 장 옆에 붙으면
+     시안이 만든 «둘 중 하나»가 셋 중 하나로 흐려진다. 맵기와 예산에는 남긴다: 맵기는
+     정도(degree)라 «어느 쪽도 아님»이 실제 답이 되고, 예산의 「없어요」는 양보가 아니라
+     «상한이 없다»는 사실이다. 뼈냐 순살이냐는 그 둘 중 어느 쪽도 아니다. */
   { key: "boneType", title: "뼈 있는 것과 없는 것 중 어떤 걸 드시나요?", options: [
-    { value: "뼈", label: "뼈" }, { value: "순살", label: "순살" }, { value: "상관없음", label: "상관없어요" } ] },
+    { value: "뼈", label: "뼈" }, { value: "순살", label: "순살" } ] },
   { key: "serviceType", title: "드시고 가나요, 포장하나요?", options: [
-    { value: "매장", label: "먹고 가기" }, { value: "포장", label: "포장하기" }, { value: "상관없음", label: "상관없어요" } ] },
+    { value: "매장", label: "먹고 가기" }, { value: "포장", label: "포장하기" } ] },
   /* 수량은 선택지가 아니라 «− 1 +» 증감으로 묻는다 (디자인 S10 99:1292). 계약이
      `integer, minimum 1` 이라 상한이 없는데 버튼 셋으로 두면 화면이 계약을 좁힌다.
      아래 options 는 남겨 둔다 — 「1개」 같은 라벨과 시연 프리셋이 참조한다. */
   { key: "quantity", title: "얼마나 드실 건가요?", options: [
     { value: 1, label: "1개" }, { value: 2, label: "2개" }, { value: 3, label: "3개" } ] },
-  { key: "cupOption", title: "컵이 필요하세요?", hint: "메뉴에 따라 선택할 수 있는 컵이 다릅니다.", options: [
-    { value: "종이컵", label: "종이컵", icon: "🥤" }, { value: "일반컵", label: "일반컵", icon: "🥛" },
-    { value: "없음", label: "필요 없어요", icon: "🚫" }, { value: "상관없음", label: "상관없어요" } ] },
-  /* 5,000원이 있어야 하는 이유: 이 가게의 최저가가 5,500원(매운 뼈 닭강정)이다.
-   * 선택지가 6,000원부터 시작하면 «조건에 맞는 메뉴가 없습니다»가 **어떤 답변으로도
-   * 일어나지 않는다.** 그 화면과 엔진 경로는 이미 다 만들어 두었는데 사용자만 못 갔다.
-   * 5,000원 들고 온 사람에게 «그 예산으로는 없습니다, 조건을 고쳐 보시겠어요»라고
-   * 말하는 것은 이 서비스가 마땅히 해야 할 일이다.
-   * (계약도 이 상태를 이미 모델링한다 — recommendation.schema.json 의
-   *  recommendedCandidateId 는 ["string", "null"] 이다.) */
-  { key: "budgetKrw", title: "예산 상한이 있으세요?", options: [
-    { value: "없음", label: "없어요" }, { value: 5000, label: "5,000원" }, { value: 6000, label: "6,000원" }, { value: 7000, label: "7,000원" }, { value: 10000, label: "10,000원" } ] },
+  /* **상한이 아니라 희망 금액을 묻는다.** 넘는다고 빼지 않고, 말한 금액에 가장 가까운
+   * 것을 위로 올린다(core/engine.ts budgetKrw). 조건이 조금 안 맞아도 «없습니다»라고
+   * 답하는 대신 가장 가까운 것을 권하는 것이 이 질문이 바뀐 이유다.
+   *
+   * 그래서 5,000원의 뜻도 바뀌었다. 한때 이 선택지는 «조건에 맞는 메뉴가 없습니다»에
+   * 닿는 유일한 길이었다(이 가게 최저가가 5,500원이라 그 아래는 아무것도 안 남았다).
+   * 이제는 최저가인 5,500원짜리를 맨 위로 올리는 답이다 — 싼 것을 찾는 사람의 답으로
+   * 여전히 뜻이 있어 남긴다.
+   *
+   * «후보 0개» 상태 자체는 없어지지 않았다. 계약이 그 상태를 모델링하고
+   * (recommendation.schema.json 의 recommendedCandidateId 는 ["string", "null"]),
+   * hardConstraints.maxPriceKrw 가 들어오면 엔진은 여전히 BLOCK 규칙대로 뺀다.
+   * 화면이 그 값을 만들지 않게 됐을 뿐이다(core/canonical.ts). */
+  /* 첫 선택지의 라벨은 「상관없어요」다. 질문이 「예산 상한이 있으세요?」였을 때는
+     「없어요」가 «상한이 없다»로 읽혔지만, 「예산은 얼마인가요?」에 「없어요」로 답하면
+     «금액이 없다»가 된다 — 돈이 없다는 뜻으로 읽힐 수 있는 자리에 그 말을 두지 않는다.
+     맵기와 같은 말을 쓰는 것이 뜻에도 맞는다: 고르지 않겠다는 답이다.
+
+     **값(value)은 "없음" 그대로 둔다.** 옛 저장본이 그 값을 들고 있고, buildRawInput 이
+     그것을 보고 예산을 안 보낸다. 화면 글자만 바꾸는 것이지 데이터를 바꾸는 것이 아니다. */
+  { key: "budgetKrw", title: "예산은 얼마인가요?", options: [
+    { value: "없음", label: "상관없어요" }, { value: 5000, label: "5,000원" }, { value: 6000, label: "6,000원" }, { value: 7000, label: "7,000원" }, { value: 10000, label: "10,000원" } ] },
 ];
 
 /* ───────── 알레르기를 두 걸음으로 묻는다 (디자인 S06) ─────────
@@ -207,7 +225,7 @@ export const ALLERGY_ITEMS = ["땅콩", "콩", "우유", "계란", "밀", "새�
 
 export const EDIT_LABELS: Record<string, string> = {
   serviceType: "이용 방식", spicyLevel: "맵기", boneType: "형태",
-  quantity: "수량", cupOption: "컵", allergies: "알레르기", budgetKrw: "예산",
+  quantity: "수량", allergies: "알레르기", budgetKrw: "예산",
 };
 
 /** 요약 행에 보여줄 현재 값 (답변은 이미 한국어 라벨/숫자로 저장돼 있다) */
@@ -218,7 +236,8 @@ export function answerLabel(key: string, v: unknown): string {
     return a.length === 0 || a[0] === "없음" ? "없음" : a.join("·");
   }
   if (key === "quantity") return `${v}개`;
-  if (key === "budgetKrw") return v === "없음" ? "없음" : `${Number(v).toLocaleString()}원`;
+  // 고른 선택지의 라벨과 같은 말로 보여준다 — 요약이 «없음»이면 고른 적 없는 말이 뜬다
+  if (key === "budgetKrw") return v === "없음" ? "상관없어요" : `${Number(v).toLocaleString()}원`;
   if (v === "매장") return "먹고 가기";
   return String(v);
 }
@@ -238,27 +257,27 @@ export interface Preset {
 export const PRESETS: Preset[] = [
   {
     id: "p-normal", title: "박순자 · 견과류 알레르기 · 포장", shows: "정상 추천",
-    answers: { serviceType: "포장", spicyLevel: "매운맛", boneType: "순살", quantity: 1, cupOption: "종이컵", allergies: ["땅콩"], budgetKrw: 7000 },
+    answers: { serviceType: "포장", spicyLevel: "매운맛", boneType: "순살", quantity: 1, allergies: ["땅콩"], budgetKrw: 7000 },
     a11y: { largeText: true, simpleSteps: true },
   },
   {
     id: "p-context", title: "같은 사람 · 이용 방식 미정 · 점심 붐빔", shows: "상황에 따라 순서가 달라짐",
-    answers: { serviceType: "상관없음", spicyLevel: "매운맛", boneType: "순살", quantity: 1, cupOption: "상관없음", allergies: ["땅콩"], budgetKrw: 7000 },
+    answers: { serviceType: "상관없음", spicyLevel: "매운맛", boneType: "순살", quantity: 1, allergies: ["땅콩"], budgetKrw: 7000 },
     a11y: { largeText: true, simpleSteps: true }, hour: 12,
   },
   {
     id: "p-a11y", title: "김영호 · 저시력 · 그림과 큰 글씨", shows: "다른 접근성 요구",
-    answers: { serviceType: "매장", spicyLevel: "순한맛", boneType: "순살", quantity: 2, cupOption: "일반컵", allergies: ["없음"], budgetKrw: "없음" },
+    answers: { serviceType: "매장", spicyLevel: "순한맛", boneType: "순살", quantity: 2, allergies: ["없음"], budgetKrw: "없음" },
     a11y: { largeText: true, highContrast: true, visualGuidance: true, mobilitySupport: true },
   },
   {
     id: "p-unknown", title: "알레르기를 모르는 경우", shows: "안전 중단 — 승인 차단",
-    answers: { serviceType: "포장", spicyLevel: "상관없음", boneType: "상관없음", quantity: 1, cupOption: "상관없음", allergies: ["모름"], budgetKrw: "없음" },
+    answers: { serviceType: "포장", spicyLevel: "상관없음", boneType: "상관없음", quantity: 1, allergies: ["모름"], budgetKrw: "없음" },
     a11y: { largeText: true, staffAssistancePreferred: true },
   },
   {
-    id: "p-empty", title: "예산 5,000원 · 매운맛 · 순살", shows: "조건에 맞는 메뉴 없음",
-    answers: { serviceType: "포장", spicyLevel: "매운맛", boneType: "순살", quantity: 1, cupOption: "상관없음", allergies: ["없음"], budgetKrw: 5000 },
+    id: "p-budget", title: "예산 5,000원 · 매운맛 · 순살", shows: "희망 금액에 가장 가까운 메뉴",
+    answers: { serviceType: "포장", spicyLevel: "매운맛", boneType: "순살", quantity: 1, allergies: ["없음"], budgetKrw: 5000 },
   },
 ];
 
@@ -329,7 +348,8 @@ export function buildRawInput(
     serviceType: a.serviceType,
     spicyLevel: a.spicyLevel,
     boneType: a.boneType,
-    cupOption: a.cupOption,
+    /* cupOption 은 화면이 만들지 않는다 — 컵 질문을 뺐다. 코어(canonical.ts)는 여전히
+       이 필드를 읽을 수 있고 CLI raw input 으로 들어오면 실행계획이 존중한다. */
     quantity: a.quantity,
     allergies: (a.allergies as unknown[] | undefined) === undefined ? undefined : allergies,
     budgetKrw: a.budgetKrw === "없음" ? undefined : a.budgetKrw,

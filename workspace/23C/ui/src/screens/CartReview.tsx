@@ -59,7 +59,12 @@ export function josa(word: string, withJong: string, withoutJong: string): strin
   return (last.charCodeAt(0) - 0xac00) % 28 === 0 ? withoutJong : withJong;
 }
 
-/** 디자인의 «주문 방식» 절에 들어가는 그룹. 나머지는 카드의 «옵션:» 줄이 맡는다. */
+/** 디자인의 «주문 방식» 절에 들어가는 그룹. 나머지는 카드의 «옵션:» 줄이 맡는다.
+ *
+ * CUP 을 지우지 않는다 — 화면은 이제 컵을 묻지 않아(질문 6개) UI 흐름의 실행계획에는
+ * CUP 액션이 실리지 않지만, 계약은 CUP 을 유지한다(core/plan.ts — CLI raw input 의
+ * cupOption 을 존중한다). 이 화면은 계획을 읽는 쪽이므로, 계획에 있을 수 있는 값을
+ * 읽는 능력도 같이 남긴다. */
 const WAY_GROUPS = new Set(["SERVICE_TYPE", "CUP"]);
 
 /** 시안(114:2117)의 주문 방식 문장 — 값이 곧 문장이 된다. 표에 없는 값은 이름만 적는다. */

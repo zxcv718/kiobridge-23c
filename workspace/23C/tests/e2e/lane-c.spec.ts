@@ -4,7 +4,7 @@
  * 실행: npx playwright test -c workspace/23C/tests/e2e/playwright.config.ts lane-c
  * 전제: 데모 UI 가 http://localhost:5173 에 떠 있어야 한다.
  *
- * verify-b.spec.ts 가 «흐름»(질문 7개 고정·첫 질문 알레르기·상관없어요)을 지키고,
+ * verify-b.spec.ts 가 «흐름»(질문 6개 고정·첫 질문 알레르기·상관없어요)을 지키고,
  * 여기서는 그 흐름 위에 얹은 **디자인 반영이 접근성 계약을 깨지 않았는지**를 본다.
  * 두 가지가 대상이다.
  *
@@ -169,10 +169,10 @@ test.describe("레인 C — 질문 화면", () => {
     expect(await iconOf(page, 2)).toMatch(/takeout[-.\w]*\.svg/);
   });
 
-  test("C-L5 7문항 어디에도 글자 없는 선택지가 없다", async ({ page }) => {
+  test("C-L5 6문항 어디에도 글자 없는 선택지가 없다", async ({ page }) => {
     await openWizard(page, { visualGuidance: true });
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 6; i++) {
       await expect(page.locator("#qtitle")).toBeVisible();
 
       /* 수량은 선택지가 아니라 «− 1 +» 증감이다(디자인 S10). 고를 것이 없으니 라벨을
@@ -224,7 +224,7 @@ test.describe("레인 C — 질문 화면", () => {
 
   test("C-L8 계산 화면에도 진행 표시가 남는다", async ({ page }) => {
     await openWizard(page);
-    for (let i = 0; i < 7; i++) await pick(page, 1);
+    for (let i = 0; i < 6; i++) await pick(page, 1);
 
     // 결과는 이미 계산돼 있고 화면만 거친다 — 짧게 지나가므로 바로 잡는다
     await expect(page.locator(".calcspin")).toBeVisible();
@@ -272,7 +272,7 @@ test.describe("레인 C — 움직임 줄이기", () => {
     const reduced = await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
     expect(reduced, "브라우저에 «움직임 줄이기»가 걸리지 않았습니다").toBe(true);
 
-    for (let i = 0; i < 7; i++) await pick(page, 1);
+    for (let i = 0; i < 6; i++) await pick(page, 1);
 
     // 도는 표시를 멈추는 데서 그치지 않고 지연 자체를 없앤다.
     // 기다리면 어차피 사라지므로 마지막 답 직후 그 자리에서 잰다(재시도 없는 count).

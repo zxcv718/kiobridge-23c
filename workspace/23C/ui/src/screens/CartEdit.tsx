@@ -17,7 +17,7 @@ import "./profile.css"; // .p-edit — 요약 행의 주황 «수정» 링크 (�
  * 동일함»). 다 고치면 «수정 완료»가 재계산해 메뉴 확인으로 보낸다.
  *
  * **기획 목업에 없는 항목을 지우지는 못한다.** 알레르기(재확인 경로의 입구), 예산
- * («조건에 맞는 메뉴가 없어요»의 유일한 탈출로), 맵기·컵, 그리고 화면 보기 방식
+ * (조건이 안 맞을 때의 주된 조정 축), 맵기, 그리고 화면 보기 방식
  * (글씨가 안 보여 멈춘 사람의 입구)이 그것이다. 지우는 대신 «다른 항목 수정»으로
  * 접는다(FIGMA_RULES §2.1) — 기본 화면은 기획 그대로 네 행이고, 필요한 사람은 한 번
  * 눌러 닿는다. 저장된 내용 수정(홈)과 재확인·조건 없음 경로에서는 **저절로 펴진다** —
@@ -34,7 +34,7 @@ const PRIMARY: { key: "boneType" | "quantity" | "serviceType"; label: string }[]
 ];
 
 /** 기획 목업에 없어 «다른 항목 수정»으로 접는 항목들 — 위 파일머리 주석의 이유로 못 지운다. */
-const EXTRA_KEYS = ["allergies", "spicyLevel", "cupOption", "budgetKrw"] as const;
+const EXTRA_KEYS = ["allergies", "spicyLevel", "budgetKrw"] as const;
 
 /** 화면 보기 방식 세 줄 — 디자인의 SummaryCard(185:209) 행과 같은 순서다. */
 const VIEW_ROWS: {
@@ -53,7 +53,7 @@ export function CartEdit() {
   } = useFlow();
 
   /* 접힘의 초기 상태 — 세 경우에 저절로 펴진다:
-     ① 저장본 수정(추천 없음): 일곱 항목이 전부 보여야 한다(무로그인 가이드 4번의 «수정»)
+     ① 저장본 수정(추천 없음): 여섯 항목이 전부 보여야 한다(무로그인 가이드 4번의 «수정»)
      ② 조건에 맞는 메뉴 없음: 빠져나가려면 대개 예산을 고쳐야 한다 — 접혀 있으면 막다른 길
      ③ 재확인 경로: openEdit 가 알레르기 행을 편 채로 보낸다 */
   const [extraOpen, setExtraOpen] = useState<boolean>(

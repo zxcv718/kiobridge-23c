@@ -136,3 +136,53 @@ describe("STEP 7 alternatives — 제외 후보를 되살리지 않는다", () =
     }
   });
 });
+
+/**
+ * 사용자에게 나가는 문장에 **영문 enum 이 섞이지 않는가.**
+ *
+ * 실제로 한 번 샜다 — 추천 화면의 「선호하신 맵기(MILD)와 다른 맵기입니다」. 바로 아래
+ * 추천 사유는 SPICY_KO 로 「순한맛을 선호하셔서…」라고 제대로 말하고 있었으니, 한 화면에서
+ * 같은 값이 두 언어로 나란히 떴다. 문장을 하나씩 눈으로 보고 잡을 수 있는 종류가 아니라
+ * (조합마다 다른 문장이 나온다) 여기서 전수로 훑는다.
+ *
+ * 두 글자 이상 이어진 대문자를 찾는다. 계약 enum 은 전부 그 꼴이고(MILD·BONELESS·
+ * TAKE_OUT·PEANUT…), 우리 문장은 한국어와 숫자뿐이라 거짓 경보가 나지 않는다.
+ * 새 문장에 약어를 정말 써야 하면 그때 이 검사가 먼저 걸리고, 사람이 판단해 적으면 된다.
+ */
+describe("화면에 나가는 문장", () => {
+  const 조합: Partial<EngineContext["preferences"]>[] = [
+    {}, { spicyLevel: "MILD" }, { spicyLevel: "HOT" }, { boneType: "BONE" }, { boneType: "BONELESS" },
+    { spicyLevel: "MILD", boneType: "BONE" }, { serviceType: "DINE_IN" }, { serviceType: "TAKE_OUT" },
+    { spicyLevel: "MEDIUM", boneType: "BONE", serviceType: "DINE_IN" },
+  ];
+
+  it("영문 enum 이 그대로 나오지 않는다", () => {
+    const 샌곳: string[] = [];
+    let 본문장 = 0;
+    let 못맞춘조건 = 0;
+    for (const prefs of 조합) {
+      for (const 알레르기 of [[], ["PEANUT"], ["SOY", "PEANUT"]]) {
+        const c: EngineContext = { preferences: { quantity: 1, ...prefs }, hardConstraints: { allergenIds: 알레르기 } };
+        const rec = buildRecommendation(fx.candidates, c);
+        // 계약상 옵셔널이라 없을 수 있다 — 없는 것과 빈 것을 같게 다룬다
+        const 못맞춘 = rec.unmetConditions ?? [];
+        못맞춘조건 += 못맞춘.length;
+        const 문장 = [
+          ...못맞춘,
+          ...explainCore(rec, c),
+          // explanation 도 계약상 옵셔널이다 — 있는 것만 훑는다
+          ...rec.excludedCandidates.map((e) => e.explanation).filter((s): s is string => s !== undefined),
+        ];
+        본문장 += 문장.length;
+        for (const s of 문장) if (/[A-Z]{2,}/.test(s)) 샌곳.push(`${JSON.stringify(prefs)} → ${s}`);
+      }
+    }
+    /* 문장을 하나도 안 만들고 통과하면 이 검사는 아무것도 지키지 않는다. 특히 실제로
+       샜던 자리가 unmetConditions 라, 그 문장이 이 조합들에서 실제로 나오는지까지 본다. */
+    expect(본문장, "문장을 하나도 못 모았습니다 — 이 검사가 공짜로 통과하고 있습니다")
+      .toBeGreaterThan(20);
+    expect(못맞춘조건, "«못 맞춘 조건» 문장이 한 번도 안 나왔습니다 — 실제로 샜던 자리가 여깁니다")
+      .toBeGreaterThan(0);
+    expect(샌곳, `영문 enum 이 섞인 문장:\n${샌곳.join("\n")}`).toEqual([]);
+  });
+});
