@@ -35,6 +35,9 @@ async function pressOn(page: Page, name: RegExp | string): Promise<void> {
 test.describe("접근성 실측", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("http://localhost:5173/");
+    /* 연동 관문이 홈보다 앞에 선다(기획 2026-08-12) — 관문도 키보드만으로 지날 수
+       있어야 하므로 마우스 없이 지나서 홈에 선다. */
+    await pressOn(page, /^QR 없이 계속하기$/);
     await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요|다시 오셨네요/ })).toBeVisible();
   });
 
@@ -57,21 +60,18 @@ test.describe("접근성 실측", () => {
       await pressOn(page, /다음|추천 보기/);
     }
 
-    /* 화면 제목은 h2(.kb-title) 하나뿐이다 — 본문 소제목(h3.q-sechead «이런 메뉴는
-       제외했어요»)까지 걸리지 않도록 단계를 지정한다. «없습니다»는 화면에 없는 문구라
-       실제 문구(«조건에 맞는 메뉴가 없어요»)로 맞춘다. */
-    await expect(page.getByRole("heading", { level: 2, name: /이런 메뉴는 어떠세요|조건에 맞는 메뉴가 없어요/ }))
+    /* 화면 제목은 h2(.kb-title) 하나뿐이다 — 본문 소제목까지 걸리지 않도록 단계를
+       지정한다. «없습니다»는 화면에 없는 문구라 실제 문구(«조건에 맞는 메뉴가
+       없어요»)로 맞춘다. 추천·메뉴 확인은 «메뉴 확인» 한 화면으로 합쳐졌다. */
+    await expect(page.getByRole("heading", { level: 2, name: /이 메뉴를 선택하시겠어요|조건에 맞는 메뉴가 없어요/ }))
       .toBeVisible();
 
-    // 추천이 나왔으면 최종 확인까지 간다
-    const approve = page.getByRole("button", { name: "네, 좋아요" });
+    // 추천이 나왔으면 최종 확인까지 간다 — 여기도 마우스 없이 지나야 한다
+    const approve = page.getByRole("button", { name: "선택하기", exact: true });
     if (await approve.isVisible()) {
       await approve.focus();
       await page.keyboard.press("Enter");
-      // 메뉴 확인이 한 걸음 들어간다 — 여기도 마우스 없이 지나야 한다
-      await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
-      await pressOn(page, /^이대로 담기$/);
-      await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+      await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
     }
   });
 
@@ -100,12 +100,12 @@ test.describe("접근성 실측", () => {
     await page.getByRole("button", { name: /다음/ }).click();
 
     /* 4번째 질문(이용 방식)이 그대로 나와야 한다.
-       «몇 번째 질문인가»는 .stepmeta 글자에서 진행 표시(.kb-steps.mini)로 옮겨 갔다.
-       점만 찍는 표시라 눈에는 번호가 없지만, 색만으로 위치를 말하지 않도록 낭독기용
-       문장(.srline)이 «질문 4 / 6» 을 그대로 들고 있다 — 세는 자리가 거기로 바뀌었을 뿐
-       재는 것은 같다. */
+       위쪽 단계 점은 걷혔다(기획 2026-08-12) — 진행 표시는 개인 설정(온보딩 5걸음)
+       까지만 쓴다. 다만 «몇 번째 질문인가»는 질문 화면의 낭독기 전용 문장(.q-progress)이
+       그대로 들고 있다 — 세는 자리가 바뀌었을 뿐 재는 것은 같다. */
     await expect(page.locator("#qtitle")).toBeVisible();
-    const qcount = page.locator(".kb-steps.mini .srline");
+    await expect(page.locator(".kb-steps")).toHaveCount(0); // 점이 되살아나면 여기서 걸린다
+    const qcount = page.locator(".q-progress");
     await expect(qcount).toContainText("질문 4 / 6");
 
     // 끝까지 답한다 — 총 6문항
@@ -157,10 +157,11 @@ test.describe("접근성 실측", () => {
   test("상태를 색이 아니라 글자로도 알 수 있다", async ({ page }) => {
     await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
     /* 설정 목록은 프로필 3/3 의 «자세한 설정» 안으로 옮겨 갔다 — 걸음마다 붙여 두면
-       고를 것 두 장 아래로 목록이 늘 따라붙어 화면이 무너지기 때문이다. 옮겨졌을 뿐
-       접혀 있지도 사라지지도 않았으므로, 그 자리까지 가서 같은 것을 잰다. */
+       고를 것 두 장 아래로 목록이 늘 따라붙어 화면이 무너지기 때문이다. 기본은
+       접힘이므로(기획 2026-08-12) 그 자리까지 가서 펼친 뒤 같은 것을 잰다. */
     for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
     await expect(page.getByRole("heading", { name: "필요한 안내 방식을 선택해주세요" })).toBeVisible();
+    await page.locator("details.p-more > summary").click();
 
     // 각 설정 행이 켬/끔을 글자로 표시한다
     const states = await page.locator(".astate").allInnerTexts();

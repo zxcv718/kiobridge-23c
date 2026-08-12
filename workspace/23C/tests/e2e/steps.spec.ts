@@ -33,7 +33,8 @@ test("단계 이름이 잘리지 않는다 — 그리고 문서가 가로로 밀
   await openHome(page);
   /* 양끝 라벨은 점 중심에 맞추느라 상자 밖으로 나간다. 자르면 「세션 시작」이 「세션 시」가
      되고(실제로 그렇게 났다), 안 자르면 화면이 가로로 밀릴 수 있다. 둘 다 아니어야 한다. */
-  for (const 이름 of ["홈", "프로필 생성", "저장 방식", "QR 연동", "세션 시작"]) {
+  // QR 연동은 흐름의 1걸음이다(기획 확정 2026-08-12) — 라벨 다섯이 전부 있어야 한다
+  for (const 이름 of ["QR 연동", "홈", "프로필 생성", "저장 방식", "세션 시작"]) {
     const 잘렸나 = await page.locator(".kb-steplabel", { hasText: 이름 }).first()
       .evaluate((el) => el.scrollWidth > el.clientWidth + 1);
     expect(잘렸나, `단계 이름 «${이름}»이 잘려 있습니다`).toBe(false);
@@ -66,7 +67,7 @@ test("마지막 점은 오른쪽 선에 붙는다 — 사이 간격이 고르다
 
   const cta = (await page.locator(".kb-actions .btn").boundingBox())!;
   const 반지름 = (await page.locator(".kb-dot").first().boundingBox())!.width / 2;
-  expect(Math.round(중심[4] + 반지름), "마지막 점이 오른쪽 선에 붙지 않았습니다")
+  expect(Math.round(중심[중심.length - 1] + 반지름), "마지막 점이 오른쪽 선에 붙지 않았습니다")
     .toBe(Math.round(cta.x + cta.width));
 
   const 간격 = 중심.slice(1).map((c, i) => c - 중심[i]);

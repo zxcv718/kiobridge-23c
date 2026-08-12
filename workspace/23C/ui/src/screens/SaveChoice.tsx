@@ -37,13 +37,14 @@ export function SaveChoice() {
     ),
   });
 
-  /** 저장 방식을 정하고 그대로 다음 화면으로 — 결정과 이동이 같은 버튼이다. */
-  const choose = (store: boolean) => { setStoreIntent(store); setStep("qr"); };
+  /** 저장 방식을 정하고 그대로 다음 화면으로 — 결정과 이동이 같은 버튼이다.
+   *  QR 걸음(S04)은 기획(2026-08-12)으로 흐름에서 빠져 다음은 곧장 세션 시작이다. */
+  const choose = (store: boolean) => { setStoreIntent(store); setStep("sessionStart"); };
 
   return (
     <Screen
       onBack={() => setStep("profile")}
-      steps={{ labels: FLOW_STEPS, current: 3 }}
+      steps={{ labels: FLOW_STEPS, current: 4 }}
       label="저장 방식"
       /* 제목·부제·버튼 문구 전부 시안 그대로다 (150:301 · 150:302 · 208:754/756).
          부제 색도 시안을 따른다 — 이 화면만 secondary 가 아니라 tertiary 다. */

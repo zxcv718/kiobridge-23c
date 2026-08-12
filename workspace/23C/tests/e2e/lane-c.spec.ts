@@ -40,6 +40,7 @@ const openWizard = async (page: Page, a11y: Record<string, boolean> = {}) => {
     }));
   }, a11y);
   await page.reload();
+  await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 홈으로
   await page.getByRole("button", { name: /이전 화면 설정 사용|지난번과 똑같이 주문하기/ }).click();
   await expect(page.locator("#qtitle")).toBeVisible();
 };
@@ -144,12 +145,13 @@ test.describe("레인 C — 질문 화면", () => {
         n: e.querySelectorAll(".kb-marks img").length,
         srcs: [...e.querySelectorAll(".kb-marks img")].map((i) => (i as HTMLImageElement).src),
       })));
-    expect(flames.map((f) => f.n)).toEqual([0, 1, 3, 0]);
+    // 순서는 시안(S07) 그대로 — 「상관없어요」가 맨 위다(2026-08-12 전면 대조)
+    expect(flames.map((f) => f.n)).toEqual([0, 0, 1, 3]);
     // 개수가 뜻을 만들려면 표식이 같아야 한다
     expect(new Set(flames.flatMap((f) => f.srcs)).size,
       "표식이 서로 다르면 개수가 정도를 뜻하지 못합니다").toBe(1);
     // 그림은 거드는 신호일 뿐 — 순서는 글자가 말한다
-    expect(flames.map((f) => f.label)).toEqual(["순한맛", "보통맛", "매운맛", "상관없어요"]);
+    expect(flames.map((f) => f.label)).toEqual(["상관없어요", "순한맛", "보통맛", "매운맛"]);
     await pick(page, 3);
 
     /* 형태·이용 방식은 «종류»다 — 서로 다른 그림이 맞다.
@@ -276,9 +278,9 @@ test.describe("레인 C — 움직임 줄이기", () => {
     // 도는 표시를 멈추는 데서 그치지 않고 지연 자체를 없앤다.
     // 기다리면 어차피 사라지므로 마지막 답 직후 그 자리에서 잰다(재시도 없는 count).
     expect(await page.locator(".calcspin").count(), "계산 화면을 거쳤습니다").toBe(0);
-    /* 화면 제목은 h2(.kb-title) 하나뿐이다 — 본문 소제목(h3.q-sechead «이런 메뉴는
-       제외했어요»)이 같은 정규식에 걸려 두 개가 잡히므로 단계를 지정해 화면 제목만 본다. */
-    await expect(page.getByRole("heading", { level: 2, name: /이런 메뉴는 어떠세요|조건에 맞는 메뉴가 없어요/ }))
+    /* 화면 제목은 h2(.kb-title) 하나뿐이다 — 본문 소제목이 같은 정규식에 걸리지 않게
+       단계를 지정해 화면 제목만 본다. 추천·메뉴 확인은 «메뉴 확인» 한 화면이 됐다. */
+    await expect(page.getByRole("heading", { level: 2, name: /이 메뉴를 선택하시겠어요|조건에 맞는 메뉴가 없어요/ }))
       .toBeVisible();
   });
 });

@@ -61,12 +61,12 @@ h3.cart-cap { margin: 22px 0 8px; font-size: 0.78em; }
 .cart-legend { color: var(--muted); font-size: 0.82em; margin: 0 0 4px; word-break: keep-all; }
 
 /* ───────── S13 매장 이름 줄 (Figma 99:1798) ─────────
- * 시안의 이 줄은 15px Medium 본문색이다 — 공용 «고객님,» 줄(18px Regular 보조색)과 다르다.
- * .kb-eyebrow 는 열여섯 화면이 함께 쓰는 것이라 고치지 않고, 이 화면에만 걸리는
- * 스코프를 하나 더 씌운다. `Screen` 이 겉의 <p class="kb-eyebrow"> 를 직접 그리므로
- * 화면에서 붙일 수 있는 자리는 그 안쪽뿐이고, 그래서 자손 선택자다.
- * 크기는 px 이 아니라 em 이다 — 큰 글씨 설정과 함께 커져야 한다. */
-.kb-eyebrow .cart-store { font-size: 0.83em; font-weight: 500; color: var(--fg); }
+ * 시안의 이 줄은 15px Medium 본문색이고, 이 화면에는 큰 제목 문장이 따로 없다 —
+ * 매장 이름 줄이 화면 제목(h2)을 겸한다. .kb-title 은 열여섯 화면이 함께 쓰는 것이라
+ * 고치지 않고, 안쪽 span 에 이 화면만의 스코프를 씌워 크기를 내린다.
+ * 크기는 px 이 아니라 em 이다 — 큰 글씨 설정과 함께 커져야 한다.
+ * (0.68em = .kb-title 1.22em 기준 15px — 0.83em 은 본문 18px 기준값이라 여기선 다르다) */
+.kb-title .cart-store { font-size: 0.68em; font-weight: 500; color: var(--fg); }
 
 /* ───────── S13 선택 목록 (Figma 114:2116 «order option») ─────────
  * 디자인의 «✓ + 한 문장» 줄에 출처 한 줄을 더한 것. 고른 대로인 줄은 테두리 없이
@@ -101,11 +101,8 @@ h3.cart-cap { margin: 22px 0 8px; font-size: 0.78em; }
   font-size: 0.5em; font-weight: 700; line-height: 1;
 }
 
-/* ───────── 메뉴 확인 (신규 · Figma 99:1762) ───────── */
-.mc-why { font-size: 1em; line-height: 1.6; margin: 12px 0 0; color: var(--muted-strong); }
-/* 강조는 굵기와 색이 함께 맡는다 — 색만으로는 신호가 되지 못한다 */
-.mc-why b { color: var(--brand-strong); font-weight: 700; }
-.mc-ask { font-size: 1.05em; margin: 18px 0 0; }
+/* 메뉴 확인의 강조 규칙은 recommend.css 의 .mc-flow 절에 있다 —
+   조건 문장이 «추천해요» 목록(.reasons)으로 옮겨지면서 .mc-why 는 없어졌다. */
 
 /* ───────── S14 화면 설정 행 — SummaryCard 의 «수정» (Figma 185:209) ───────── */
 .rowfix {
@@ -151,3 +148,14 @@ h3.cart-cap { margin: 22px 0 8px; font-size: 0.78em; }
 /* S12 안전 중단은 이제 finish.css 가 그린다(`.stop-figma`).
    여기 있던 `.stopwrap`·`.stoplabel`·`.stopalert` 는 일러스트를 못 그린다는 전제 위에
    세워진 것이라, 시안대로 다시 그리면서 함께 걷어냈다. */
+
+/* ───────── S14 수정 — 본문 덩어리를 세로 가운데에 둔다 (기획 목업 2026-08-12) ─────────
+ * 인사말·제목·4행 카드·«다른 항목 수정»이 한 덩어리로 화면 가운데에 선다.
+ * `safe center` 라 내용이 길어지면(접힘이 저절로 펴지는 재확인·저장본 수정·조건 없음
+ * 경로) 가운데를 포기하고 위에서부터 흐른다 — 가운데 정렬은 넘칠 때 위쪽을 스크롤로
+ * 되돌아갈 수 없게 자른다는 함정을 안전 중단 화면에서 배웠다(lane-d D12 실측). */
+.kb-screen-body:has(.edit-extra) {
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+}

@@ -30,8 +30,8 @@ import { QrConnect } from "./screens/QrConnect";
 import { SessionStart } from "./screens/SessionStart";
 import { QuestionScreen } from "./screens/Question";
 import { Calculating } from "./screens/Calculating";
-import { Recommend } from "./screens/Recommend";
 import { MenuConfirm } from "./screens/MenuConfirm";
+import { MenuSelect } from "./screens/MenuSelect";
 import { CartReview } from "./screens/CartReview";
 import { CartEdit } from "./screens/CartEdit";
 import { Running } from "./screens/Running";
@@ -41,15 +41,15 @@ import { StaffHelp } from "./screens/StaffHelp";
 
 /** 라우팅 표 — 화면 하나 = 한 줄. 여기 없는 Step 은 존재할 수 없다. */
 const SCREENS: Record<Step, React.ComponentType> = {
-  start: Home,                // S01a·S01b 홈
+  connect: QrConnect,         // 매장 연동 관문 — 흐름(4걸음) 밖, 홈보다 앞 (기획 2026-08-12)
+  start: Home,                // S01a·S01b 홈 — 매장 QR 링크(?env=)로 열리면 여기부터 시작한다
   profile: ProfileSetup,      // S02 프로필 생성 3걸음
   saveChoice: SaveChoice,     // S03 저장 방식
-  qr: QrConnect,              // S04a·S04b 매장 QR
-  sessionStart: SessionStart, // S05 세션 시작
+  sessionStart: SessionStart, // S05 세션 시작 (QR 은 흐름의 걸음이 아니라 관문이 됐다)
   wizard: QuestionScreen,     // S06~S10 질문
   calculating: Calculating,   // S11 계산 중
-  recommend: Recommend,       // 추천 결과
-  menuConfirm: MenuConfirm,   // 메뉴 확인(신규)
+  menuConfirm: MenuConfirm,   // 메뉴 확인 (추천 화면과 통합 — 노션 기획 2026-08-12)
+  menuSelect: MenuSelect,     // 메뉴 선택 — 점수순 목록, 상위 3개 «추천» (노션 기획)
   confirm: CartReview,        // S13 장바구니 확인
   edit: CartEdit,             // S14 수정
   run: Running,               // 가상 키오스크 실행 중

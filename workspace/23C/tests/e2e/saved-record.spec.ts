@@ -37,6 +37,7 @@ async function 저장본만들기(page: Page): Promise<void> {
   await approveToCartReview(page);
   await finishOrder(page);
   await page.goto(HOME);
+  await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
   await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
   expect((await 저장본(page))?.answers?.allergies, "저장본이 만들어지지 않았습니다").toBeDefined();
 }
@@ -77,9 +78,17 @@ test("저장된 내용을 지우지 않고 고칠 수 있다 — 가이드 4번�
   await page.getByRole("button", { name: /저장된 내용 수정/ }).click();
   await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
 
-  // 고치러 왔는데 절반이 숨어 있으면 안 된다 — 여섯 항목이 전부 있어야 한다
-  const 행 = await page.locator(".editrow .editlabel").allInnerTexts();
-  expect(행.length, `수정 화면에 항목이 ${행.length}개뿐입니다`).toBeGreaterThanOrEqual(6);
+  /* 고치러 왔는데 절반이 숨어 있으면 안 된다 — 여섯 항목이 전부 있어야 한다.
+     기획 4행(카드)과 «다른 항목 수정»(접힘 — 이 경로에서는 저절로 펴진다)에 나뉘어 있다.
+     (컵은 질문이 빠지면서 수정 항목에서도 빠졌다 — 물은 적 없는 값을 고치게 하지 않는다) */
+  for (const 라벨 of ["뼈/순살 선택", "수량", "먹고가기/포장 선택"]) {
+    await expect(page.locator(".kb-row .kb-rowlabel", { hasText: 라벨 }).first(),
+      `수정 화면에 «${라벨}» 이 없습니다`).toBeVisible();
+  }
+  for (const 라벨 of ["알레르기", "맵기", "예산"]) {
+    await expect(page.locator(".editrow .editlabel", { hasText: 라벨 }).first(),
+      `수정 화면에 «${라벨}» 이 없습니다`).toBeVisible();
+  }
 
   // 여는 것만으로는 아무것도 지워지지 않는다
   expect((await 저장본(page))!.answers).toEqual(원래);

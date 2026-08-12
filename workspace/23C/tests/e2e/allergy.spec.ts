@@ -18,7 +18,6 @@ async function 알레르기질문까지(page: Page): Promise<void> {
   await page.getByRole("button", { name: /^시작하기$/ }).click();
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "이번만 사용" }).click();
-  await page.getByRole("button", { name: "QR 없이 계속하기" }).click();
   await page.getByRole("button", { name: /^(주문 시작하기|아니오)$/ }).click();
   await expect(page.locator("#qtitle")).toHaveText(/알레르기가 있으신가요/);
 }

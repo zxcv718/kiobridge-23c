@@ -1,9 +1,10 @@
 import React from "react";
 import { useFlow } from "../flow";
 import { A11Y_ITEMS, EDIT_LABELS, FLOW_STEPS, QUESTIONS, answerLabel } from "../model";
-import { candidateName } from "../logic";
+import { candidateName, readUrlStoreCode } from "../logic";
 import { Card, Cta, Screen } from "../components";
 import "./profile.css";
+import "./qr.css";
 
 /**
  * 화면목록 S01 — 시작 화면. Figma 150:162(S01a 최초 방문) · 150:190(S01b 재방문).
@@ -26,6 +27,17 @@ import "./profile.css";
  */
 export function Home() {
   const { saved, fixture, savedCoversAll, startFromSaved, deleteSaved, editSaved, setStep } = useFlow();
+
+  /* ── 매장 QR 링크 확인 ──
+   * QR 걸음이 흐름에서 빠지면서(기획 2026-08-12) 매장 QR 링크(?env=)로 열린 방문은
+   * 연동 관문을 거치지 않고 이 화면부터 시작한다(flow.tsx). 자동으로 어딘가로 보내지
+   * 않는다 — 어느 매장으로 도울지 문장으로 밝히고, 진행은 여느 방문과 같이
+   * «시작하기»가 한다(무로그인 가이드 8번). 모르는 코드면 아는 척하지 않는다 —
+   * 무엇을 읽었는지 밝히고 이 기기의 매장으로 잇는다. */
+  const [urlCode] = React.useState(readUrlStoreCode);
+  const envId = fixture?.manifest.environmentId ?? "";
+  const storeName = fixture?.manifest.displayName ?? fixture?.manifest.name ?? "";
+  const qrMatch = urlCode !== "" && envId !== "" && urlCode.toLowerCase() === envId.toLowerCase();
 
   /**
    * «처음부터 새로 시작하기»를 누르면 기록이 지워진다 — 되돌릴 수 없으므로 한 번 되묻는다.
@@ -59,13 +71,13 @@ export function Home() {
 
   return (
     <Screen
-      steps={{ labels: FLOW_STEPS, current: 1 }}
+      steps={{ labels: FLOW_STEPS, current: 2 }}
       label={saved ? "다시 오신 것을 확인하는 시작 화면" : "시작 화면"}
       /* 시안 150:184 · 150:212 — 한 문장이 통째로 22px Bold 다. 강조어를 키우는 것은
          질문 화면(99:1276)의 문법이지 여기 것이 아니다. */
       title={saved ? "다시 오셨네요" : "KioBridge에 오신 걸 환영해요"}
       subtitle={saved
-        /* 시안 150:213 은 «화면 설정»만 말한다. 저장본에 답변 일곱 개가 다 들어 있을
+        /* 시안 150:213 은 «화면 설정»만 말한다. 저장본에 답변 여섯 개가 다 들어 있을
            때는 그 문장이 실제보다 적게 말하므로, 그 경우에만 우리 문장을 쓴다. */
         ? (savedCoversAll
           ? "이 기기에 지난번 주문과 화면 설정이 남아 있어요"
@@ -98,6 +110,20 @@ export function Home() {
           <Cta tone="primary" disabled={!fixture} onClick={() => setStep("profile")} label="시작하기" />
         </>}
     >
+      {/* 매장 QR로 들어온 방문 — 어느 매장으로 도울지 문장으로 밝힌다. 세션을 발급받은
+          것도, 서버에 연결한 것도 아니다 — 매장을 맞춰 본 것까지만 말한다. */}
+      {urlCode !== "" && fixture && (qrMatch
+        ? (
+          <p className="banner ok" role="status">
+            매장 QR로 들어오셨어요. <b>{storeName}</b> 매장으로 주문을 도와드립니다.
+          </p>
+        ) : (
+          <p className="banner warn" role="status">
+            QR이 가리키는 매장(<code className="qr-code">{urlCode}</code>) 정보는 아직 없습니다.
+            {" "}이 기기에 담긴 <b>{storeName}</b> 매장으로 도와드립니다.
+          </p>
+        ))}
+
       {saved && (
         <>
           {/* 무로그인 가이드 4번의 «조회·수정». 시안에는 없으므로 **접어 둔다** —

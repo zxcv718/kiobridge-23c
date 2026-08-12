@@ -15,15 +15,21 @@ import { migrateSaved, type SavedSettings as CoreSaved } from "../../src/core/sa
  * (`Record<Step, …>`) — 새 화면을 만들면 표에 넣지 않고는 타입이 통과하지 않는다.
  */
 export type Step =
-  | "start" | "profile" | "saveChoice" | "qr" | "sessionStart"
-  | "wizard" | "calculating" | "recommend" | "menuConfirm"
+  | "connect"                                          // QR 연동 — 흐름의 1걸음 (매장 QR 링크로 열리면 건너뛴다)
+  | "start" | "profile" | "saveChoice" | "sessionStart"
+  | "wizard" | "calculating" | "menuConfirm" | "menuSelect"
   | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
 
 /**
- * 프로필 흐름 다섯 걸음의 이름 (Figma StepIndicator 181:177).
- * 홈·프로필·저장방식·QR·세션시작 네 화면이 같은 표를 봐야 해서 여기 둔다.
+ * 흐름 다섯 걸음의 이름 (Figma StepIndicator 181:177 의 문법).
+ * QR 연동·홈·프로필·저장방식·세션시작 다섯 화면이 같은 표를 봐야 해서 여기 둔다.
+ *
+ * **QR 연동이 1걸음으로 돌아왔다(기획 확정 2026-08-12, 시안 S01-B).** 한때 흐름 밖
+ * 관문으로 뺐지만, 확정 시안의 진행 표시가 «QR 연동»을 첫 걸음으로 그린다. 매장 QR
+ * 링크(?env=)로 열리면 1걸음을 마친 것으로 보고 홈(2걸음)부터 시작하며, 그 확인은
+ * 홈의 매장 배너가 한다.
  */
-export const FLOW_STEPS = ["홈", "프로필 생성", "저장 방식", "QR 연동", "세션 시작"];
+export const FLOW_STEPS = ["QR 연동", "홈", "프로필 생성", "저장 방식", "세션 시작"];
 
 /** 추천 계산 화면(S11)을 보여주는 시간. 진행 중임을 알리는 최소한이며, 결과를 늦추려는 것이 아니다. */
 export const CALC_MS = 600;
@@ -49,7 +55,9 @@ export interface A11y {
 }
 
 export const A11Y_DEFAULT: A11y = {
-  largeText: true, highContrast: false, simpleSteps: true, visualGuidance: false,
+  /* 글씨 크기의 기본은 «기본 크기»다(기획 2026-08-12) — 프로필 1/3 라디오의 시안이
+     기본 크기를 선택된 채로 그린다. 큰 글씨는 고르는 사람의 것이지 기본값이 아니다. */
+  largeText: false, highContrast: false, simpleSteps: true, visualGuidance: false,
   hearingSupport: false, mobilitySupport: false, staffAssistancePreferred: false,
   preferredInput: "TOUCH",
 };
@@ -131,8 +139,10 @@ export const QUESTIONS: Question[] = [
      6개 그대로여야 한다. 나뉘는 것은 «묻는 방법»이지 «답의 모양»이 아니다. */
   // 정도(degree)라 그림을 두지 않는다 — 순한→보통→매운은 글자가 이미 순서로 말한다
   /* 시안 99:1264 의 제목 그대로다 — 「맵기」 28px + 「는 어떻게 해드릴까요?」 22px. */
+  /* 순서는 시안(S07) 그대로 — 「상관없어요」가 **맨 위**다(2026-08-12 전면 대조).
+     예산도 같은 자리(첫째)에 두므로, «고르지 않겠다»는 답의 자리가 두 질문에서 같다. */
   { key: "spicyLevel", title: "맵기는 어떻게 해드릴까요?", options: [
-    { value: "순한맛", label: "순한맛" }, { value: "보통", label: "보통맛" }, { value: "매운맛", label: "매운맛" }, { value: "상관없음", label: "상관없어요" } ] },
+    { value: "상관없음", label: "상관없어요" }, { value: "순한맛", label: "순한맛" }, { value: "보통", label: "보통맛" }, { value: "매운맛", label: "매운맛" } ] },
   /* 제목과 순서 모두 시안 그대로다(99:1270 · 99:1281).
      타일 두 장은 좌우 위치가 곧 그 선택지의 자리라, 순서가 뒤집히면 시안을 본 사람이
      기억한 자리와 어긋난다. 둘 다 반대로 두고 있었고 제목도 우리가 지어 쓴 문장이었다. */
@@ -169,8 +179,12 @@ export const QUESTIONS: Question[] = [
 
      **값(value)은 "없음" 그대로 둔다.** 옛 저장본이 그 값을 들고 있고, buildRawInput 이
      그것을 보고 예산을 안 보낸다. 화면 글자만 바꾸는 것이지 데이터를 바꾸는 것이 아니다. */
+  /* 선택지는 셋이다(기획 2026-08-12) — 상관없어요 · 5,000원 · 10,000원. 6,000·7,000을
+     뺀 것은 «가장 가까운 것을 권하는» 질문에 촘촘한 눈금이 필요 없기 때문이다 —
+     싼 쪽·비싼 쪽·상관없음이면 순서가 정해진다. 옛 저장본의 6000/7000 값은 그대로
+     동작한다(엔진은 아무 숫자나 받는다) — 화면의 눈금만 줄었다. */
   { key: "budgetKrw", title: "예산은 얼마인가요?", options: [
-    { value: "없음", label: "상관없어요" }, { value: 5000, label: "5,000원" }, { value: 6000, label: "6,000원" }, { value: 7000, label: "7,000원" }, { value: 10000, label: "10,000원" } ] },
+    { value: "없음", label: "상관없어요" }, { value: 5000, label: "5,000원" }, { value: 10000, label: "10,000원" } ] },
 ];
 
 /* ───────── 알레르기를 두 걸음으로 묻는다 (디자인 S06) ─────────

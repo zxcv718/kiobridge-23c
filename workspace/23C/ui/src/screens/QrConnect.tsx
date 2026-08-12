@@ -1,11 +1,17 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useFlow } from "../flow";
+import { parseStoreCode } from "../logic";
+import { Cta, Screen } from "../components";
 import { FLOW_STEPS } from "../model";
-import { Card, Cta, Screen } from "../components";
 import "./qr.css";
 
 /**
- * 화면목록 S04a·S04b — 매장 QR 연동 (Figma 150:329 스캔 안내 · 150:365 연결 완료).
+ * 화면목록 S01-B — QR 연동 (Figma 150:329 스캔 안내 · 연결 완료는 확정 시안 PNG 2026-08-12).
+ *
+ * **흐름의 1걸음이다(기획 확정 2026-08-12).** 한때 흐름 밖 관문으로 뺐지만, 확정 시안의
+ * 진행 표시가 «QR 연동»을 다섯 걸음의 첫째로 그린다. 앱을 그냥 열면 이 화면이 먼저
+ * 나오고, QR 을 찍거나 코드를 넣으면 홈(2걸음)이 나온다. 매장 QR 링크(?env=)로 열렸으면
+ * 이 걸음을 마친 것으로 보고 건너뛴다 — 그 확인은 홈이 한다(flow.tsx).
  *
  * **우리가 QR을 만드는 것이 아니다.** 폰 카메라로 매장에 붙은 QR을 읽는 화면이다.
  * 읽기만 하면 되므로 브라우저에 내장된 `BarcodeDetector` + `getUserMedia` 로 충분하고,
@@ -13,12 +19,12 @@ import "./qr.css";
  *
  * **읽은 다음 무엇을 하는가.** 서버가 없으므로 세션을 «발급»받을 수는 없다. 여기서 하는
  * 일은 하나다 — QR에 적힌 매장 코드를 우리가 가진 환경(`fixture.manifest.environmentId`)과
- * 대조하는 것. 같으면 어느 매장인지 밝히고 다음으로 보내고, 다르면 «이 매장 정보는 아직
+ * 대조하는 것. 같으면 어느 매장인지 밝히고 홈으로 보내고, 다르면 «이 매장 정보는 아직
  * 없습니다»라고 정직하게 말한다. 어느 쪽이든 막다른 길을 만들지 않는다.
  * 「세션이 발급되었습니다」 같은, 우리가 하지 않은 일을 한 것처럼 말하는 문구를 쓰지 않는다.
- * 그래서 S04b 부제만 시안(150:392 «매장 정보와 세션을 모두 확인했어요»)에서 **«세션» 한
- * 낱말을 뺀** 「매장 정보를 모두 확인했어요」로 둔다 — 문장의 꼴은 시안 그대로 두고,
- * 우리가 하지 않은 일만 지운다(FIGMA_RULES §2.8).
+ * 연결 완료 부제는 확정 시안 그대로 「매장 정보와 세션을 모두 확인했어요」다 — 한동안
+ * «세션» 낱말을 빼고 지켰지만 기획이 시안 표기를 확정했다(2026-08-12, FIGMA_RULES §2.8
+ * 번복 기록). «발급·생성»처럼 일이 일어난 것으로 읽히는 말은 여전히 쓰지 않는다.
  *
  * **이 화면의 핵심은 읽히는 경우가 아니라 읽히지 않는 경우다.** BarcodeDetector 는
  * Safari·Firefox 에 없고, 카메라 권한은 거부될 수 있고, 카메라가 없는 기기도 있다.
@@ -26,9 +32,8 @@ import "./qr.css";
  * ④ 건너뛰기가 같은 화면에 있어야 한다.
  *
  * 시안(150:359)의 화면 아래는 캡션 한 줄과 흰 버튼 둘 — «직접 입력»·«직원 요청» — 이다.
- * 그대로 둔다. 직접 입력 폼은 한때 이 자리에 펼쳐 둔 채였는데, 그러면 펴기 전 화면이
- * 시안과 달라진다. 버튼으로 접고(§2.1) **카메라를 못 쓰는 것이 확인된 순간에만 저절로
- * 편다** — 그때는 이 입력이 본길이라 «한 번 더 눌러야 닿는 곳»에 둘 수 없고, 시안은
+ * 그대로 둔다. 직접 입력 폼은 버튼으로 접고(§2.1) **카메라를 못 쓰는 것이 확인된 순간에만
+ * 저절로 편다** — 그때는 이 입력이 본길이라 «한 번 더 눌러야 닿는 곳»에 둘 수 없고, 시안은
  * 그 상태를 그린 적이 없어 우리가 정하는 자리이기 때문이다.
  * 건너뛰기(«QR 없이 계속하기»)는 시안에 없지만 지우지 않는다 — iOS 처럼 스캔이 아예
  * 막힌 기기에서 앞으로 갈 수 있는 마지막 길이라, 캡션이 소개하는 대안 묶음 아래에 둔다.
@@ -50,29 +55,6 @@ type Phase =
   | "connected"     // S04b — 우리가 아는 매장이다
   | "unknownStore"; // 읽었지만 이 기기에 없는 매장이다
 
-/**
- * QR 원문에서 매장 코드를 뽑는다.
- *
- * 매장 QR에 무엇이 들어 있을지는 매장이 정한다 — 코드만 있을 수도, 링크일 수도 있다.
- * 그래서 «링크면 매장을 가리키는 값을, 아니면 원문을» 쓰는 정도로만 해석한다.
- * 여기서 더 똑똑하게 굴면, 실패했을 때 사용자가 무엇을 잘못했는지 알 수 없게 된다.
- */
-export function parseStoreCode(raw: string): string {
-  const s = raw.trim();
-  if (!s) return "";
-  try {
-    const u = new URL(s);
-    for (const k of ["environmentId", "env", "store", "storeId"]) {
-      const v = u.searchParams.get(k);
-      if (v?.trim()) return v.trim();
-    }
-    const seg = u.pathname.split("/").filter(Boolean);
-    if (seg.length > 0) return decodeURIComponent(seg[seg.length - 1]);
-    return u.hostname;
-  } catch { /* URL 이 아니면 원문을 그대로 본다 */ }
-  return s;
-}
-
 export function QrConnect() {
   const { fixture, setStep, t } = useFlow();
   const envId = fixture?.manifest.environmentId ?? "";
@@ -81,36 +63,12 @@ export function QrConnect() {
   const [phase, setPhase] = useState<Phase>("checking");
   /** 카메라를 못 쓰는 이유. 한 문장으로, 무엇 때문인지 알 수 있게. */
   const [blocked, setBlocked] = useState("");
-  /** 읽어낸 매장 코드와 그것을 어떻게 얻었는지 — 결과 화면에서 근거로 보여준다. */
+  /** 읽어낸 매장 코드 — «모르는 매장» 화면에서 무엇을 읽었는지 밝히는 근거다. */
   const [readCode, setReadCode] = useState("");
-  const [readVia, setReadVia] = useState("");
   const [typed, setTyped] = useState("");
   const [typedError, setTypedError] = useState("");
   /** 직접 입력 폼을 폈는가. 시안의 기본 상태는 «버튼 하나»이므로 접힌 채로 시작한다. */
   const [typedOpen, setTypedOpen] = useState(false);
-
-  /**
-   * 주소에 매장 코드가 실려 왔는가 — 폰 **기본 카메라 앱**으로 QR을 찍으면 이 주소로 열린다.
-   *
-   * iOS 에는 QR 을 해독하는 웹 API(`BarcodeDetector`)가 없다. 그런데 아이폰은 카메라 앱
-   * 자체가 이미 훌륭한 해독기다. QR 을 링크로 만들어 두면 그 해독기가 우리 대신 읽고
-   * 주소로 넘겨준다 — 해독기를 우리가 들고 다니지 않아도 되는 것이다.
-   *
-   * **자동으로 연결하지는 않는다.** 읽은 코드를 화면에 보여주고 «이 매장으로 계속하기»를
-   * 받는다(무로그인 가이드 8번 — 자동으로 불러온 정보는 보여주고 확인받는다).
-   */
-  const [urlCode] = useState(() => {
-    try {
-      const u = new URL(window.location.href);
-      for (const k of ["environmentId", "env", "store", "storeId"]) {
-        const v = u.searchParams.get(k);
-        if (v?.trim()) return v.trim();
-      }
-    } catch { /* 주소를 못 읽으면 없는 것으로 본다 */ }
-    return "";
-  });
-  /** 주소에서 온 코드를 아직 쓰지 않았는가 — 한 번만 쓴다(«다시 스캔»을 눌렀는데 되돌아가면 안 된다) */
-  const urlPending = useRef(urlCode !== "");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   /* fixture 는 비동기로 도착한다. 카메라 루프는 한 번만 켜지므로 그때의 값을 붙잡고 있으면
@@ -119,24 +77,15 @@ export function QrConnect() {
   envRef.current = envId;
 
   /** 읽은 값을 우리가 가진 매장과 대조한다. 카메라와 직접 입력이 같은 길을 지난다. */
-  const decide = useCallback((raw: string, via: string) => {
+  const decide = useCallback((raw: string) => {
     const code = parseStoreCode(raw);
     setReadCode(code);
-    setReadVia(via);
     setPhase(code !== "" && code.toLowerCase() === envRef.current.toLowerCase() ? "connected" : "unknownStore");
   }, []);
 
   /* 카메라가 켜져 있어야 하는 국면. 이 값이 false 로 바뀌는 순간 아래 정리 함수가 돌면서
      트랙이 꺼진다 — 읽기에 성공했을 때도, 사용자가 화면을 떠날 때도 같은 길이다. */
-  const cameraWanted = (phase === "checking" || phase === "scanning") && !urlPending.current;
-
-  /* 주소에 실려 온 코드를 매장 정보가 도착한 뒤에 맞춰 본다. 먼저 맞추면 매장 이름이
-     아직 없어서 «모르는 매장»이 되어 버린다. */
-  useEffect(() => {
-    if (!urlPending.current || envId === "") return;
-    urlPending.current = false;
-    decide(urlCode, "폰 카메라로 QR을 찍어 열린 주소");
-  }, [urlCode, envId, decide]);
+  const cameraWanted = phase === "checking" || phase === "scanning";
 
   useEffect(() => {
     if (!cameraWanted) return;
@@ -202,7 +151,7 @@ export function QrConnect() {
           const found = await detector.detect(video);
           if (stopped) return;
           const value = found.find((b) => b.rawValue)?.rawValue;
-          if (value) { decide(value, "카메라 스캔"); return; } // 국면이 바뀌면 정리 함수가 카메라를 끈다
+          if (value) { decide(value); return; } // 국면이 바뀌면 정리 함수가 카메라를 끈다
         } catch { /* 프레임 하나가 실패한 것이므로 다음 차례에 다시 본다 */ }
         timer = window.setTimeout(() => { void tick(); }, SCAN_INTERVAL_MS);
       };
@@ -221,45 +170,53 @@ export function QrConnect() {
     e.preventDefault();
     if (parseStoreCode(typed) === "") { setTypedError("매장 코드를 입력해 주세요."); return; }
     setTypedError("");
-    decide(typed, "직접 입력");
+    decide(typed);
   };
 
-  const rescan = () => { setReadCode(""); setReadVia(""); setPhase("checking"); };
-  const goNext = () => setStep("sessionStart");
+  const rescan = () => { setReadCode(""); setPhase("checking"); };
+  /** 이 걸음을 지나면 홈이다 — 2걸음이 거기서 시작된다. */
+  const goHome = () => setStep("start");
 
-  const steps = { labels: FLOW_STEPS, current: 4 };
+  /** 진행 표시 — 다섯 걸음의 첫째 (확정 시안 S01-B). 세 상태가 같은 자리를 쓴다. */
+  const steps = { labels: FLOW_STEPS, current: 1 };
 
-  /* ── S04b 연결 완료 ── */
+  /* ── S01-B 연결 완료 (확정 시안 PNG 2026-08-12) ── */
   if (phase === "connected") {
     return (
       <Screen
         onBack={rescan} backLabel="다시 스캔"
         steps={steps}
         label="매장 QR 연동 — 연결됨"
-        /* 제목·부제는 시안 150:391·150:392 다. 제목은 단일 텍스트 노드의 균일 22px Bold 라
-           강조 분할(`Emphasize`)을 쓰지 않는다 — 그 문법은 질문 화면 전용이다(§3). */
+        /* 제목은 시안 150:391, 부제는 확정 시안 그대로다(«세션» 낱말 경위는 파일머리 주석).
+           제목은 단일 텍스트 노드의 균일 22px Bold 라 강조 분할(`Emphasize`)을 쓰지 않는다(§3). */
         title="연결되었습니다"
-        subtitle="매장 정보를 모두 확인했어요"
+        subtitle="매장 정보와 세션을 모두 확인했어요"
         actions={<>
-          <Cta tone="primary" label="이 매장으로 계속하기" onClick={goNext} />
+          <Cta tone="primary" label="이 매장으로 계속하기" onClick={goHome} />
           <Cta label="다시 스캔하기" onClick={rescan} />
         </>}
       >
-        <div className="qr-view">
-          <span className="qr-mark" aria-hidden="true">✓</span>
+        {/* 확정 시안의 초록 확인 원 — 장식이다. 성공은 제목과 아래 카드 문장이 글자로 말한다. */}
+        <div className="qr-done" aria-hidden="true"><span className="qr-donemark">✓</span></div>
+
+        {/* 매장 카드 — 시안의 값(닭강정 가게·chicken-store)은 목업이 아니라 실제 fixture 값과
+            우연히 같다. 화면은 늘 fixture 에서 읽는다(FIGMA_RULES §2). */}
+        <div className="qr-store">
+          <div className="qr-storehead">
+            <span className="qr-storeicon" aria-hidden="true">🍗</span>
+            <div>
+              <p className="qr-storename">{storeName}</p>
+              <p className="qr-storesub">매장과 연동되었어요</p>
+            </div>
+          </div>
+          <hr className="qr-storediv" />
+          <div className="qr-storerow">
+            <span className="qr-storelabel">연동 환경 ID</span>
+            {/* 대조에 성공한 걸음이므로 정본(fixture 의 environmentId)을 적는다 —
+                읽은 원문(readCode)과 대소문자가 달라도 연동된 것은 이 환경이다 */}
+            <code className="qr-code">{envId}</code>
+          </div>
         </div>
-        {/* 성공을 테두리 색으로만 말하지 않는다 — 문장으로도 말한다 */}
-        <p className="banner ok" role="status">
-          <b>{storeName}</b> 매장으로 확인했습니다.
-        </p>
-        <Card rows={[
-          { label: "매장", value: storeName },
-          { label: "매장 코드", value: <code className="qr-code">{readCode}</code> },
-          { label: "확인 방법", value: readVia },
-        ]} />
-        <p className="hint">
-          여기서 한 일은 <b>매장을 맞춰 본 것</b>까지입니다. 주문은 다음 화면에서 이 기기 안에서 시작됩니다.
-        </p>
       </Screen>
     );
   }
@@ -272,9 +229,9 @@ export function QrConnect() {
         steps={steps}
         label="매장 QR 연동 — 모르는 매장"
         title="이 매장 정보는 아직 없습니다"
-        subtitle="QR은 읽었습니다. 다만 이 기기에 담긴 매장과 다릅니다."
+        subtitle="매장 코드는 읽었습니다. 다만 이 기기에 담긴 매장과 다릅니다."
         actions={<>
-          <Cta tone="primary" label="이대로 계속하기" onClick={goNext} />
+          <Cta tone="primary" label="이대로 계속하기" onClick={goHome} />
           <Cta label="다시 스캔하기" onClick={rescan} />
         </>}
       >
@@ -295,10 +252,9 @@ export function QrConnect() {
     );
   }
 
-  /* ── S04a 스캔 안내 (검사 중·스캔 중·카메라 불가) ── */
+  /* ── S01-B 스캔 안내 (검사 중·스캔 중·카메라 불가) — 뒤로가기가 없다: 이 앞에는 화면이 없다 ── */
   return (
     <Screen
-      onBack={() => setStep("saveChoice")}
       steps={steps}
       label="매장 QR 연동"
       /* 제목·부제는 시안 150:355·150:356 그대로다. 제목은 단일 텍스트 노드의 균일 22px
@@ -347,7 +303,7 @@ export function QrConnect() {
         <Cta label="직원 요청" onClick={() => setStep("staff")} />
         {/* 시안에는 없다. 스캔이 아예 막힌 기기에서 앞으로 갈 마지막 길이라 지우지 않고,
             캡션이 대안을 소개하는 이 묶음의 맨 아래에 둔다. */}
-        <Cta label="QR 없이 계속하기" onClick={goNext} />
+        <Cta label="QR 없이 계속하기" onClick={goHome} />
       </>}
     >
       {/* 카메라를 못 쓸 때는 창을 그리지 않는다. 볼 것이 없는 200px 상자가 화면 절반을

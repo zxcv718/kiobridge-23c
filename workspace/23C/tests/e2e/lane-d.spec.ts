@@ -20,8 +20,9 @@ const start = openHome;
  * 「추천 이후는 멀쩡한데 거기 갈 수가 없는」 상태를 못 잡는다.
  */
 const CASE = {
-  /** 땅콩 알레르기 · 매운맛 · 순살 · 포장 · 1개 · 7,000원 — 정상 경로 */
-  normal: ["땅콩", "매운맛", "순살", "포장하기", "1개", "7,000원"],
+  /** 땅콩 알레르기 · 매운맛 · 순살 · 포장 · 1개 · 10,000원 — 정상 경로
+      (예산 눈금이 셋으로 줄며 7,000원이 없어졌다 — 10,000원이어도 1위는 같다) */
+  normal: ["땅콩", "매운맛", "순살", "포장하기", "1개", "10,000원"],
   /** 알레르기 없음 · 순한맛 · 순살 · 먹고 가기 · 2개 · 예산 상관없음 — 수량 2개 */
   twoQty: ["없어요", "순한맛", "순살", "먹고 가기", "2개", "상관없어요"],
 } as const;
@@ -53,6 +54,7 @@ async function 미확정추천까지(page: Page) {
     localStorage.setItem("kb23c-saved-settings-v4", JSON.stringify(s));
   }, 모름저장본);
   await page.reload();
+  await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
   await page.getByRole("button", { name: /지난번과 똑같이 주문하기/ }).click();
 }
 
@@ -81,10 +83,10 @@ test.describe("D계열 — 확인·수정·결과", () => {
     // 추천 화면에서 본 것과 같은 메뉴여야 한다 — 화면마다 다른 값을 적지 않는다
     await expect(page.getByText("매운 순살 닭강정").first()).toBeVisible();
     // 조건 문장의 조사가 앞말에 맞는다 — «땅콩가» 가 아니라 «땅콩이»
-    await expect(page.locator(".mc-why")).toContainText("땅콩이 없는 메뉴 중");
+    await expect(page.locator(".reasons").first()).toContainText("땅콩이 들어간 메뉴");
 
-    await page.getByRole("button", { name: "이대로 담기" }).click();
-    await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+    await page.getByRole("button", { name: "선택하기", exact: true }).click();
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
   });
 
   test("D2 메뉴 확인에는 되돌아갈 길이 있다", async ({ page }) => {
@@ -92,8 +94,9 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await toCartReview(page);
     await page.getByRole("button", { name: "뒤로" }).click();
 
-    await page.getByRole("button", { name: "다른 메뉴 볼게요" }).click();
-    await expect(page.getByRole("button", { name: "네, 좋아요" })).toBeVisible();
+    // 추천을 받아들이지 않을 길 — «다시 추천받기»가 조건 수정 화면으로 잇는다
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
   });
 
   /* ───────── S13 장바구니 확인 (Figma 99:1798) ───────── */
@@ -102,9 +105,12 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await start(page);
     await toCartReview(page);
 
+    /* 시안 재정렬(99:1798)로 목록에는 주문 방식(이용 방식)만 남고, 맵기·형태는 카드의
+       «옵션:» 줄이, 수량은 «x N개»가 말한다. 컵 줄은 질문이 빠지면서 같이 사라졌다 —
+       실행계획이 CUP 액션을 사용자가 컵을 말했을 때만 만든다(core/plan.ts). */
     const rows = page.locator(".sellist li[data-origin]");
     await expect(rows.first()).toBeVisible();
-    expect(await rows.count()).toBeGreaterThan(2);
+    expect(await rows.count()).toBeGreaterThanOrEqual(1);
 
     // 출처는 세 가지뿐이며 전부 글자로 설명된다 (색만으로 말하지 않는다)
     for (const o of await rows.evaluateAll((els) => els.map((e) => e.getAttribute("data-origin")))) {
@@ -112,18 +118,17 @@ test.describe("D계열 — 확인·수정·결과", () => {
     }
     await expect(page.locator('.sellist li[data-origin="USER"]').first()).toContainText("고르신 대로");
 
-    // 직접 고른 수량을 «상관없다고 하셔서»로 말하지 않는다
-    const qty = page.locator(".sellist li", { hasText: "수량" });
-    await expect(qty).toHaveAttribute("data-origin", "USER");
+    /* 직접 고른 수량을 «상관없다고 하셔서»로 말하지 않는다 — 카드의 수량 보조줄은
+       우리가 정했거나 바꿨을 때만 붙는다(이 흐름에서는 사용자가 골랐으므로 없어야 한다) */
+    await expect(page.locator(".cart-box")).not.toContainText("수량:");
   });
 
   test("D4 장바구니 확인의 값이 실행계획과 어긋나지 않는다 (총 가격 = 단가 × 수량)", async ({ page }) => {
     await start(page);
     // 수량 2개인 프리셋 — 곱셈이 실제로 일어나는 경우로 잰다
     await toRecommend(page, CASE.twoQty);
-    await page.getByRole("button", { name: "네, 좋아요" }).click();
-    await page.getByRole("button", { name: "이대로 담기" }).click();
-    await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+    await page.getByRole("button", { name: "선택하기", exact: true }).click();
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 
     const won = (s: string) => Number(s.replace(/[^\d]/g, ""));
     const unit = won(await page.locator(".cart-price").innerText());
@@ -137,26 +142,30 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D4b 원한 값을 못 맞춘 옵션은 대체했다고 밝힌다", async ({ page }) => {
     await start(page);
     await toRecommend(page, CASE.normal);
-    await page.getByRole("button", { name: "조건 수정" }).click();
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
 
-    /* 순한맛 + 뼈 로 바꾸면 «간장 순살 닭강정»(6,500원)이 뽑힌다. 예산 7,000원이 상한이
-       아니라 **희망 금액**이 된 뒤로 그 금액에 가장 가까운 것이 위로 오는데, 뼈를 내는
-       메뉴는 이 가게에서 5,500원짜리 하나뿐이라 «뼈»가 밀린다. 그래서 못 맞추는 것은
-       형태다.
+    /* 순한맛 + 뼈 로 바꾸면 «간장 순살 닭강정»(6,500원)이 뽑힌다. 예산이 상한이 아니라
+       **희망 금액**이라 10,000원에 가장 가까운 생존 후보가 위로 오는데(7,000원 땅콩
+       토핑은 알레르기로 제외), 뼈를 내는 메뉴는 이 가게에서 5,500원짜리 하나뿐이라
+       «뼈»가 밀린다. 그래서 못 맞추는 것은 형태다.
 
        이 자리는 두 번 옮겼다 — 처음엔 컵(질문이 없어짐), 다음엔 맵기(예산 방식이 바뀜).
        재는 대상은 세 번 다 같다: **못 맞춘 옵션을 사용자에게 밝히는가.** */
+    // 뼈/순살은 기획 4행에서 바로, 맵기는 «다른 항목 수정» 접힘 안에서 고친다
+    await page.getByRole("button", { name: /^뼈\/순살 선택/ }).click();
+    await page.getByRole("button", { name: "뼈", exact: true }).click();
+    await page.locator("details.home-saved > summary", { hasText: "다른 항목 수정" }).click();
     await page.getByRole("button", { name: /^맵기/ }).click();
     await page.getByRole("button", { name: "순한맛", exact: true }).click();
-    await page.getByRole("button", { name: /^형태/ }).click();
-    await page.getByRole("button", { name: "뼈", exact: true }).click();
-    await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
-    await page.getByRole("button", { name: "네, 좋아요" }).click();
-    await page.getByRole("button", { name: "이대로 담기" }).click();
+    await page.getByRole("button", { name: "수정 완료" }).click();
+    await page.getByRole("button", { name: "선택하기", exact: true }).click();
 
-    const sub = page.locator('.sellist li[data-origin="SUBSTITUTED"]');
+    /* 형태는 시안 재정렬(99:1798) 뒤로 «주문 방식» 목록이 아니라 카드 관할이다 —
+       대체 사실과 이유는 카드 보조줄이 말한다.
+       조사가 앞말에 맞아야 한다 — 받침이 없는 «뼈» 는 «뼈는» 이다(«뼈은» 이 아니다). */
+    const sub = page.locator(".cart-box .cart-sub", { hasText: "바꿨습니다" });
     await expect(sub).toHaveCount(1);
-    // 조사가 앞말에 맞아야 한다 — 받침이 없는 «뼈» 는 «뼈는» 이다(«뼈은» 이 아니다)
+    await expect(sub).toContainText("형태");
     await expect(sub).toContainText("원하신 뼈는 이 메뉴에 없어 바꿨습니다");
     // 대체가 있으면 다른 메뉴를 볼 길을 함께 준다
     await expect(page.getByRole("button", { name: "다른 메뉴 보기" })).toBeVisible();
@@ -173,10 +182,12 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D6 수정 화면에서 글씨 크기·고대비·화면 안내를 바로 바꿀 수 있다", async ({ page }) => {
     await start(page);
     await toRecommend(page, CASE.normal);
-    await page.getByRole("button", { name: "조건 수정" }).click();
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
 
     const app = page.locator(".app");
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
+    // 화면 보기 방식은 기획 4행 밖이라 «다른 항목 수정» 접힘 안으로 옮겨졌다
+    await page.locator("details.home-saved > summary", { hasText: "다른 항목 수정" }).click();
 
     await page.getByRole("button", { name: "고대비 수정" }).click();
     await expect(app).toHaveClass(/contrast/);
@@ -184,28 +195,31 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await page.getByRole("button", { name: "화면 안내 수정" }).click();
     await expect(app).toHaveClass(/guide/);
 
+    // 기본이 «기본 크기»이므로(기획 2026-08-12) 누르면 큰 글씨가 켜진다
     await page.getByRole("button", { name: "글씨 크기 수정" }).click();
-    await expect(app).not.toHaveClass(/large/);
+    await expect(app).toHaveClass(/large/);
   });
 
   test("D7 수정 화면에는 조건을 고쳐 다시 추천받는 길이 남아 있다", async ({ page }) => {
     // 알레르기가 미확인이라 확정되지 않은 추천 — 여기서 빠져나갈 길이 없으면 막다른 길이 된다
     await 미확정추천까지(page);
-    await page.getByRole("button", { name: /조건 수정/ }).click();
+    // 조건을 고치러 가는 길은 «다시 추천받기»다 — 합쳐진 메뉴 확인 화면의 라벨(기획 목업)
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
 
     /* 미확인을 «없음»으로 바로잡으면 확정된 추천으로 빠져나간다.
+       재확인 경로라 «다른 항목 수정»(알레르기 포함)은 저절로 펴져서 온다.
        선택지 이름에는 그림이 함께 들어가므로(«✅ 없어요») 정확 일치로는 못 잡고,
        다른 행에도 같은 글자가 나올 수 있어 알레르기 행 안으로 범위를 좁힌다.
-       접힘 여부를 단정하지 않는다 — 고칠 것이 남은 행은 펼쳐진 채로 오기도 하고,
-       그때 한 번 더 누르면 도로 접혀 선택지가 사라진다(실제로 그렇게 걸렸다). */
+       행이 열려 있는지는 단정하지 않는다 — 열린 행을 한 번 더 누르면 도로 접혀
+       선택지가 사라진다(실제로 그렇게 걸렸다). */
     const 알레르기행 = page.locator(".editrow", { hasText: "알레르기" });
     const 없어요 = 알레르기행.locator("button", { hasText: "없어요" });
     if (!(await 없어요.isVisible().catch(() => false))) {
       await 알레르기행.locator("button").first().click();
     }
     await 없어요.click();
-    await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
-    await expect(page.getByRole("button", { name: "네, 좋아요" })).toBeVisible();
+    await page.getByRole("button", { name: "수정 완료" }).click();
+    await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
   });
 
   /* ───────── S15 안내 (Figma 99:1830) ───────── */
@@ -245,7 +259,9 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D11 내려받기 두 파일의 방향 안내와 오류 주입 7종이 그대로 있다", async ({ page }) => {
     await start(page);
     await toCartReview(page);
-    const live = await page.getByRole("button", { name: /가상 키오스크에서 실행/ }).count();
+    /* CTA 가 시안 라벨 «주문하기» 하나가 되면서, 라이브 여부는 라이브에서만 나오는
+       세션 ID 입력칸으로 잰다. */
+    const live = await page.getByText(/공식 시뮬레이터 세션에 제출하기/).count();
     /* 예전에는 여기서 test.skip 을 했다. 하지만 **스킵된 테스트는 증거가 아니다** —
        오류 주입 7종은 계약 시연의 핵심인데, API 가 꺼져 있다는 이유로 조용히 넘어가면
        그것이 사라져도 아무도 모른다. 공식 검증은 늘 API 를 띄운 채 돌리므로,
@@ -275,8 +291,8 @@ test.describe("D계열 — 확인·수정·결과", () => {
     /* 첫 미확정에서는 멈추지 않는다 — 조건을 고칠 기회를 한 번 준다. 그대로 다시 받으면
        두 번째이고, 그때 멈춘다(core/ask.ts MAX_RECONFIRM_ATTEMPTS). */
     await 미확정추천까지(page);
-    await page.getByRole("button", { name: "조건 수정" }).click();
-    await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await page.getByRole("button", { name: "수정 완료" }).click();
 
     /* 시안 99:1337 의 네 조각이 그 순서로 다 있다 — 에러 라벨 · 일러스트 · 타이틀 · 서브텍스트. */
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();

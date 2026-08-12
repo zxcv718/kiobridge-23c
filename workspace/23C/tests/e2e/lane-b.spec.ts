@@ -1,8 +1,12 @@
 /**
- * 레인 B — 매장 QR 읽기(S04a·S04b) 실측.
+ * 레인 B — 매장 연동 관문(구 S04a·S04b)의 QR 읽기 실측.
  *
  * 실행: npx playwright test -c workspace/23C/tests/e2e/playwright.config.ts lane-b
  * 전제: 데모 UI가 http://localhost:5173 에서 떠 있어야 한다.
+ *
+ * 기획 확정(2026-08-12): QR 연동은 흐름 다섯 걸음의 **1걸음**이다(시안 S01-B) — 앱을
+ * 그냥 열면 이 화면이 먼저 나오고, QR 을 찍거나 코드를 넣으면 홈(2걸음)이 나온다.
+ * 매장 QR 링크(?env=)로 열리면 이 걸음을 건너뛴다 — 그 경로는 qr-url.spec.ts 가 잰다.
  *
  * 이 화면의 핵심은 «읽히는 경우»가 아니라 **읽히지 않는 경우**다. BarcodeDetector 는
  * Safari·Firefox 에 없고, 카메라 권한은 거부될 수 있고, 카메라가 아예 없는 기기도 있다.
@@ -19,27 +23,25 @@ import { expect, test, type Page } from "@playwright/test";
 
 /** ui/src/model.ts 의 Step 유니온. 앱 상태를 찾아낼 때 «이것이 step 인가»의 판별에 쓴다. */
 const STEPS = [
-  "start", "profile", "saveChoice", "qr", "sessionStart",
-  "wizard", "calculating", "recommend", "menuConfirm",
+  "connect", "start", "profile", "saveChoice", "sessionStart",
+  "wizard", "calculating", "menuConfirm", "menuSelect",
   "confirm", "run", "result", "staff", "edit", "stopped",
 ];
-
-/* QR 화면으로 가는 길이 이어졌다. 예전에는 레인 A 가 S03 을 만드는 중이라 React 내부
-   상태를 직접 건드리는 임시 다리를 놓았는데, 그건 «화면에서 실제로 닿을 수 있는가»를
-   재지 못한다. 이제 사용자와 같은 길로 간다. */
 
 const screen = (page: Page) => page.locator("section[aria-label^='매장 QR 연동']");
 /** 5단계 인디케이터의 현재 라벨 — 내부 상태를 훔쳐보지 않고 화면에 보이는 것으로 잰다. */
 const nowStep = (page: Page) => page.locator(".kb-steps:not(.mini) .kb-step.now .kb-steplabel");
+const 홈도착 = async (page: Page) => {
+  await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요|다시 오셨네요/ }),
+    "QR 연동을 지나면 홈이어야 합니다").toBeVisible();
+  await expect(nowStep(page)).toHaveText("홈"); // 2걸음 — QR 연동 다음이다
+};
 
-/** 홈에서 사용자와 같은 길로 QR 화면까지 간 뒤, 카메라 판단이 끝날 때까지 기다린다. */
-async function goToQr(page: Page) {
+/** 그냥 연다 — 관문이 첫 화면이다. 카메라 판단이 끝날 때까지 기다린다. */
+async function goToGate(page: Page) {
   await page.goto("http://localhost:5173/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
-  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
-  await page.getByRole("button", { name: "이번만 사용" }).click();
   await expect(screen(page)).toBeVisible();
   /* «카메라를 준비하고 있습니다»에서 벗어나야 판단이 끝난 것이다. 그 전에 화면을 재면
      직접 입력이 접혔는지 펴졌는지가 아직 정해지지 않아 결과가 실행마다 달라진다. */
@@ -47,14 +49,14 @@ async function goToQr(page: Page) {
 }
 
 /**
- * QR 화면으로 옮기고 **직접 입력을 편 뒤**, 매장 정보(fixture)가 도착할 때까지 기다린다.
+ * 관문에서 **직접 입력을 편 뒤**, 매장 정보(fixture)가 도착할 때까지 기다린다.
  *
  * 직접 입력은 시안(150:359)대로 버튼 하나로 접혀 있고, 카메라를 못 쓰는 것이 확인되면
  * 화면이 스스로 편다. 그래서 접혀 있을 때만 누른다 — 무조건 누르면 이미 펴진 경우를
  * 도로 접어 버린다.
  */
 async function openQr(page: Page) {
-  await goToQr(page);
+  await goToGate(page);
   const 직접입력 = screen(page).getByRole("button", { name: "직접 입력" });
   if (await 직접입력.getAttribute("aria-expanded") === "false") await 직접입력.click();
   // fixture 가 오기 전에는 대조할 매장이 없어 «확인» 버튼이 잠겨 있다
@@ -99,11 +101,19 @@ const withFakeCamera = (page: Page) =>
     Object.defineProperty(window, "BarcodeDetector", { configurable: true, value: FakeBarcodeDetector });
   });
 
-test.describe("레인 B — 매장 QR 읽기", () => {
+test.describe("레인 B — 매장 연동 관문", () => {
   test.describe("카메라를 쓸 수 없는 브라우저", () => {
     test.beforeEach(async ({ page }) => {
       await withoutCamera(page);
       await openQr(page);
+    });
+
+    test("QR 연동이 홈보다 먼저 나오고, 진행 표시의 1걸음이 여기다", async ({ page }) => {
+      /* 흐름 밖 관문이던 때는 진행 표시가 없는 것을 지켰다. 기획 확정(2026-08-12,
+         시안 S01-B)으로 다섯 걸음의 첫째가 됐다 — 표시가 있고, 지금 위치가 «QR 연동»이다. */
+      await expect(nowStep(page)).toHaveText("QR 연동");
+      await expect(page.locator(".kb-steps:not(.mini) .srline")).toContainText("5단계 중 1단계");
+      await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요/ })).toHaveCount(0);
     });
 
     test("왜 안 되는지 말하고, 앞으로 갈 길을 세 갈래 준다", async ({ page }) => {
@@ -130,7 +140,7 @@ test.describe("레인 B — 매장 QR 읽기", () => {
       await expect(page.locator("section[aria-label='직원 호출']")).toBeVisible();
     });
 
-    test("매장 코드를 직접 넣으면 연결 완료로 간다", async ({ page }) => {
+    test("매장 코드를 직접 넣으면 연결 완료를 거쳐 홈으로 간다", async ({ page }) => {
       await page.getByLabel("매장 코드 직접 입력").fill("chicken-store");
       await page.getByRole("button", { name: "이 코드로 연결하기" }).click();
 
@@ -139,14 +149,15 @@ test.describe("레인 B — 매장 QR 읽기", () => {
       await expect(screen(page)).toContainText("닭강정 가게");
       await expect(screen(page)).toContainText("chicken-store");
 
-      /* 없는 것을 있다고 하지 않는다 — 세션을 발급받은 것도, 확인한 것도 아니다.
-         시안 부제(150:392)가 「매장 정보와 **세션을 모두 확인했어요**」라서, «발급»만
-         막으면 시안 문구를 그대로 되돌려 놓아도 검사가 통과해 버린다. 진행 표시의
-         «세션 시작»은 걸리지 않도록 «세션을 어떻게 했다»는 꼴만 막는다. */
-      await expect(screen(page)).not.toContainText(/세션[을이]?\s*(모두\s*)?(발급|생성|확인)/);
+      /* 부제는 확정 시안 그대로 «매장 정보와 세션을 모두 확인했어요»다(기획 확정
+         2026-08-12 — FIGMA_RULES §2.8 에 번복 기록). 한동안 «세션» 낱말을 빼고 지켰던
+         가드는 그 결정과 함께 걷었다. «발급·생성»처럼 일이 일어난 것으로 읽히는 말은
+         여전히 막는다 — 세션은 만들어지지 않는다. */
+      await expect(screen(page)).toContainText("매장 정보와 세션을 모두 확인했어요");
+      await expect(screen(page)).not.toContainText(/세션[을이]?\s*(발급|생성)/);
 
       await page.getByRole("button", { name: /이 매장으로 계속하기/ }).click();
-      await expect(nowStep(page), "세션 시작으로 넘어가지 않았습니다").toHaveText("세션 시작");
+      await 홈도착(page);
     });
 
     test("QR을 URL 로 적어도 매장 코드를 알아본다", async ({ page }) => {
@@ -165,16 +176,12 @@ test.describe("레인 B — 매장 QR 읽기", () => {
 
       // 막다른 길이 아니다
       await page.getByRole("button", { name: /이대로 계속하기/ }).click();
-      await expect(nowStep(page), "세션 시작으로 넘어가지 않았습니다").toHaveText("세션 시작");
+      await 홈도착(page);
     });
 
-    test("QR 없이 건너뛰어도 흐름이 이어진다", async ({ page }) => {
+    test("QR 없이 건너뛰어도 흐름이 이어진다 — 홈에서 시작한다", async ({ page }) => {
       await page.getByRole("button", { name: /QR 없이 계속하기/ }).click();
-      await expect(nowStep(page), "세션 시작으로 넘어가지 않았습니다").toHaveText("세션 시작");
-    });
-
-    test("진행 표시에서 QR은 5단계 중 4번째다", async ({ page }) => {
-      await expect(page.locator(".kb-steps .srline")).toHaveText(/5단계 중 4단계/);
+      await 홈도착(page);
     });
 
     test("이 화면의 조작 요소가 전부 48px 이상이다", async ({ page }) => {
@@ -214,7 +221,7 @@ test.describe("레인 B — 매장 QR 읽기", () => {
     test("화면을 벗어나면 카메라가 꺼진다", async ({ page }) => {
       await expect(screen(page).locator("video")).toBeVisible();
       await page.getByRole("button", { name: /QR 없이 계속하기/ }).click();
-      await expect(nowStep(page), "세션 시작으로 넘어가지 않았습니다").toHaveText("세션 시작");
+      await 홈도착(page);
       expect(await page.evaluate(() => (window as unknown as { __stopped: number }).__stopped)).toBeGreaterThan(0);
     });
   });
@@ -225,7 +232,7 @@ test.describe("레인 B — 매장 QR 읽기", () => {
   test.describe("시안의 기본 상태 — 직접 입력은 버튼 하나로 접혀 있다", () => {
     test("스캔 중에는 접혀 있고, 눌러야 입력칸이 나온다", async ({ page }) => {
       await withFakeCamera(page);
-      await goToQr(page);
+      await goToGate(page);
 
       const 직접입력 = screen(page).getByRole("button", { name: "직접 입력" });
       await expect(직접입력).toHaveAttribute("aria-expanded", "false");

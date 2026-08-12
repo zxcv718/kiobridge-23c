@@ -14,7 +14,9 @@ import "./profile.css";
  *
  * 다만 7종을 셋으로 줄이지는 않는다. 제출물이 접근성 채널 8종을 선언하고 있고,
  * 선언한 채널이 화면에서 닿지 않으면 그건 «없는 기능을 있다고 말한 것»이 된다.
- * 그래서 «자세한 설정»에 7종을 전부 펼쳐 둔다(접지 않는다).
+ * 그래서 «자세한 설정»으로 7종이 전부 닿는다. **기본은 접힘이다**(기획 2026-08-12) —
+ * 고를 것을 다 고른 화면이 시안의 «제목 → 선택지 두 장»으로 끝나고, 필요한 사람은
+ * 한 번 눌러 편다. 숨긴 것이 아니라 접은 것이라(§2.1) 닿는다는 사실은 그대로다.
  *
  * **«자세한 설정»은 마지막 걸음에만 둔다.** 세 걸음 모두에 붙여 두었더니 걸음마다 같은
  * 목록이 800px 씩 따라붙어, 디자인이 말하는 «제목 → 선택지 두 장 → 넓은 여백 → 아래
@@ -94,7 +96,7 @@ export function ProfileSetup() {
   return (
     <Screen
       onBack={back}
-      steps={{ labels: FLOW_STEPS, current: 2 }}
+      steps={{ labels: FLOW_STEPS, current: 3 }}
       label="화면과 안내 설정"
       eyebrow={miniSteps}
       /* 시안의 TitleBlock 은 22px Bold 한 문장뿐이다 — 강조어를 키우지 않고, 부제도 없다.
@@ -115,9 +117,9 @@ export function ProfileSetup() {
         ))}
       </div>
 
-      {/* 선언한 접근성 채널 7종은 마지막 걸음에서 전부 닿는다 — 접어 두지 않는다 */}
+      {/* 선언한 접근성 채널 7종은 마지막 걸음에서 전부 닿는다 — 기본은 접혀 있고 한 번 눌러 편다 */}
       {last && (
-        <details className="p-more" open>
+        <details className="p-more">
           <summary>
             자세한 설정
             <span className="p-morehint">위에서 고르신 것을 포함해 7가지를 하나씩 켜고 끌 수 있어요</span>

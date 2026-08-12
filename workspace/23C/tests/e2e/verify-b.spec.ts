@@ -70,8 +70,7 @@ test.describe("B계열 — 신규 동작", () => {
 
     // 전부 답했으므로 생략 고지가 없어야 한다
     await expect(page.getByText(/여쭤보지 않았습니다/)).toHaveCount(0);
-    await page.getByRole("button", { name: "네, 좋아요" }).click();
-    await page.getByRole("button", { name: "이대로 담기" }).click();
+    await page.getByRole("button", { name: "선택하기", exact: true }).click();
     await expect(page.getByText(/상관없다고 하셔서 이 메뉴의 값으로 정했습니다/).first()).toBeVisible();
   });
 
@@ -97,15 +96,17 @@ test.describe("B계열 — 신규 동작", () => {
       }));
     });
     await page.reload();
+    await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
     await page.getByRole("button", { name: /지난번과 똑같이 주문하기/ }).click();
 
     // 1회차 — 사유는 말하지만 중단 화면은 아니다. 조건을 고칠 기회를 먼저 준다.
+    // 그 길은 «다시 추천받기»다 — 합쳐진 메뉴 확인 화면에서 조건 수정으로 가는 라벨
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "조건 수정" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "다시 추천받기" })).toBeVisible();
 
-    // 조건 수정 → 그대로 다시 추천 → 2회차
-    await page.getByRole("button", { name: "조건 수정" }).click();
-    await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
+    // 조건 수정 화면으로 가서 그대로 다시 추천 → 2회차
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await page.getByRole("button", { name: "수정 완료" }).click();
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();
     /* «아무 준비도 시작되지 않았다»는 안심은 그대로 있다 — 승인 전이므로 실행 계획도,
        장바구니도 없다. 시안(99:1337)에 없는 문단이라 접혀 있을 뿐 없어지지 않았고,
@@ -131,6 +132,7 @@ test.describe("B계열 — 신규 동작", () => {
       }));
     });
     await page.reload();
+    await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
     await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
     await 저장된내용펼치기(page);
     await expect(page.getByText(/땅콩/)).toBeVisible();
@@ -161,6 +163,7 @@ test.describe("B계열 — 신규 동작", () => {
     await page.goto("http://localhost:5173/");
     await page.evaluate(() => localStorage.clear());
     await page.reload();
+    await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 홈으로
 
     await enterWizard(page);
     for (let i = 0; i < 6; i++) {
@@ -170,12 +173,11 @@ test.describe("B계열 — 신규 동작", () => {
     await approveToCartReview(page);
 
     // 확인 화면에는 저장 얘기가 없다 — 결제 직전에 다음 방문 판단을 시키지 않는다
-    await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
     await expect(page.getByText(/저장/)).toHaveCount(0);
 
-    // 라이브(시뮬레이터 연결)면 "가상 키오스크에서 실행", 아니면 "주문 확정하기"
-    const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });
-    await ((await live.count()) > 0 ? live : page.getByRole("button", { name: /주문 확정하기/ })).click();
+    // CTA 는 시안 라벨 «주문하기» 하나다 — 라이브(실행)든 체험 모드(계획 보관)든 같다
+    await page.getByRole("button", { name: "주문하기", exact: true }).click();
 
     /* 결과 화면(S15)은 저장을 **다시 묻지 않는다.** 저장 여부는 프로필 단계(S03)에서
        이미 한 번 물었고, 같은 결정을 두 번 묻는 것은 통제권이 아니라 부담만 늘린다.
@@ -199,7 +201,7 @@ test.describe("B계열 — 신규 동작", () => {
 
     await page.getByRole("button", { name: /지난번과 똑같이 주문하기/ }).click();
     // 실행으로 직행하지 않는다 — 확인을 거쳐야 한다
-    await expect(page.getByRole("button", { name: "네, 좋아요" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: /실행 결과|주문이 완성되었습니다/ })).toHaveCount(0);
   });
 
@@ -210,18 +212,20 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
     /* 설정 목록은 프로필 3/3 의 «자세한 설정» 안에 있다 — 상단바 토글이 없어지면서
        여기가 8종에 닿는 유일한 자리가 됐다. 선언한 채널이 화면에서 닿지 않으면
-       «없는 기능을 있다고 말한 것»이 되므로, 이 검사는 그 자리까지 걸어가서 잰다. */
+       «없는 기능을 있다고 말한 것»이 되므로, 이 검사는 그 자리까지 걸어가서 잰다.
+       기본은 접힘이라(기획 2026-08-12) 한 번 펼치는 것까지가 «닿는 길»이다. */
     for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
     await expect(page.getByRole("heading", { name: "필요한 안내 방식을 선택해주세요" })).toBeVisible();
+    await page.locator("details.p-more > summary").click();
 
     const app = page.locator(".app");
     const row = (name: string) => page.locator(".a11ylist .a11yrow", { hasText: name });
 
-    // largeText 는 기본 켜짐 — 끄고 켜며 실제로 바뀌는지 확인
-    await row("큰 글씨").click();
-    await expect(app).not.toHaveClass(/large/);
+    // largeText 는 기본 꺼짐(기본 크기, 기획 2026-08-12) — 켜고 끄며 실제로 바뀌는지 확인
     await row("큰 글씨").click();
     await expect(app).toHaveClass(/large/);
+    await row("큰 글씨").click();
+    await expect(app).not.toHaveClass(/large/);
 
     await row("고대비").click();
     await expect(app).toHaveClass(/contrast/);
@@ -256,33 +260,41 @@ test.describe("B계열 — 신규 동작", () => {
    * 말하지 않는가**를 본다. 서버가 없으므로 세션을 발급받을 수는 없고, 여기서 하는
    * 일은 QR 에 적힌 매장 코드를 우리가 가진 환경과 맞춰 보는 것까지다.
    */
-  test("C3 QR 은 읽기만 하며, 하지 않은 일을 한 것처럼 말하지 않는다", async ({ page }) => {
-    await start(page);
-    await page.getByRole("button", { name: /^(시작하기|새로 설정하기)$/ }).click();
-    for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
-    // S03 은 라디오+«다음»이 아니라 저장 방식 CTA 를 고르는 순간 QR 로 간다
-    await page.getByRole("button", { name: "이번만 사용" }).click();
-
+  test("C3 연동 관문은 QR 을 읽기만 하며, 하지 않은 일을 한 것처럼 말하지 않는다", async ({ page }) => {
+    /* 관문은 홈보다 앞에 선다(기획 2026-08-12) — 그냥 열면 이것이 첫 화면이다. */
+    await page.goto("http://localhost:5173/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
     await expect(page.getByRole("heading", { name: /매장 QR|QR을 읽을 수 없습니다/ })).toBeVisible();
+    // 헤드리스에는 카메라가 없다 — 판단이 끝나면 직접 입력이 저절로 펴진다
+    await expect(page.getByRole("status").first()).not.toHaveText("카메라를 준비하고 있습니다.");
 
     const body = await page.locator("body").innerText();
     // 세션 발급·서버 연결처럼 우리가 하지 않는 일을 했다고 쓰지 않는다
     expect(body).not.toMatch(/세션이? (발급|생성)|서버에 (연결|등록)|로그인/);
     // 카메라를 못 쓰는 사람에게도 앞으로 갈 길이 같은 화면에 있어야 한다
     await expect(page.getByRole("button", { name: /QR 없이 계속하기/ })).toBeVisible();
-    await expect(page.getByRole("textbox")).toBeVisible(); // 매장 코드 직접 입력
+    await expect(page.getByRole("textbox")).toBeVisible(); // 매장 코드 직접 입력 (자동으로 펴짐)
   });
 
-  test("B9 조건 수정의 메뉴 목록에 제외된 후보가 없다", async ({ page }) => {
+  test("B9 메뉴 선택 목록에 제외된 후보가 없다 — 점수순, 상위 3개 추천 표시", async ({ page }) => {
     await start(page);
     await answerAll(page); // 땅콩·콩 알레르기 → 해당 후보 제외됨
-    await page.getByRole("button", { name: "조건 수정" }).click();
-    await page.getByRole("button", { name: /^메뉴/ }).click();
+    await page.getByRole("button", { name: "다시 추천받기" }).click();   // 메뉴 확인 → 수정 화면
+    await page.getByRole("button", { name: "메뉴 수정", exact: true }).click(); // 수정 화면 → 메뉴 선택
+    await expect(page.getByRole("heading", { name: /어떤 메뉴를 원하시나요/ })).toBeVisible();
 
-    const names = await page.locator(".editbody .choices .choice").allInnerTexts();
+    const names = await page.locator(".choices .choice").allInnerTexts();
     expect(names.length).toBeGreaterThan(0);
     // 땅콩 토핑(PEANUT)·간장 순살(SOY)은 제외됐으므로 목록에 없어야 한다
     expect(names.join(" ")).not.toContain("땅콩 토핑");
     expect(names.join(" ")).not.toContain("간장 순살");
+    // 기획(노션 2026-08-12): 추천 점수 상위 3개에 «추천» 표시
+    await expect(page.locator(".choices .choice .menu-rec", { hasText: "추천" })).toHaveCount(3);
+
+    // 고르면 메뉴 확인으로 돌아가 재확인한다
+    await page.locator(".choices .choice").nth(1).click();
+    await page.getByRole("button", { name: "선택", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
   });
 });

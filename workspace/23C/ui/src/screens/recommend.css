@@ -1,7 +1,7 @@
-/* 추천 결과와 메뉴 확인(Figma 99:1762) 두 화면이 쓰는 스타일.
+/* 메뉴 확인(Figma 99:1762 — 추천 화면과 통합됨)이 쓰는 스타일.
  *
- * 뼈대는 `Screen` 과 components.css 가 쥐고, 메뉴 상자(.cart-box)·조건 문장(.mc-why)은
- * cart.css 것을 그대로 쓴다 — 장바구니 확인 화면과 같은 메뉴를 말하는 자리라
+ * 뼈대는 `Screen` 과 components.css 가 쥐고, 메뉴 상자(.cart-box)는 cart.css
+ * 것을 그대로 쓴다 — 장바구니 확인 화면과 같은 메뉴를 말하는 자리라
  * 모양이 달라지면 사용자는 다른 것을 보고 있다고 생각한다. 여기 있는 것은
  * 그 둘 사이를 잇는 나머지뿐이다.
  *
@@ -56,6 +56,34 @@
  * **위쪽을 잘라** 배지와 조건 문장이 화면 밖으로 나간다. 아래쪽 여백은 CTA 가 바닥에
  * 붙어 있어 저절로 생긴다. */
 .kb-screen:has(.mc-flow) .kb-screen-body { padding-top: clamp(4px, 5vh, 44px); }
+/* 기획 목업의 제목은 큰 제목이 아니라 카드 위 15px 캡션 한 줄이다 — 인사말도 없다.
+   h2 는 그대로 두고(화면 제목 h2 하나라는 전제를 낭독기·e2e 가 쓴다) 크기만 내린다. */
+.kb-screen:has(.mc-flow) .kb-title { font-size: 0.83em; font-weight: 400; }
 .mc-flow { display: flex; flex-direction: column; gap: var(--kb-spacing-md); }
 .mc-flow > * { margin: 0; }
 .mc-badgeline { line-height: 1; }
+/* 추천 메뉴 카드 테두리는 cart-box 기본(#e5e5e5 = --line-soft) 그대로다 —
+   기획 확인(2026-08-12)으로 브랜드색 테두리를 되돌렸다. */
+/* «다시 추천받기» 흰 버튼의 테두리도 기획 확인으로 #e5e5e5(--line-soft) —
+   공용 .btn.ghost(--line #8a8a8a)를 건드리지 않고 이 화면에만 스코프한다.
+   글자 라벨이 컨트롤을 식별하므로 테두리가 유일한 수단은 아니다. */
+.kb-screen:has(.mc-flow) .kb-actions .btn.ghost { border-color: var(--line-soft); }
+/* 강조 단어(알레르기 이름·조건 값)는 시안대로 주황 글씨 — 굵기와 색이 함께 맡는다.
+   본문 크기라 --brand(3.12:1)를 못 얹고, 밝은 바탕 위 주황 글씨 자리인
+   --brand-strong(4.65:1, AA 통과)을 쓴다 (옛 .mc-why b 와 같은 결정). */
+.mc-flow .reasons b { color: var(--brand-strong); }
+
+/* ── 메뉴 선택 목록 (노션 기획 목업 2026-08-12) ──
+ * 한 줄에 한 장 — 이름(Bold)·가격(회색)이 왼쪽에 나란히, «추천»은 주황 글씨로
+ * 오른쪽 끝에 선다. 색만으로 말하지 않는다 — «추천»은 글자 그 자체가 뜻이다. */
+.menu-rank.choices { grid-template-columns: 1fr; gap: 12px; }
+.menu-rank .choice {
+  display: flex; align-items: baseline; gap: 10px;
+  min-height: 71px; padding: 16px 20px; text-align: left;
+}
+.menu-rank .menu-name { font-weight: 700; }
+.menu-rank .choice small { font-size: 0.92em; font-weight: 400; color: var(--muted); }
+.menu-rank .menu-rec {
+  margin-left: auto; flex: none;
+  color: var(--brand-strong); font-weight: 700; font-size: 0.88em;
+}

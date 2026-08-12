@@ -1,21 +1,21 @@
 /**
  * 홈에서 질문·추천까지 가는 길 (테스트 전용).
  *
- * 디자인 레이아웃을 전면 반영하면서 시작 화면과 질문 사이에 다섯 걸음이 들어갔다 —
- * 프로필 생성(3걸음) · 저장 방식 · QR 연동 · 세션 시작.
+ * 시작 화면과 질문 사이의 걸음 — 프로필 생성(3단계) · 저장 방식 · 세션 시작.
+ * QR 연동은 흐름의 1걸음이다(기획 확정 2026-08-12, 시안 S01-B) — 홈보다 앞이라
+ * openHome 이 «QR 없이 계속하기»로 지나고, 그 화면 자체는 lane-b.spec.ts 가 잰다.
  *
  * 이 길을 스펙마다 따로 적으면 화면이 하나 늘 때마다 여섯 파일을 같이 고쳐야 하고,
  * 그중 하나를 빠뜨리면 «왜 실패하는지 알 수 없는» 테스트가 남는다. 한 곳에 둔다.
  *
- * 실제 흐름 (2026-08-11 실측):
+ * 실제 흐름 (2026-08-12 실측):
  *   홈          [시작하기]
  *   프로필 1/3  라디오 2 · [다음]
  *   프로필 2/3  라디오 2 · [다음]
  *   프로필 3/3  라디오 2 · 접근성 토글 7 · 입력 방식 2 · [다음]
- *   저장 방식   [이 기기에 저장하기] | [이번만 사용하기]   ← 고르는 즉시 QR 로 간다
- *   QR          [이 코드로 연결하기] · [QR 없이 계속하기]
+ *   저장 방식   [이 기기에 저장하기] | [이번만 사용하기]   ← 고르는 즉시 세션 시작으로 간다
  *   세션 시작   [주문 시작하기]
- *   질문 ×7     선택지 · [다음]
+ *   질문 ×6     선택지 · [다음]
  */
 import { expect, type Page } from "@playwright/test";
 
@@ -79,11 +79,14 @@ export async function 저장된내용펼치기(page: Page): Promise<void> {
   await expect(page.getByRole("region", { name: "이 기기에 저장된 기록" })).toBeVisible();
 }
 
-/** 홈을 연다. 저장본을 비우므로 늘 «최초 방문» 상태에서 시작한다. */
+/** 홈을 연다. 저장본을 비우므로 늘 «최초 방문» 상태에서 시작한다.
+ *  매장 QR 링크 없이 열면 연동 관문이 홈보다 먼저 나온다(기획 2026-08-12) —
+ *  관문 자체는 lane-b.spec.ts 가 검사하므로 여기서는 «QR 없이» 지나 홈에 선다. */
 export async function openHome(page: Page): Promise<void> {
   await page.goto(HOME);
   await page.evaluate(() => localStorage.clear());
   await page.reload();
+  await page.getByRole("button", { name: "QR 없이 계속하기" }).click();
   await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요/ })).toBeVisible();
 }
 
@@ -99,10 +102,8 @@ export async function enterWizard(page: Page, store = false): Promise<void> {
   for (let i = 0; i < 3; i++) {
     await page.getByRole("button", { name: "다음", exact: true }).click();
   }
-  // S03 저장 방식 — 고르는 즉시 다음 걸음으로 간다
+  // S03 저장 방식 — 고르는 즉시 다음 걸음(세션 시작)으로 간다. QR 걸음은 맨 앞이라 여기 없다.
   await page.getByRole("button", { name: store ? "저장하기" : "이번만 사용" }).click();
-  // S04 매장 QR — 카메라는 헤드리스에서 못 쓴다. QR 자체는 lane-b.spec.ts 가 폴백으로 검사한다.
-  await page.getByRole("button", { name: "QR 없이 계속하기" }).click();
   // S05 세션 시작
   await page.getByRole("button", { name: /^(주문 시작하기|아니오)$/ }).click();
 
@@ -123,7 +124,6 @@ export async function enterWizardByKeyboard(
   await pressOn(page, /^(시작하기|새로 설정하기)$/);
   for (let i = 0; i < 3; i++) await pressOn(page, /^다음$/);
   await pressOn(page, /^이번만 사용$/);
-  await pressOn(page, /^QR 없이 계속하기$/);
   await pressOn(page, /^(주문 시작하기|아니오)$/);
   await expect(page.locator("#qtitle")).toBeVisible();
 }
@@ -182,22 +182,22 @@ export async function answerWizard(page: Page, picks: (string | string[] | null)
 }
 
 /**
- * 추천 화면 → 장바구니 확인(S13).
+ * 추천 확인 → 장바구니 확인(S13).
  *
- * 사이에 «메뉴 확인»(Figma 99:1762)이 한 걸음 들어간다 — 추천 화면은 이유·대안·제외를
- * 한꺼번에 보여주느라 빽빽해서, 고른 것이 맞는지만 묻는 자리를 따로 둔다.
+ * 추천(Recommend)과 메뉴 확인(MenuConfirm) 두 화면이 «메뉴 확인» 하나로 합쳐졌다
+ * (노션 기획 «장바구니 수정 플로우 변경» 2026-08-12) — 같은 메뉴를 두 번 확인시키는
+ * 중복이었다. «네, 좋아요» → «이대로 담기» 두 걸음이 «선택하기» 한 걸음이 됐다.
  */
 export async function approveToCartReview(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "네, 좋아요" }).click();
   await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
-  await page.getByRole("button", { name: "이대로 담기" }).click();
-  await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
+  await page.getByRole("button", { name: "선택하기", exact: true }).click();
+  /* 장바구니 확인(S13)에는 시안대로 큰 제목 문장이 없다 — CTA «주문하기»가 도착 표식이다 */
+  await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 }
 
-/** 주문을 확정해 결과 화면까지 (라이브면 실행, 아니면 체험 모드 확정). */
+/** 주문을 확정해 결과 화면까지 (라이브·체험 모드 모두 시안 라벨 «주문하기» 하나다). */
 export async function finishOrder(page: Page): Promise<void> {
-  const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });
-  await ((await live.count()) > 0 ? live : page.getByRole("button", { name: /주문 확정하기/ })).click();
+  await page.getByRole("button", { name: "주문하기", exact: true }).click();
   /* level 2 를 지정한다 — 결과 화면 본문에 «주문 계획» 소제목(h3)이 생겨
      이름만으로 찾으면 둘이 걸린다. 화면 제목은 언제나 h2 하나뿐이다. */
   await expect(page.getByRole("heading", { level: 2, name: /실행 결과|주문이 완성되었습니다|실행하지 못했습니다/ }))

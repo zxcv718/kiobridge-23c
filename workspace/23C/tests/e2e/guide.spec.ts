@@ -18,16 +18,18 @@ import { openHome } from "./nav";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-/** 프로필 3/3 까지 가서 「안내 켜짐」을 고르고, 질문 화면 직전까지 간다. */
+/** 프로필 3/3 까지 가서 「안내 켜짐」을 고르고, 질문 화면 직전까지 간다.
+ *  «큰 글씨»도 함께 켠다 — 기본이 «기본 크기»가 되면서(기획 2026-08-12), 이 파일의
+ *  화살표·통로 실측이 재 온 가장 불리한 조합(큰 화살표)을 이제 직접 만들어야 한다. */
 async function 안내켜고(page: Page, 켤까: boolean): Promise<void> {
   await openHome(page);
   await page.getByRole("button", { name: /^시작하기$/ }).click();
+  await page.locator(".kb-radio", { hasText: "큰 글씨" }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   if (켤까) await page.getByRole("button", { name: "안내 켜짐" }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "이번만 사용" }).click();
-  await page.getByRole("button", { name: "QR 없이 계속하기" }).click();
   await page.getByRole("button", { name: /^(주문 시작하기|아니오)$/ }).click();
   await expect(page.locator("#qtitle")).toBeVisible();
 }
@@ -135,7 +137,7 @@ test("안내 고리는 본문 스크롤 상자에 잘리지 않는다", async ({
 /**
  * 화살표가 흔들려도 고리를 파고들지 않는가.
  *
- * 화살표는 1.5em 이라 «큰 글씨»(기본값이다)를 켜면 같이 커지는데, 지나갈 통로가 44px
+ * 화살표는 1.5em 이라 «큰 글씨»(안내켜고 가 켠다)를 켜면 같이 커지는데, 지나갈 통로가 44px
  * 고정이던 때는 그 커진 만큼이 그대로 고리 위로 넘어갔다. 겹치면 화살표와 고리가 한
  * 덩어리로 읽혀, «저기를 누르세요»가 «버튼에 붙은 장식»이 된다.
  *
@@ -248,16 +250,23 @@ test("선택지 그림은 안내를 끄든 켜든 늘 있다 — 시안에서 �
  * 어느 쪽이든 **가리키는 곳은 하나**여야 하므로 아래 주 버튼은 함께 물러난다.
  */
 test.describe("QR 화면의 안내 대상", () => {
+  /* QR 연동은 흐름의 1걸음이라(기획 확정 2026-08-12) 그냥 열면 이것이 첫 화면이다.
+     다만 안내를 켜는 자리(프로필 3/3)는 이 걸음 **뒤**라, 오늘의 사용자 경로로는 안내가
+     켜진 채 이 화면에 설 수 없다(저장본 a11y 도 홈에서 확인한 뒤에야 적용된다). 여기서
+     재는 것은 «안내가 켜졌을 때 이 화면이 무엇을 가리키는가»라는 화면 계약이므로, 안전
+     중단 검사(lane-d D12)와 같은 방법으로 클래스를 직접 얹어 그 상태를 만든다 — 각
+     검사에서 카메라 국면이 정해진 **뒤에** 얹는다(그 전에 얹으면 상태 변화 렌더가 도로
+     지운다). QR 걸음이 프로필 뒤로 옮겨지는 날이 오면 이 우회도 같이 걷어낸다. */
   const qr까지 = async (page: Page) => {
     await page.setViewportSize({ width: 390, height: 844 });
-    await openHome(page);
-    await page.getByRole("button", { name: /^시작하기$/ }).click();
-    await page.getByRole("button", { name: "다음", exact: true }).click();
-    await page.getByRole("button", { name: "다음", exact: true }).click();
-    await page.getByRole("button", { name: "안내 켜짐" }).click();
-    await page.getByRole("button", { name: "다음", exact: true }).click();
-    await page.getByRole("button", { name: "이번만 사용" }).click();
+    await page.goto("http://localhost:5173/");
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+    await expect(page.getByRole("heading", { name: /매장 QR을 스캔해주세요|카메라로 QR을 읽을 수 없습니다/ }))
+      .toBeVisible();
   };
+  const 안내상태로 = (page: Page) =>
+    page.evaluate(() => document.querySelector(".app")?.classList.add("guide"));
   const 그림자 = (page: Page, sel: string) =>
     page.locator(sel).first().evaluate((el) => getComputedStyle(el).boxShadow);
   const 화살표 = (page: Page, sel: string) =>
@@ -265,8 +274,10 @@ test.describe("QR 화면의 안내 대상", () => {
 
   test("카메라를 못 쓰면 직접 입력 칸을 가리킨다", async ({ page }) => {
     await qr까지(page);
+    // 헤드리스에는 카메라가 없다 — «못 쓴다» 국면이 정해진 것을 보고 나서 안내를 얹는다
     await expect(page.locator(".field.kb-guide")).toHaveCount(1);
     await expect(page.locator(".qr-view.kb-guide")).toHaveCount(0);
+    await 안내상태로(page);
 
     /* 고리는 «칸»에 두른다 — 라벨 상자에 두르면 위의 설명 한 줄까지 묶여
        가리키는 것이 «칸»이 아니라 «문단»이 된다. */
@@ -298,6 +309,7 @@ test.describe("QR 화면의 안내 대상", () => {
 
     await expect(page.locator(".qr-view.kb-guide")).toHaveCount(1);
     await expect(page.locator(".field.kb-guide")).toHaveCount(0);
+    await 안내상태로(page);
     expect(await 그림자(page, ".qr-view.kb-guide"), "카메라 창에 고리가 없습니다").toMatch(고리있음);
     expect(await 화살표(page, ".qr-view.kb-guide"), "창 위에 화살표가 없습니다").not.toBe("none");
 
