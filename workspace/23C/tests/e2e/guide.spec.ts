@@ -46,6 +46,30 @@ const 선택지고리 = (page: Page) =>
 
 const 고리있음 = /0px 0px 0px 7px|0 0 0 7px/;
 
+/**
+ * 고리가 본문 상자 안에 **온전히** 들어오는지 방향별 여유(px)로 잰다.
+ *
+ * 본문(.kb-screen-body)은 스크롤 상자라 넘치는 것을 자른다 — overflow-y 만 auto 로 둬도
+ * 가로가 함께 auto 가 되어 좌우로도 자른다. 고리는 box-shadow 라 요소 상자 **바깥** 7px 에
+ * 그려지는데, box-shadow 는 스크롤 범위를 넓히지 않으므로(ink overflow) 상자가 안쪽 여백을
+ * 그만큼 벌려 두지 않으면 그대로 깎인다.
+ */
+const 고리여유 = (page: Page) =>
+  page.locator(".q-choices .choices").first().evaluate((el) => {
+    const 고리 = 7; // box-shadow spread — question.css 와 styles.css 의 CTA 가 같은 값을 쓴다
+    const g = el.getBoundingClientRect();
+    const body = el.closest(".kb-screen-body") as HTMLElement;
+    const b = body.getBoundingClientRect();
+    const cs = getComputedStyle(body);
+    // 자르는 자리는 border box 가 아니라 **padding box** 다
+    return {
+      왼쪽: g.left - 고리 - (b.left + parseFloat(cs.borderLeftWidth)),
+      오른쪽: b.right - parseFloat(cs.borderRightWidth) - (g.right + 고리),
+      아래: b.bottom - parseFloat(cs.borderBottomWidth) - (g.bottom + 고리),
+      스크롤됨: body.scrollHeight > body.clientHeight,
+    };
+  });
+
 test("안내를 켜면 고르기 전에는 선택지 영역을 가리키고, 고르면 «다음»으로 넘긴다", async ({ page }) => {
   await 안내켜고(page, true);
 
@@ -76,6 +100,36 @@ test("안내를 켜면 고르기 전에는 선택지 영역을 가리키고, 고
   expect(await 화살표보임(page), "골랐는데 «다음» 쪽 화살표가 없습니다").toBe(true);
   expect(await 선택지고리(page), "이미 골랐는데 선택지 영역을 계속 가리킵니다")
     .not.toMatch(고리있음);
+});
+
+/**
+ * 고리가 본문 상자에 잘리지 않는가.
+ *
+ * 본문 좌우 여백이 6px(초점 테두리 몫)이던 동안, 7px 로 그려지는 고리는 양옆이 1px 씩
+ * 깎였다. 눈에는 «세로 선만 가늘고 모서리는 납작하다»로 보였는데 — 둥근 모서리는 잘리는
+ * 선과 접선 방향이라 1px 만 깎여도 12px 가량이 평평해진다 — 정작 굵기는 어디서나 3px 라
+ * 고리 쪽을 아무리 들여다봐도 원인이 나오지 않는 자리였다.
+ *
+ * 아래쪽도 같은 결함이 난다. 끝까지 내렸을 때 마지막 줄 아래에는 고리가 들어올 자리가
+ * 없는데, box-shadow 는 스크롤 범위를 넓히지 않아 그 자리를 스스로 만들지 못한다.
+ * 그래서 실제로 스크롤되는 화면(알레르기 항목 목록)에서 끝까지 내려 두고 잰다.
+ */
+test("안내 고리는 본문 스크롤 상자에 잘리지 않는다", async ({ page }) => {
+  await 안내켜고(page, true);
+
+  const 여유 = await 고리여유(page);
+  expect(여유.왼쪽, `고리 왼쪽이 ${(-여유.왼쪽).toFixed(1)}px 잘립니다`).toBeGreaterThanOrEqual(0);
+  expect(여유.오른쪽, `고리 오른쪽이 ${(-여유.오른쪽).toFixed(1)}px 잘립니다`).toBeGreaterThanOrEqual(0);
+
+  await page.setViewportSize({ width: 390, height: 640 });
+  await page.getByRole("button", { name: "있어요", exact: true }).click();
+  await page.locator(".kb-screen-body").evaluate((el) => { el.scrollTop = el.scrollHeight; });
+
+  const 끝 = await 고리여유(page);
+  // 스크롤되지 않는 화면에서 재면 아래쪽 검사가 조용히 통과한다 — 잰 자리부터 확인한다
+  expect(끝.스크롤됨, "이 화면이 스크롤되지 않아 아래쪽을 재지 못했습니다").toBe(true);
+  expect(끝.아래, `끝까지 내렸을 때 고리 아래가 ${(-끝.아래).toFixed(1)}px 잘립니다`)
+    .toBeGreaterThanOrEqual(0);
 });
 
 /**
@@ -180,4 +234,76 @@ test("선택지 그림은 안내를 끄든 켜든 늘 있다 — 시안에서 �
     const 그림 = await page.locator(".q-choices .choice .ico").count();
     expect(그림, `안내 ${켤까 ? "켬" : "끔"} 에서 선택지 그림이 사라졌습니다`).toBeGreaterThan(0);
   }
+});
+
+/**
+ * QR 연동 화면 — 안내는 «지금 해야 할 일»을 가리킨다.
+ *
+ * 이 화면은 대안 묶음(직접 입력 · 직원 요청 · 건너뛰기)을 통째로 아래 바에 담는다.
+ * 그래서 기본 규칙(«아래 주 버튼을 가리킨다»)을 그대로 두면, 카메라로 비추면 되는
+ * 사람에게 «폈을 때 나오는 폼의 제출 버튼»을 가리키게 된다. 화살표도 바 맨 위,
+ * 캡션보다도 위에 떠서 아무것도 가리키지 않았다.
+ *
+ * 대상은 상태를 따라간다 — 카메라가 살아 있으면 창, 막혔으면 직접 입력 칸.
+ * 어느 쪽이든 **가리키는 곳은 하나**여야 하므로 아래 주 버튼은 함께 물러난다.
+ */
+test.describe("QR 화면의 안내 대상", () => {
+  const qr까지 = async (page: Page) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openHome(page);
+    await page.getByRole("button", { name: /^시작하기$/ }).click();
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await page.getByRole("button", { name: "안내 켜짐" }).click();
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await page.getByRole("button", { name: "이번만 사용" }).click();
+  };
+  const 그림자 = (page: Page, sel: string) =>
+    page.locator(sel).first().evaluate((el) => getComputedStyle(el).boxShadow);
+  const 화살표 = (page: Page, sel: string) =>
+    page.locator(sel).first().evaluate((el) => getComputedStyle(el, "::before").content);
+
+  test("카메라를 못 쓰면 직접 입력 칸을 가리킨다", async ({ page }) => {
+    await qr까지(page);
+    await expect(page.locator(".field.kb-guide")).toHaveCount(1);
+    await expect(page.locator(".qr-view.kb-guide")).toHaveCount(0);
+
+    /* 고리는 «칸»에 두른다 — 라벨 상자에 두르면 위의 설명 한 줄까지 묶여
+       가리키는 것이 «칸»이 아니라 «문단»이 된다. */
+    expect(await 그림자(page, ".field.kb-guide input"), "입력칸에 고리가 없습니다").toMatch(고리있음);
+    expect(await 화살표(page, ".field.kb-guide"), "입력칸 위에 화살표가 없습니다").not.toBe("none");
+
+    // 한 화면에서 가리키는 곳은 하나다 — 아래 주 버튼은 물러난다
+    expect(await 그림자(page, ".kb-actions .btn.primary"), "아래 주 버튼까지 같이 가리킵니다")
+      .not.toMatch(고리있음);
+  });
+
+  test("카메라가 켜지면 창을 가리키고, 화살표가 창에 잘리지 않는다", async ({ page }) => {
+    await page.addInitScript(() => {
+      /* 실기기 없이 «스캔 중» 국면을 만든다. 해독기는 끝내 아무것도 못 찾게 두어
+         그 국면에 머무르게 한다 — 읽히면 곧바로 다음 화면으로 넘어가 버린다. */
+      const c = document.createElement("canvas");
+      c.width = 320; c.height = 240;
+      c.getContext("2d")!.fillRect(0, 0, 320, 240);
+      Object.defineProperty(navigator, "mediaDevices", {
+        configurable: true,
+        value: { getUserMedia: async () =>
+          (c as HTMLCanvasElement & { captureStream(f?: number): MediaStream }).captureStream(30) },
+      });
+      (window as unknown as { BarcodeDetector: unknown }).BarcodeDetector =
+        class { async detect() { return []; } };
+    });
+    await qr까지(page);
+    await expect(page.getByText("카메라가 켜졌습니다")).toBeVisible();
+
+    await expect(page.locator(".qr-view.kb-guide")).toHaveCount(1);
+    await expect(page.locator(".field.kb-guide")).toHaveCount(0);
+    expect(await 그림자(page, ".qr-view.kb-guide"), "카메라 창에 고리가 없습니다").toMatch(고리있음);
+    expect(await 화살표(page, ".qr-view.kb-guide"), "창 위에 화살표가 없습니다").not.toBe("none");
+
+    /* 창은 영상 모서리를 다듬으려고 overflow: hidden 을 쓴다 — 그대로 두면 창 **위**에
+       서는 화살표까지 잘려 나간다. 실제로 그렇게 만들었다가 화살표가 통째로 사라졌다. */
+    const 넘침 = await page.locator(".qr-view.kb-guide").evaluate((el) => getComputedStyle(el).overflow);
+    expect(넘침, "창이 제 위의 화살표를 잘라냅니다").toBe("visible");
+  });
 });
