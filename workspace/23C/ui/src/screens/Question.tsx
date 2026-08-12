@@ -147,7 +147,9 @@ export function QuestionScreen() {
     <Screen
       label={제목}
       onBack={뒤로}
-      steps={{ total: askTotal, current: askPos + 1, srLabel: `질문 ${askPos + 1} / ${askTotal}` }}
+      /* 위쪽 단계 점은 걷었다(기획 2026-08-12) — 진행 표시는 개인 설정(온보딩 5걸음)까지만
+         쓰고, 주문(질문~장바구니)에서는 띄우지 않는다. «몇 번째 질문인가»는 아래 낭독기
+         전용 문장이 그대로 든다 — 눈에 안 보인다고 낭독기 사용자까지 잃으면 안 된다. */
       eyebrow="고객님,"
       titleId="qtitle"
       title={<Emphasize text={제목} word={EMPHASIS[q.key]} />}
@@ -164,6 +166,9 @@ export function QuestionScreen() {
         </>
       }
     >
+      {/* 낭독기 전용 진행 문장 — 단계 점을 걷은 뒤에도 «몇 번째 질문인가»는 남는다 */}
+      <p className="srline q-progress">질문 {askPos + 1} / {askTotal}</p>
+
       {carried.includes(q.key) && (
         <p className="hint">지난번 설정에서 불러온 값입니다. 바꾸셔도 됩니다.</p>
       )}

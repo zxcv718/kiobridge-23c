@@ -100,12 +100,12 @@ test.describe("접근성 실측", () => {
     await page.getByRole("button", { name: /다음/ }).click();
 
     /* 4번째 질문(이용 방식)이 그대로 나와야 한다.
-       «몇 번째 질문인가»는 .stepmeta 글자에서 진행 표시(.kb-steps.mini)로 옮겨 갔다.
-       점만 찍는 표시라 눈에는 번호가 없지만, 색만으로 위치를 말하지 않도록 낭독기용
-       문장(.srline)이 «질문 4 / 6» 을 그대로 들고 있다 — 세는 자리가 거기로 바뀌었을 뿐
-       재는 것은 같다. */
+       위쪽 단계 점은 걷혔다(기획 2026-08-12) — 진행 표시는 개인 설정(온보딩 5걸음)
+       까지만 쓴다. 다만 «몇 번째 질문인가»는 질문 화면의 낭독기 전용 문장(.q-progress)이
+       그대로 들고 있다 — 세는 자리가 바뀌었을 뿐 재는 것은 같다. */
     await expect(page.locator("#qtitle")).toBeVisible();
-    const qcount = page.locator(".kb-steps.mini .srline");
+    await expect(page.locator(".kb-steps")).toHaveCount(0); // 점이 되살아나면 여기서 걸린다
+    const qcount = page.locator(".q-progress");
     await expect(qcount).toContainText("질문 4 / 6");
 
     // 끝까지 답한다 — 총 6문항
