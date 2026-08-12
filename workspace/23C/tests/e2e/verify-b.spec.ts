@@ -48,17 +48,21 @@ test.describe("B계열 — 신규 동작", () => {
     await expect(page.getByText(/여쭤보지 않아서/)).toHaveCount(0);
   });
 
-  test("B2 전부 '상관없어요'면 끝까지 묻고 사유는 '상관없다고 하셔서'", async ({ page }) => {
+  /* 「상관없어요」가 남은 질문은 맵기 하나다 — 형태·이용 방식에서는 뺐다(시안의 «둘 중
+     하나»를 흐리지 않으려고). 그래서 «전부 상관없어요»라는 상태는 화면에서 만들 수 없고,
+     여기서 재는 것은 **상관없다고 답한 항목을 메뉴 값으로 정하고 그 사실을 밝히는가**다. */
+  test("B2 '상관없어요'로 답한 항목은 메뉴 값으로 정하고 그 사실을 밝힌다", async ({ page }) => {
     await start(page);
     await enterWizard(page);
     await page.getByRole("button", { name: "없어요", exact: true }).click(); // 알레르기 없음
     await page.getByRole("button", { name: /다음/ }).click();
 
-    // 맵기·형태·이용방식은 상관없어요
-    for (let i = 0; i < 3; i++) {
-      await page.getByRole("button", { name: "상관없어요" }).click();
-      await page.getByRole("button", { name: /다음/ }).click();
-    }
+    await page.getByRole("button", { name: "상관없어요" }).click();          // 맵기
+    await page.getByRole("button", { name: /다음/ }).click();
+    await page.getByRole("button", { name: "순살", exact: true }).click();    // 형태 — 골라야 한다
+    await page.getByRole("button", { name: /다음/ }).click();
+    await page.getByRole("button", { name: "포장하기" }).click();             // 이용 방식 — 골라야 한다
+    await page.getByRole("button", { name: /다음/ }).click();
     // 수량은 증감이고 1이 이미 떠 있다 — 그 값이 곧 답이므로 누를 것이 없다
     await page.getByRole("button", { name: /다음/ }).click();
     await page.getByRole("button", { name: "없어요", exact: true }).click(); // 예산
