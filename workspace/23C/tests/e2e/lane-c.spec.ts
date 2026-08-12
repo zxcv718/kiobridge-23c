@@ -145,12 +145,13 @@ test.describe("레인 C — 질문 화면", () => {
         n: e.querySelectorAll(".kb-marks img").length,
         srcs: [...e.querySelectorAll(".kb-marks img")].map((i) => (i as HTMLImageElement).src),
       })));
-    expect(flames.map((f) => f.n)).toEqual([0, 1, 3, 0]);
+    // 순서는 시안(S07) 그대로 — 「상관없어요」가 맨 위다(2026-08-12 전면 대조)
+    expect(flames.map((f) => f.n)).toEqual([0, 0, 1, 3]);
     // 개수가 뜻을 만들려면 표식이 같아야 한다
     expect(new Set(flames.flatMap((f) => f.srcs)).size,
       "표식이 서로 다르면 개수가 정도를 뜻하지 못합니다").toBe(1);
     // 그림은 거드는 신호일 뿐 — 순서는 글자가 말한다
-    expect(flames.map((f) => f.label)).toEqual(["순한맛", "보통맛", "매운맛", "상관없어요"]);
+    expect(flames.map((f) => f.label)).toEqual(["상관없어요", "순한맛", "보통맛", "매운맛"]);
     await pick(page, 3);
 
     /* 형태·이용 방식은 «종류»다 — 서로 다른 그림이 맞다.
