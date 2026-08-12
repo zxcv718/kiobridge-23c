@@ -112,11 +112,13 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await page.getByRole("button", { name: "다시 추천받기" }).click();
 
     // 매운맛 + 뼈 로 바꾸면 «매운 뼈 닭강정»이 뽑히는데, 그 메뉴에는 일반컵이 없다
-    await page.getByRole("button", { name: /^형태/ }).click();
+    await page.getByRole("button", { name: /^뼈\/순살 선택/ }).click();
     await page.getByRole("button", { name: "뼈", exact: true }).click();
+    // 컵은 기획 4행 밖이라 «다른 항목 수정» 접힘 안에 있다
+    await page.locator("details.home-saved > summary", { hasText: "다른 항목 수정" }).click();
     await page.getByRole("button", { name: /^컵/ }).click();
     await page.getByRole("button", { name: "일반컵" }).click();
-    await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
+    await page.getByRole("button", { name: "수정 완료" }).click();
     await page.getByRole("button", { name: "선택하기", exact: true }).click();
 
     const sub = page.locator('.sellist li[data-origin="SUBSTITUTED"]');
@@ -142,6 +144,8 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
     const app = page.locator(".app");
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
+    // 화면 보기 방식은 기획 4행 밖이라 «다른 항목 수정» 접힘 안으로 옮겨졌다
+    await page.locator("details.home-saved > summary", { hasText: "다른 항목 수정" }).click();
 
     await page.getByRole("button", { name: "고대비 수정" }).click();
     await expect(app).toHaveClass(/contrast/);
@@ -160,9 +164,10 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByRole("heading", { name: /조건에 맞는 메뉴가 없어요/ })).toBeVisible();
     await page.getByRole("button", { name: /조건 수정/ }).click();
 
+    // «조건에 맞는 메뉴 없음»으로 왔으므로 «다른 항목 수정»(예산 포함)이 저절로 펴져 있다
     await page.getByRole("button", { name: /^예산/ }).click();
     await page.getByRole("button", { name: "없어요", exact: true }).click();
-    await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
+    await page.getByRole("button", { name: "수정 완료" }).click();
     await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
   });
 
@@ -233,7 +238,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await start(page);
     await toRecommend(page, CASE.noMatch);
     await page.getByRole("button", { name: "조건 수정" }).click();
-    await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
+    await page.getByRole("button", { name: "수정 완료" }).click();
 
     /* 시안 99:1337 의 네 조각이 그 순서로 다 있다 — 에러 라벨 · 일러스트 · 타이틀 · 서브텍스트. */
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();

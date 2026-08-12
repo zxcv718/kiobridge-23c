@@ -31,6 +31,7 @@ import { SessionStart } from "./screens/SessionStart";
 import { QuestionScreen } from "./screens/Question";
 import { Calculating } from "./screens/Calculating";
 import { MenuConfirm } from "./screens/MenuConfirm";
+import { MenuSelect } from "./screens/MenuSelect";
 import { CartReview } from "./screens/CartReview";
 import { CartEdit } from "./screens/CartEdit";
 import { Running } from "./screens/Running";
@@ -48,6 +49,7 @@ const SCREENS: Record<Step, React.ComponentType> = {
   wizard: QuestionScreen,     // S06~S10 질문
   calculating: Calculating,   // S11 계산 중
   menuConfirm: MenuConfirm,   // 메뉴 확인 (추천 화면과 통합 — 노션 기획 2026-08-12)
+  menuSelect: MenuSelect,     // 메뉴 선택 — 점수순 목록, 상위 3개 «추천» (노션 기획)
   confirm: CartReview,        // S13 장바구니 확인
   edit: CartEdit,             // S14 수정
   run: Running,               // 가상 키오스크 실행 중

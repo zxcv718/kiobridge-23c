@@ -17,7 +17,7 @@ import { migrateSaved, type SavedSettings as CoreSaved } from "../../src/core/sa
 export type Step =
   | "connect"                                          // 매장 연동 관문 — 흐름(4걸음) 밖, 홈보다 앞
   | "start" | "profile" | "saveChoice" | "sessionStart"
-  | "wizard" | "calculating" | "menuConfirm"
+  | "wizard" | "calculating" | "menuConfirm" | "menuSelect"
   | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
 
 /**

@@ -106,7 +106,7 @@ function SelList({ title, items }: { title: string; items: PlanSelection[] }) {
 export function CartReview() {
   const {
     uiRec, fixture, live, sessionInput, setSessionInput, runSimulation,
-    setStep, setEditOpen, openEdit, confirmOffline, simple,
+    setStep, openEdit, confirmOffline, simple,
   } = useFlow();
   if (!uiRec || !fixture) return null;
 
@@ -211,10 +211,8 @@ export function CartReview() {
       <SelList title="주문 방식" items={way} />
       <SelList title="메뉴 옵션" items={opt} />
       {need.length > 0 && (
-        /* 대안 목록은 조건 수정 화면의 «메뉴» 행에 있다 — 그 행을 바로 펴서 보낸다.
-           (추천 화면이 메뉴 확인과 합쳐지면서 대안이 그리로 옮겨졌다) */
-        <button type="button" className="btn ghost cart-alt"
-          onClick={() => { setEditOpen("__menu"); setStep("edit"); }}>
+        /* 대안은 «메뉴 선택» 화면이 맡는다 — 점수순 목록에서 직접 고른다 (노션 기획). */
+        <button type="button" className="btn ghost cart-alt" onClick={() => setStep("menuSelect")}>
           다른 메뉴 보기
         </button>
       )}

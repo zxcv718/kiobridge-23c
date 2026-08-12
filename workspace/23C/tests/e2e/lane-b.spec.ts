@@ -24,7 +24,7 @@ import { expect, test, type Page } from "@playwright/test";
 /** ui/src/model.ts 의 Step 유니온. 앱 상태를 찾아낼 때 «이것이 step 인가»의 판별에 쓴다. */
 const STEPS = [
   "connect", "start", "profile", "saveChoice", "sessionStart",
-  "wizard", "calculating", "menuConfirm",
+  "wizard", "calculating", "menuConfirm", "menuSelect",
   "confirm", "run", "result", "staff", "edit", "stopped",
 ];
 

@@ -89,7 +89,7 @@ test.describe("B계열 — 신규 동작", () => {
 
     // 조건 수정 → 그대로 다시 추천 → 2회차
     await page.getByRole("button", { name: "조건 수정" }).click();
-    await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
+    await page.getByRole("button", { name: "수정 완료" }).click();
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();
     /* «아무 준비도 시작되지 않았다»는 안심은 그대로 있다 — 승인 전이므로 실행 계획도,
        장바구니도 없다. 시안(99:1337)에 없는 문단이라 접혀 있을 뿐 없어지지 않았고,
@@ -259,16 +259,24 @@ test.describe("B계열 — 신규 동작", () => {
     await expect(page.getByRole("textbox")).toBeVisible(); // 매장 코드 직접 입력 (자동으로 펴짐)
   });
 
-  test("B9 조건 수정의 메뉴 목록에 제외된 후보가 없다", async ({ page }) => {
+  test("B9 메뉴 선택 목록에 제외된 후보가 없다 — 점수순, 상위 3개 추천 표시", async ({ page }) => {
     await start(page);
     await answerAll(page); // 땅콩·콩 알레르기 → 해당 후보 제외됨
-    await page.getByRole("button", { name: "다시 추천받기" }).click();
-    await page.getByRole("button", { name: /^메뉴/ }).click();
+    await page.getByRole("button", { name: "다시 추천받기" }).click();   // 메뉴 확인 → 수정 화면
+    await page.getByRole("button", { name: "메뉴 수정", exact: true }).click(); // 수정 화면 → 메뉴 선택
+    await expect(page.getByRole("heading", { name: /어떤 메뉴를 원하시나요/ })).toBeVisible();
 
-    const names = await page.locator(".editbody .choices .choice").allInnerTexts();
+    const names = await page.locator(".choices .choice").allInnerTexts();
     expect(names.length).toBeGreaterThan(0);
     // 땅콩 토핑(PEANUT)·간장 순살(SOY)은 제외됐으므로 목록에 없어야 한다
     expect(names.join(" ")).not.toContain("땅콩 토핑");
     expect(names.join(" ")).not.toContain("간장 순살");
+    // 기획(노션 2026-08-12): 추천 점수 상위 3개에 «추천» 표시
+    await expect(page.locator(".choices .choice .menu-rec", { hasText: "추천" })).toHaveCount(3);
+
+    // 고르면 메뉴 확인으로 돌아가 재확인한다
+    await page.locator(".choices .choice").nth(1).click();
+    await page.getByRole("button", { name: "선택", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
   });
 });
