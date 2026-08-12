@@ -221,11 +221,11 @@ test.describe("B계열 — 신규 동작", () => {
     const app = page.locator(".app");
     const row = (name: string) => page.locator(".a11ylist .a11yrow", { hasText: name });
 
-    // largeText 는 기본 켜짐 — 끄고 켜며 실제로 바뀌는지 확인
-    await row("큰 글씨").click();
-    await expect(app).not.toHaveClass(/large/);
+    // largeText 는 기본 꺼짐(기본 크기, 기획 2026-08-12) — 켜고 끄며 실제로 바뀌는지 확인
     await row("큰 글씨").click();
     await expect(app).toHaveClass(/large/);
+    await row("큰 글씨").click();
+    await expect(app).not.toHaveClass(/large/);
 
     await row("고대비").click();
     await expect(app).toHaveClass(/contrast/);

@@ -195,8 +195,9 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await page.getByRole("button", { name: "화면 안내 수정" }).click();
     await expect(app).toHaveClass(/guide/);
 
+    // 기본이 «기본 크기»이므로(기획 2026-08-12) 누르면 큰 글씨가 켜진다
     await page.getByRole("button", { name: "글씨 크기 수정" }).click();
-    await expect(app).not.toHaveClass(/large/);
+    await expect(app).toHaveClass(/large/);
   });
 
   test("D7 수정 화면에는 조건을 고쳐 다시 추천받는 길이 남아 있다", async ({ page }) => {

@@ -18,10 +18,13 @@ import { openHome } from "./nav";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
-/** 프로필 3/3 까지 가서 「안내 켜짐」을 고르고, 질문 화면 직전까지 간다. */
+/** 프로필 3/3 까지 가서 「안내 켜짐」을 고르고, 질문 화면 직전까지 간다.
+ *  «큰 글씨»도 함께 켠다 — 기본이 «기본 크기»가 되면서(기획 2026-08-12), 이 파일의
+ *  화살표·통로 실측이 재 온 가장 불리한 조합(큰 화살표)을 이제 직접 만들어야 한다. */
 async function 안내켜고(page: Page, 켤까: boolean): Promise<void> {
   await openHome(page);
   await page.getByRole("button", { name: /^시작하기$/ }).click();
+  await page.locator(".kb-radio", { hasText: "큰 글씨" }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "다음", exact: true }).click();
   if (켤까) await page.getByRole("button", { name: "안내 켜짐" }).click();
@@ -134,7 +137,7 @@ test("안내 고리는 본문 스크롤 상자에 잘리지 않는다", async ({
 /**
  * 화살표가 흔들려도 고리를 파고들지 않는가.
  *
- * 화살표는 1.5em 이라 «큰 글씨»(기본값이다)를 켜면 같이 커지는데, 지나갈 통로가 44px
+ * 화살표는 1.5em 이라 «큰 글씨»(안내켜고 가 켠다)를 켜면 같이 커지는데, 지나갈 통로가 44px
  * 고정이던 때는 그 커진 만큼이 그대로 고리 위로 넘어갔다. 겹치면 화살표와 고리가 한
  * 덩어리로 읽혀, «저기를 누르세요»가 «버튼에 붙은 장식»이 된다.
  *

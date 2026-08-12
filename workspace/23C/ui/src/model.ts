@@ -55,7 +55,9 @@ export interface A11y {
 }
 
 export const A11Y_DEFAULT: A11y = {
-  largeText: true, highContrast: false, simpleSteps: true, visualGuidance: false,
+  /* 글씨 크기의 기본은 «기본 크기»다(기획 2026-08-12) — 프로필 1/3 라디오의 시안이
+     기본 크기를 선택된 채로 그린다. 큰 글씨는 고르는 사람의 것이지 기본값이 아니다. */
+  largeText: false, highContrast: false, simpleSteps: true, visualGuidance: false,
   hearingSupport: false, mobilitySupport: false, staffAssistancePreferred: false,
   preferredInput: "TOUCH",
 };

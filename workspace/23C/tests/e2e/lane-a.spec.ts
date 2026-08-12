@@ -110,10 +110,9 @@ test.describe("A계열 — 프로필 흐름", () => {
     await toProfile(page);
     const app = page.locator(".app");
 
-    // 1/3 글씨 크기 — 기본은 큰 글씨가 켜져 있다(A11Y_DEFAULT)
-    await expect(app).toHaveClass(/large/);
-    await radio(page, "기본 크기").click();
+    // 1/3 글씨 크기 — 기본은 «기본 크기»다(A11Y_DEFAULT, 기획 2026-08-12)
     await expect(app).not.toHaveClass(/large/);
+    await expect(radio(page, "기본 크기")).toContainText("선택됨");
     await radio(page, "큰 글씨").click();
     await expect(app).toHaveClass(/large/);
     // 선택 상태를 색이 아니라 글자로도 알 수 있다
@@ -260,7 +259,7 @@ test.describe("A계열 — 프로필 흐름", () => {
     };
 
     await toProfile(page);
-    await radio(page, "기본 크기").click();        // 큰 글씨를 꺼도 (가장 불리한 쪽)
+    await radio(page, "기본 크기").click();        // 기본 크기 그대로 — 글자가 작은 쪽이 가장 불리하다
     await check("S02 1/3");
     await page.getByRole("button", { name: "다음", exact: true }).click();
     await radio(page, "고대비 화면").click();      // 고대비까지 켜고
