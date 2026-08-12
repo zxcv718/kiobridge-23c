@@ -101,11 +101,8 @@ h3.cart-cap { margin: 22px 0 8px; font-size: 0.78em; }
   font-size: 0.5em; font-weight: 700; line-height: 1;
 }
 
-/* ───────── 메뉴 확인 (신규 · Figma 99:1762) ───────── */
-.mc-why { font-size: 1em; line-height: 1.6; margin: 12px 0 0; color: var(--muted-strong); }
-/* 강조는 굵기와 색이 함께 맡는다 — 색만으로는 신호가 되지 못한다 */
-.mc-why b { color: var(--brand-strong); font-weight: 700; }
-.mc-ask { font-size: 1.05em; margin: 18px 0 0; }
+/* 메뉴 확인의 강조 규칙은 recommend.css 의 .mc-flow 절에 있다 —
+   조건 문장이 «추천해요» 목록(.reasons)으로 옮겨지면서 .mc-why 는 없어졌다. */
 
 /* ───────── S14 화면 설정 행 — SummaryCard 의 «수정» (Figma 185:209) ───────── */
 .rowfix {

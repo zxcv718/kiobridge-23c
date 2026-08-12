@@ -223,8 +223,7 @@ test.describe("A계열 — 프로필 흐름", () => {
       if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
       await 아무거나답하고다음(page);
     }
-    await page.getByRole("button", { name: "네, 좋아요" }).click();
-    await page.getByRole("button", { name: "이대로 담기" }).click();   // 메뉴 확인 한 걸음
+    await page.getByRole("button", { name: "선택하기", exact: true }).click(); // 추천·메뉴 확인이 한 화면으로 합쳐졌다
     await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
 
     const live = page.getByRole("button", { name: /가상 키오스크에서 실행/ });

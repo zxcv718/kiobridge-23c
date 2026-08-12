@@ -182,15 +182,15 @@ export async function answerWizard(page: Page, picks: (string | string[] | null)
 }
 
 /**
- * 추천 화면 → 장바구니 확인(S13).
+ * 추천 확인 → 장바구니 확인(S13).
  *
- * 사이에 «메뉴 확인»(Figma 99:1762)이 한 걸음 들어간다 — 추천 화면은 이유·대안·제외를
- * 한꺼번에 보여주느라 빽빽해서, 고른 것이 맞는지만 묻는 자리를 따로 둔다.
+ * 추천(Recommend)과 메뉴 확인(MenuConfirm) 두 화면이 «메뉴 확인» 하나로 합쳐졌다
+ * (노션 기획 «장바구니 수정 플로우 변경» 2026-08-12) — 같은 메뉴를 두 번 확인시키는
+ * 중복이었다. «네, 좋아요» → «이대로 담기» 두 걸음이 «선택하기» 한 걸음이 됐다.
  */
 export async function approveToCartReview(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "네, 좋아요" }).click();
   await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
-  await page.getByRole("button", { name: "이대로 담기" }).click();
+  await page.getByRole("button", { name: "선택하기", exact: true }).click();
   await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
 }
 

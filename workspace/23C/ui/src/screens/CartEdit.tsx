@@ -64,7 +64,7 @@ export function CartEdit() {
   return (
     <Screen
       label="주문 조건과 화면 보기 방식 수정"
-      onBack={() => setStep(uiRec ? "recommend" : "start")}
+      onBack={() => setStep(uiRec ? "menuConfirm" : "start")}
       eyebrow="고객님,"
       title={<Emphasize text="어떤 항목을 수정하고 싶으신가요?" word="수정" />}
       actions={(
@@ -99,7 +99,7 @@ export function CartEdit() {
                     aria-pressed={id === uiRec.rec.recommendedCandidateId}
                     onClick={() => {
                       setUiRec(withManualSelection(uiRec, fixture, id));
-                      setManual(true); setEditOpen(null); setStep("recommend");
+                      setManual(true); setEditOpen(null); setStep("menuConfirm");
                     }}>
                     {candidateName(fixture, id)}
                     <small>{candidatePrice(fixture, id)?.toLocaleString()}원</small>

@@ -131,7 +131,7 @@ export function useFlowState() {
 
     /* 화면목록 S11 — "고객님께 어울리는 메뉴를 찾고 있어요". 결과는 이미 계산돼 있고
        화면만 거친다. 계산을 기다리는 척하는 게 아니라, 답이 반영됐다는 것을 알리는 단계다. */
-    const dest: Step = shouldSafetyStop(u.rec, attempts) ? "stopped" : "recommend";
+    const dest: Step = shouldSafetyStop(u.rec, attempts) ? "stopped" : "menuConfirm";
     if (calcTimer.current !== null) window.clearTimeout(calcTimer.current);
     if (prefersReducedMotion()) { setStep(dest); return; }
     setStep("calculating");

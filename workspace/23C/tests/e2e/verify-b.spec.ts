@@ -68,8 +68,7 @@ test.describe("B계열 — 신규 동작", () => {
 
     // 전부 답했으므로 생략 고지가 없어야 한다
     await expect(page.getByText(/여쭤보지 않았습니다/)).toHaveCount(0);
-    await page.getByRole("button", { name: "네, 좋아요" }).click();
-    await page.getByRole("button", { name: "이대로 담기" }).click();
+    await page.getByRole("button", { name: "선택하기", exact: true }).click();
     await expect(page.getByText(/상관없다고 하셔서 이 메뉴의 값으로 정했습니다/).first()).toBeVisible();
   });
 
@@ -184,7 +183,7 @@ test.describe("B계열 — 신규 동작", () => {
 
     await page.getByRole("button", { name: /지난번과 똑같이 주문하기/ }).click();
     // 실행으로 직행하지 않는다 — 확인을 거쳐야 한다
-    await expect(page.getByRole("button", { name: "네, 좋아요" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: /실행 결과|주문이 완성되었습니다/ })).toHaveCount(0);
   });
 
@@ -261,7 +260,7 @@ test.describe("B계열 — 신규 동작", () => {
   test("B9 조건 수정의 메뉴 목록에 제외된 후보가 없다", async ({ page }) => {
     await start(page);
     await answerAll(page); // 땅콩·콩 알레르기 → 해당 후보 제외됨
-    await page.getByRole("button", { name: "조건 수정" }).click();
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
     await page.getByRole("button", { name: /^메뉴/ }).click();
 
     const names = await page.locator(".editbody .choices .choice").allInnerTexts();

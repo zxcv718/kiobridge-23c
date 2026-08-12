@@ -53,9 +53,9 @@ test.describe("D계열 — 확인·수정·결과", () => {
     // 추천 화면에서 본 것과 같은 메뉴여야 한다 — 화면마다 다른 값을 적지 않는다
     await expect(page.getByText("매운 순살 닭강정").first()).toBeVisible();
     // 조건 문장의 조사가 앞말에 맞는다 — «땅콩가» 가 아니라 «땅콩이»
-    await expect(page.locator(".mc-why")).toContainText("땅콩이 없는 메뉴 중");
+    await expect(page.locator(".reasons").first()).toContainText("땅콩이 들어간 메뉴");
 
-    await page.getByRole("button", { name: "이대로 담기" }).click();
+    await page.getByRole("button", { name: "선택하기", exact: true }).click();
     await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
   });
 
@@ -64,8 +64,9 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await toCartReview(page);
     await page.getByRole("button", { name: "뒤로" }).click();
 
-    await page.getByRole("button", { name: "다른 메뉴 볼게요" }).click();
-    await expect(page.getByRole("button", { name: "네, 좋아요" })).toBeVisible();
+    // 추천을 받아들이지 않을 길 — «다시 추천받기»가 조건 수정 화면으로 잇는다
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
   });
 
   /* ───────── S13 장바구니 확인 (Figma 99:1798) ───────── */
@@ -93,8 +94,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await start(page);
     // 수량 2개인 프리셋 — 곱셈이 실제로 일어나는 경우로 잰다
     await toRecommend(page, CASE.twoQty);
-    await page.getByRole("button", { name: "네, 좋아요" }).click();
-    await page.getByRole("button", { name: "이대로 담기" }).click();
+    await page.getByRole("button", { name: "선택하기", exact: true }).click();
     await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
 
     const won = (s: string) => Number(s.replace(/[^\d]/g, ""));
@@ -109,7 +109,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D4b 원한 값을 못 맞춘 옵션은 대체했다고 밝힌다", async ({ page }) => {
     await start(page);
     await toRecommend(page, CASE.normal);
-    await page.getByRole("button", { name: "조건 수정" }).click();
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
 
     // 매운맛 + 뼈 로 바꾸면 «매운 뼈 닭강정»이 뽑히는데, 그 메뉴에는 일반컵이 없다
     await page.getByRole("button", { name: /^형태/ }).click();
@@ -117,8 +117,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await page.getByRole("button", { name: /^컵/ }).click();
     await page.getByRole("button", { name: "일반컵" }).click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
-    await page.getByRole("button", { name: "네, 좋아요" }).click();
-    await page.getByRole("button", { name: "이대로 담기" }).click();
+    await page.getByRole("button", { name: "선택하기", exact: true }).click();
 
     const sub = page.locator('.sellist li[data-origin="SUBSTITUTED"]');
     await expect(sub).toHaveCount(1);
@@ -139,7 +138,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D6 수정 화면에서 글씨 크기·고대비·화면 안내를 바로 바꿀 수 있다", async ({ page }) => {
     await start(page);
     await toRecommend(page, CASE.normal);
-    await page.getByRole("button", { name: "조건 수정" }).click();
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
 
     const app = page.locator(".app");
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
@@ -164,7 +163,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await page.getByRole("button", { name: /^예산/ }).click();
     await page.getByRole("button", { name: "없어요", exact: true }).click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
-    await expect(page.getByRole("button", { name: "네, 좋아요" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
   });
 
   /* ───────── S15 안내 (Figma 99:1830) ───────── */

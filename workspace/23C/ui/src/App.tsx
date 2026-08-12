@@ -30,7 +30,6 @@ import { QrConnect } from "./screens/QrConnect";
 import { SessionStart } from "./screens/SessionStart";
 import { QuestionScreen } from "./screens/Question";
 import { Calculating } from "./screens/Calculating";
-import { Recommend } from "./screens/Recommend";
 import { MenuConfirm } from "./screens/MenuConfirm";
 import { CartReview } from "./screens/CartReview";
 import { CartEdit } from "./screens/CartEdit";
@@ -48,8 +47,7 @@ const SCREENS: Record<Step, React.ComponentType> = {
   sessionStart: SessionStart, // S05 세션 시작
   wizard: QuestionScreen,     // S06~S10 질문
   calculating: Calculating,   // S11 계산 중
-  recommend: Recommend,       // 추천 결과
-  menuConfirm: MenuConfirm,   // 메뉴 확인(신규)
+  menuConfirm: MenuConfirm,   // 메뉴 확인 (추천 화면과 통합 — 노션 기획 2026-08-12)
   confirm: CartReview,        // S13 장바구니 확인
   edit: CartEdit,             // S14 수정
   run: Running,               // 가상 키오스크 실행 중

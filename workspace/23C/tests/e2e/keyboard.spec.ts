@@ -57,20 +57,17 @@ test.describe("접근성 실측", () => {
       await pressOn(page, /다음|추천 보기/);
     }
 
-    /* 화면 제목은 h2(.kb-title) 하나뿐이다 — 본문 소제목(h3.q-sechead «이런 메뉴는
-       제외했어요»)까지 걸리지 않도록 단계를 지정한다. «없습니다»는 화면에 없는 문구라
-       실제 문구(«조건에 맞는 메뉴가 없어요»)로 맞춘다. */
-    await expect(page.getByRole("heading", { level: 2, name: /이런 메뉴는 어떠세요|조건에 맞는 메뉴가 없어요/ }))
+    /* 화면 제목은 h2(.kb-title) 하나뿐이다 — 본문 소제목까지 걸리지 않도록 단계를
+       지정한다. «없습니다»는 화면에 없는 문구라 실제 문구(«조건에 맞는 메뉴가
+       없어요»)로 맞춘다. 추천·메뉴 확인은 «메뉴 확인» 한 화면으로 합쳐졌다. */
+    await expect(page.getByRole("heading", { level: 2, name: /이 메뉴를 선택하시겠어요|조건에 맞는 메뉴가 없어요/ }))
       .toBeVisible();
 
-    // 추천이 나왔으면 최종 확인까지 간다
-    const approve = page.getByRole("button", { name: "네, 좋아요" });
+    // 추천이 나왔으면 최종 확인까지 간다 — 여기도 마우스 없이 지나야 한다
+    const approve = page.getByRole("button", { name: "선택하기", exact: true });
     if (await approve.isVisible()) {
       await approve.focus();
       await page.keyboard.press("Enter");
-      // 메뉴 확인이 한 걸음 들어간다 — 여기도 마우스 없이 지나야 한다
-      await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
-      await pressOn(page, /^이대로 담기$/);
       await expect(page.getByRole("heading", { name: /마지막으로 확인/ })).toBeVisible();
     }
   });

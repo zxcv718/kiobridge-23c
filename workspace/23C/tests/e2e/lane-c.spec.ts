@@ -276,9 +276,9 @@ test.describe("레인 C — 움직임 줄이기", () => {
     // 도는 표시를 멈추는 데서 그치지 않고 지연 자체를 없앤다.
     // 기다리면 어차피 사라지므로 마지막 답 직후 그 자리에서 잰다(재시도 없는 count).
     expect(await page.locator(".calcspin").count(), "계산 화면을 거쳤습니다").toBe(0);
-    /* 화면 제목은 h2(.kb-title) 하나뿐이다 — 본문 소제목(h3.q-sechead «이런 메뉴는
-       제외했어요»)이 같은 정규식에 걸려 두 개가 잡히므로 단계를 지정해 화면 제목만 본다. */
-    await expect(page.getByRole("heading", { level: 2, name: /이런 메뉴는 어떠세요|조건에 맞는 메뉴가 없어요/ }))
+    /* 화면 제목은 h2(.kb-title) 하나뿐이다 — 본문 소제목이 같은 정규식에 걸리지 않게
+       단계를 지정해 화면 제목만 본다. 추천·메뉴 확인은 «메뉴 확인» 한 화면이 됐다. */
+    await expect(page.getByRole("heading", { level: 2, name: /이 메뉴를 선택하시겠어요|조건에 맞는 메뉴가 없어요/ }))
       .toBeVisible();
   });
 });

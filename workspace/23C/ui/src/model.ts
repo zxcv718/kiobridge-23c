@@ -16,7 +16,7 @@ import { migrateSaved, type SavedSettings as CoreSaved } from "../../src/core/sa
  */
 export type Step =
   | "start" | "profile" | "saveChoice" | "qr" | "sessionStart"
-  | "wizard" | "calculating" | "recommend" | "menuConfirm"
+  | "wizard" | "calculating" | "menuConfirm"
   | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
 
 /**
