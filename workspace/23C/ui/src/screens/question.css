@@ -136,9 +136,16 @@
  *
  * 테두리는 CTA 와 **같은 문법**으로 그린다(outline 이 아니라 box-shadow 두 겹, 사이에
  * 바탕색 고리). outline 자리는 키보드 초점의 몫이라 거기에 안내를 겹치면 «지금 초점이
- * 어디인가»가 안내에 묻힌다. box-shadow 는 자리를 차지하지 않아 선택지 배치도 그대로다. */
+ * 어디인가»가 안내에 묻힌다. box-shadow 는 자리를 차지하지 않아 선택지 배치도 그대로다.
+ *
+ * **반경은 선택지와 같은 값이어야 한다** (--kb-radius-md, styles.css 의 .choice 와 같다).
+ * box-shadow 의 spread 는 모서리를 «요소 반경 + spread» 로 그리므로, 격자에 더 큰 반경을
+ * 주면 고리의 곡선 중심이 선택지 곡선 중심에서 밀려난다. 그러면 직선 구간에서는 4px 인
+ * 여백이 모서리에서 2.3px 로 좁아지고, 주황 선 자체는 3px 로 일정한데도 **틀 전체가
+ * 모서리에서 두꺼워 보인다.** 두 반경을 같게 두면 중심이 겹쳐 어디서나 4px 로 균일하다.
+ * 선택지 반경을 바꾸는 날에는 이 값도 같이 바꾼다 — 아래 검사가 그 사실을 알려준다. */
 .app.guide .q-choices .choices {
-  border-radius: var(--kb-radius-lg);
+  border-radius: var(--kb-radius-md);
   box-shadow: 0 0 0 4px var(--bg), 0 0 0 7px var(--brand-strong);
 }
 .app.guide .q-choices .choices:has(.choice[aria-pressed="true"]) { box-shadow: none; }

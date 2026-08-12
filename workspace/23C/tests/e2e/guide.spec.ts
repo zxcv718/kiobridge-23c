@@ -56,6 +56,20 @@ test("안내를 켜면 고르기 전에는 선택지 영역을 가리키고, 고
   expect(await 선택지고리(page), "고르기 전인데 선택지 영역에 안내 테두리가 없습니다")
     .toMatch(고리있음);
 
+  /* 고리 반경은 **선택지 반경과 같아야 한다.** box-shadow 의 spread 는 모서리를
+     «요소 반경 + spread» 로 그리므로, 격자 반경이 선택지보다 크면 두 곡선의 중심이
+     어긋나 직선 구간 4px 이던 여백이 모서리에서 2.3px 로 좁아진다. 주황 선 자체는
+     3px 로 일정한데도 틀이 모서리에서만 두꺼워 보인다 — 눈에는 «두께가 들쭉날쭉»
+     으로 읽히지만 원인은 두께가 아니라 반경이라 그 자리를 보고는 못 찾는다. */
+  const [고리반경, 선택지반경] = await Promise.all([
+    page.locator(".q-choices .choices").first()
+      .evaluate((el) => getComputedStyle(el).borderTopLeftRadius),
+    page.locator(".q-choices .choice").first()
+      .evaluate((el) => getComputedStyle(el).borderTopLeftRadius),
+  ]);
+  expect(고리반경, "안내 고리 반경이 선택지와 달라 모서리에서 틀 두께가 달라 보입니다")
+    .toBe(선택지반경);
+
   await page.getByRole("button", { name: "없어요", exact: true }).click();
 
   // 골랐으면 가리킬 곳이 «다음»으로 옮겨간다 — 두 곳을 동시에 가리키지 않는다
