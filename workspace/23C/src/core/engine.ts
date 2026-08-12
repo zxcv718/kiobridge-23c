@@ -233,14 +233,26 @@ export function buildRecommendation(candidates: Candidate[], ctx: EngineContext)
   };
 }
 
+/** 값을 한국어로 — 표에 없으면 원값을 그대로 둔다(모르는 값을 지어내지 않는다). */
+const ko = (table: Record<string, string>, v: string | undefined): string => (v === undefined ? "" : table[v] ?? v);
+
 function unmetConditions(top: Scored | undefined, ctx: EngineContext): string[] {
   if (!top) return [];
   const out: string[] = [];
   const attrs = (top.candidate as { attributes?: { spicyLevel?: string; boneType?: string } }).attributes ?? {};
+  /* 사용자가 볼 문장에 영문 enum 을 그대로 내보내지 않는다. 한때 여기가
+     「선호하신 맵기(MILD)와 다른 맵기입니다」였다 — 같은 화면 아래쪽 추천 사유는
+     SPICY_KO 를 제대로 쓰고 있어서, 한 화면에서 「순한맛을 선호하셔서…」와
+     「선호하신 맵기(MILD)…」가 나란히 떴다.
+
+     문장 꼴도 바꿨다. 「…(순한맛)와 다른 맵기입니다」로만 고치면 조사가 틀린다 —
+     받침이 없는 「뼈」는 «와», 받침이 있는 「순살」은 «과»라 하나로 고정할 수 없다.
+     조사가 값에 붙지 않는 꼴로 쓰면서, **이 메뉴가 실제로 무엇인지**까지 말한다.
+     못 맞췄다는 사실만 알리고 무엇으로 대신했는지 안 말하면 확인할 수가 없다. */
   if (definite(ctx.preferences.spicyLevel) && attrs.spicyLevel !== ctx.preferences.spicyLevel)
-    out.push(`선호하신 맵기(${ctx.preferences.spicyLevel})와 다른 맵기입니다`);
+    out.push(`원하신 맵기는 ${ko(SPICY_KO, ctx.preferences.spicyLevel)}인데, 이 메뉴는 ${ko(SPICY_KO, attrs.spicyLevel)}입니다`);
   if (definite(ctx.preferences.boneType) && attrs.boneType !== ctx.preferences.boneType)
-    out.push(`선호하신 형태(${ctx.preferences.boneType})와 다른 형태입니다`);
+    out.push(`원하신 형태는 ${ko(BONE_KO, ctx.preferences.boneType)}인데, 이 메뉴는 ${ko(BONE_KO, attrs.boneType)}입니다`);
   if (definite(ctx.preferences.cupOption) && !(top.candidate.supportedOptions?.CUP ?? []).includes(ctx.preferences.cupOption!))
     out.push(`선호하신 컵 옵션을 이 메뉴에서는 선택할 수 없습니다`);
   return out;
