@@ -78,13 +78,26 @@ test.describe("B계열 — 신규 동작", () => {
   test("B4 확정되지 않은 추천을 두 번 만나면 안전 중단 전용 화면", async ({ page }) => {
     await start(page);
     await enterWizard(page);
-    /* 예산을 5,000원으로 두면 이 가게에서 살 수 있는 것이 없다(최저가 5,500원).
-       추천을 만들지 못하는 상태이고, 그것이 «확정되지 않은 추천»의 한 갈래다.
-       한때 여기서 알레르기 «잘 모르겠어요»를 썼는데 그 선택지는 시안에 없어 걷어냈다 —
-       화면에서 재확인(하드 제약 미확인) 경로로 들어가는 입구는 이제 없다. */
-    for (let i = 0; i < 5; i++) await 아무거나답하고다음(page);
-    await page.getByRole("button", { name: "5,000원" }).click();
-    await page.getByRole("button", { name: /추천 보기|다음/ }).click();
+    /* 한때 예산 5,000원으로 이 상태를 만들었다 — 이 가게 최저가(5,500원)보다 낮아 살 수
+       있는 것이 없었다. 예산이 상한이 아니라 **희망 금액**이 된 뒤로 가격은 후보를 빼지
+       않으므로 그 길은 없어졌다. 없앤 것이 기획의 뜻이다 — 조건이 조금 안 맞아도 가장
+       가까운 것을 권한다.
+
+       «확정되지 않은 추천»의 다른 갈래는 그대로다: 알레르기가 **미확인**이면 임의로
+       판단하지 않고 재확인을 요구한다. 「모름」은 시안에 없어 화면에서 고를 수 없지만
+       값은 살아 있고(model.ts), 옛 저장본으로 들어온다. 그 경로로 만든다. */
+    await page.evaluate(() => {
+      localStorage.setItem("kb23c-saved-settings-v4", JSON.stringify({
+        answers: { allergies: ["모름"], spicyLevel: "매운맛", boneType: "순살",
+                   serviceType: "포장", quantity: 1, budgetKrw: "없음" },
+        a11y: { largeText: true, highContrast: false, simpleSteps: true, visualGuidance: false,
+                hearingSupport: false, mobilitySupport: false, staffAssistancePreferred: false,
+                preferredInput: "TOUCH" },
+        scope: "LASTING", savedAt: "2026-08-11T10:00:00.000Z",
+      }));
+    });
+    await page.reload();
+    await page.getByRole("button", { name: /지난번과 똑같이 주문하기/ }).click();
 
     // 1회차 — 사유는 말하지만 중단 화면은 아니다. 조건을 고칠 기회를 먼저 준다.
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toHaveCount(0);

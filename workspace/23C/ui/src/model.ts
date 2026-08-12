@@ -149,14 +149,20 @@ export const QUESTIONS: Question[] = [
      아래 options 는 남겨 둔다 — 「1개」 같은 라벨과 시연 프리셋이 참조한다. */
   { key: "quantity", title: "얼마나 드실 건가요?", options: [
     { value: 1, label: "1개" }, { value: 2, label: "2개" }, { value: 3, label: "3개" } ] },
-  /* 5,000원이 있어야 하는 이유: 이 가게의 최저가가 5,500원(매운 뼈 닭강정)이다.
-   * 선택지가 6,000원부터 시작하면 «조건에 맞는 메뉴가 없습니다»가 **어떤 답변으로도
-   * 일어나지 않는다.** 그 화면과 엔진 경로는 이미 다 만들어 두었는데 사용자만 못 갔다.
-   * 5,000원 들고 온 사람에게 «그 예산으로는 없습니다, 조건을 고쳐 보시겠어요»라고
-   * 말하는 것은 이 서비스가 마땅히 해야 할 일이다.
-   * (계약도 이 상태를 이미 모델링한다 — recommendation.schema.json 의
-   *  recommendedCandidateId 는 ["string", "null"] 이다.) */
-  { key: "budgetKrw", title: "예산 상한이 있으세요?", options: [
+  /* **상한이 아니라 희망 금액을 묻는다.** 넘는다고 빼지 않고, 말한 금액에 가장 가까운
+   * 것을 위로 올린다(core/engine.ts budgetKrw). 조건이 조금 안 맞아도 «없습니다»라고
+   * 답하는 대신 가장 가까운 것을 권하는 것이 이 질문이 바뀐 이유다.
+   *
+   * 그래서 5,000원의 뜻도 바뀌었다. 한때 이 선택지는 «조건에 맞는 메뉴가 없습니다»에
+   * 닿는 유일한 길이었다(이 가게 최저가가 5,500원이라 그 아래는 아무것도 안 남았다).
+   * 이제는 최저가인 5,500원짜리를 맨 위로 올리는 답이다 — 싼 것을 찾는 사람의 답으로
+   * 여전히 뜻이 있어 남긴다.
+   *
+   * «후보 0개» 상태 자체는 없어지지 않았다. 계약이 그 상태를 모델링하고
+   * (recommendation.schema.json 의 recommendedCandidateId 는 ["string", "null"]),
+   * hardConstraints.maxPriceKrw 가 들어오면 엔진은 여전히 BLOCK 규칙대로 뺀다.
+   * 화면이 그 값을 만들지 않게 됐을 뿐이다(core/canonical.ts). */
+  { key: "budgetKrw", title: "예산은 얼마인가요?", options: [
     { value: "없음", label: "없어요" }, { value: 5000, label: "5,000원" }, { value: 6000, label: "6,000원" }, { value: 7000, label: "7,000원" }, { value: 10000, label: "10,000원" } ] },
 ];
 
@@ -257,7 +263,7 @@ export const PRESETS: Preset[] = [
     a11y: { largeText: true, staffAssistancePreferred: true },
   },
   {
-    id: "p-empty", title: "예산 5,000원 · 매운맛 · 순살", shows: "조건에 맞는 메뉴 없음",
+    id: "p-budget", title: "예산 5,000원 · 매운맛 · 순살", shows: "희망 금액에 가장 가까운 메뉴",
     answers: { serviceType: "포장", spicyLevel: "매운맛", boneType: "순살", quantity: 1, allergies: ["없음"], budgetKrw: 5000 },
   },
 ];

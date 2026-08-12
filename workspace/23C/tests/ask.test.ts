@@ -65,8 +65,16 @@ describe("안전 중단 판정 — 화면목록 S12", () => {
     expect(isUnresolved(recFor({ allergies: ["모름"], spicyLevel: "매운맛" }).rec)).toBe(true);
   });
 
+  /* 후보가 0개인 상태는 **화면에서 만들 수 없다.** 예산이 상한이 아니라 희망 금액이 된
+     뒤로 가격은 후보를 빼지 않고(engine.ts budgetKrw), 알레르기·이용 방식으로는 여덟 중
+     최대 셋까지만 빠진다. 그래도 판정 자체는 살려 둔다 — hardConstraints.maxPriceKrw 가
+     들어오면(대리 입력·다른 환경) 엔진은 여전히 BLOCK 규칙대로 빼고, 그때 이 상태가
+     실제로 생긴다. 화면이 못 만든다는 이유로 판정을 지우면, 생겼을 때 아무도 못 잡는다. */
   it("조건에 맞는 후보가 아예 없는 추천도 미확정으로 본다", () => {
-    const { rec } = recFor({ allergies: ["땅콩", "콩"], budgetKrw: 3000 });
+    const { engineCtx } = buildChickenContext({ allergies: ["땅콩", "콩"] });
+    engineCtx.now = NOW;
+    engineCtx.hardConstraints.maxPriceKrw = 3000; // 화면은 이 값을 만들지 않는다
+    const rec = buildRecommendation(fixture.candidates, engineCtx);
     expect(rec.recommendedCandidateId).toBeNull();
     expect(isUnresolved(rec)).toBe(true);
   });

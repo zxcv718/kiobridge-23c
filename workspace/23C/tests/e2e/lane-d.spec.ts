@@ -24,9 +24,37 @@ const CASE = {
   normal: ["땅콩", "매운맛", "순살", "포장하기", "1개", "7,000원"],
   /** 알레르기 없음 · 순한맛 · 순살 · 먹고 가기 · 2개 · 예산 없음 — 수량 2개 */
   twoQty: ["없어요", "순한맛", "순살", "먹고 가기", "2개", "없어요"],
-  /** 예산 5,000원 — 이 가게 최저가(5,500원)보다 낮아 조건에 맞는 메뉴가 없다 */
-  noMatch: ["없어요", "매운맛", "순살", "포장하기", "1개", "5,000원"],
 } as const;
+
+/**
+ * 확정되지 않은 추천에 닿는 길 — **저장본에 남은 「모름」**.
+ *
+ * 한때는 예산 5,000원으로 «조건에 맞는 메뉴가 없어요»를 만들었다. 예산이 상한이 아니라
+ * 희망 금액이 된 뒤로 가격은 후보를 빼지 않으므로 그 길은 없어졌다. 기획이 없애려 한
+ * 것이 정확히 그 화면이다 — 조건이 조금 안 맞아도 가장 가까운 것을 권한다.
+ *
+ * 안전 중단(S12)은 그 화면과 다른 것이고 없어지지 않았다. 알레르기가 **미확인**이면
+ * 임의로 판단하지 않고 재확인을 요구하며, 두 번째에도 확정되지 않으면 멈춘다. 「모름」은
+ * 시안에 없어 화면에서 고를 수 없지만 값 자체는 살아 있다(model.ts) — 옛 저장본이나
+ * 대리 입력으로 들어온다. 여기서 재는 것이 바로 그 경로다.
+ */
+const 모름저장본 = {
+  answers: { allergies: ["모름"], spicyLevel: "매운맛", boneType: "순살", serviceType: "포장", quantity: 1, budgetKrw: "없음" },
+  a11y: { largeText: true, highContrast: false, simpleSteps: true, visualGuidance: false,
+          hearingSupport: false, mobilitySupport: false, staffAssistancePreferred: false, preferredInput: "TOUCH" },
+  scope: "LASTING", savedAt: "2026-08-11T10:00:00.000Z",
+};
+
+/** 저장본을 심고 «지난번과 똑같이 주문하기»로 1회차 추천까지 간다 (아직 중단 화면이 아니다) */
+async function 미확정추천까지(page: Page) {
+  await page.goto("http://localhost:5173/");
+  await page.evaluate((s) => {
+    localStorage.clear();
+    localStorage.setItem("kb23c-saved-settings-v4", JSON.stringify(s));
+  }, 모름저장본);
+  await page.reload();
+  await page.getByRole("button", { name: /지난번과 똑같이 주문하기/ }).click();
+}
 
 async function toRecommend(page: Page, picks: readonly string[]) {
   await enterWizard(page);
@@ -111,10 +139,13 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await toRecommend(page, CASE.normal);
     await page.getByRole("button", { name: "조건 수정" }).click();
 
-    /* 순한맛 + 뼈 로 바꾸면 «매운 뼈 닭강정»이 뽑히는데, 그 메뉴는 매운맛뿐이라 맵기를
-       못 맞춘다. 뼈를 내는 메뉴가 이 가게에 그것 하나뿐이라 «뼈»를 지키면 맵기가 밀린다.
-       (한때 이 자리를 컵으로 쟀다. 컵 질문을 빼면서 사용자가 컵 선호를 말할 길이 없어져
-        같은 것을 맵기로 옮겨 잰다 — 재는 대상은 «못 맞춘 옵션을 밝히는가»로 같다.) */
+    /* 순한맛 + 뼈 로 바꾸면 «간장 순살 닭강정»(6,500원)이 뽑힌다. 예산 7,000원이 상한이
+       아니라 **희망 금액**이 된 뒤로 그 금액에 가장 가까운 것이 위로 오는데, 뼈를 내는
+       메뉴는 이 가게에서 5,500원짜리 하나뿐이라 «뼈»가 밀린다. 그래서 못 맞추는 것은
+       형태다.
+
+       이 자리는 두 번 옮겼다 — 처음엔 컵(질문이 없어짐), 다음엔 맵기(예산 방식이 바뀜).
+       재는 대상은 세 번 다 같다: **못 맞춘 옵션을 사용자에게 밝히는가.** */
     await page.getByRole("button", { name: /^맵기/ }).click();
     await page.getByRole("button", { name: "순한맛", exact: true }).click();
     await page.getByRole("button", { name: /^형태/ }).click();
@@ -125,8 +156,8 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
     const sub = page.locator('.sellist li[data-origin="SUBSTITUTED"]');
     await expect(sub).toHaveCount(1);
-    // 조사가 앞말에 맞아야 한다 — «순한맛는» 이 아니라 «순한맛은»
-    await expect(sub).toContainText("원하신 순한맛은 이 메뉴에 없어 바꿨습니다");
+    // 조사가 앞말에 맞아야 한다 — 받침이 없는 «뼈» 는 «뼈는» 이다(«뼈은» 이 아니다)
+    await expect(sub).toContainText("원하신 뼈는 이 메뉴에 없어 바꿨습니다");
     // 대체가 있으면 다른 메뉴를 볼 길을 함께 준다
     await expect(page.getByRole("button", { name: "다른 메뉴 보기" })).toBeVisible();
   });
@@ -158,14 +189,21 @@ test.describe("D계열 — 확인·수정·결과", () => {
   });
 
   test("D7 수정 화면에는 조건을 고쳐 다시 추천받는 길이 남아 있다", async ({ page }) => {
-    await start(page);
-    // 조건에 맞는 메뉴가 없는 경우 — 여기서 빠져나갈 길이 사라지면 막다른 길이 된다
-    await toRecommend(page, CASE.noMatch);
-    await expect(page.getByRole("heading", { name: /조건에 맞는 메뉴가 없어요/ })).toBeVisible();
+    // 알레르기가 미확인이라 확정되지 않은 추천 — 여기서 빠져나갈 길이 없으면 막다른 길이 된다
+    await 미확정추천까지(page);
     await page.getByRole("button", { name: /조건 수정/ }).click();
 
-    await page.getByRole("button", { name: /^예산/ }).click();
-    await page.getByRole("button", { name: "없어요", exact: true }).click();
+    /* 미확인을 «없음»으로 바로잡으면 확정된 추천으로 빠져나간다.
+       선택지 이름에는 그림이 함께 들어가므로(«✅ 없어요») 정확 일치로는 못 잡고,
+       예산 행에도 «없어요»가 있어 알레르기 행 안으로 범위를 좁힌다.
+       접힘 여부를 단정하지 않는다 — 고칠 것이 남은 행은 펼쳐진 채로 오기도 하고,
+       그때 한 번 더 누르면 도로 접혀 선택지가 사라진다(실제로 그렇게 걸렸다). */
+    const 알레르기행 = page.locator(".editrow", { hasText: "알레르기" });
+    const 없어요 = 알레르기행.locator("button", { hasText: "없어요" });
+    if (!(await 없어요.isVisible().catch(() => false))) {
+      await 알레르기행.locator("button").first().click();
+    }
+    await 없어요.click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
     await expect(page.getByRole("button", { name: "네, 좋아요" })).toBeVisible();
   });
@@ -234,8 +272,9 @@ test.describe("D계열 — 확인·수정·결과", () => {
   /* ───────── S12 안전 중단 (Figma 99:1337) ───────── */
 
   test("D12 안전 중단은 시안 그대로 그리고, 빠져나갈 길을 하나 더 남긴다", async ({ page }) => {
-    await start(page);
-    await toRecommend(page, CASE.noMatch);
+    /* 첫 미확정에서는 멈추지 않는다 — 조건을 고칠 기회를 한 번 준다. 그대로 다시 받으면
+       두 번째이고, 그때 멈춘다(core/ask.ts MAX_RECONFIRM_ATTEMPTS). */
+    await 미확정추천까지(page);
     await page.getByRole("button", { name: "조건 수정" }).click();
     await page.getByRole("button", { name: /이 조건으로 추천 다시 받기/ }).click();
 

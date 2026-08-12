@@ -25,6 +25,17 @@ export interface ChickenHard {
 export interface EngineContext {
   preferences: ChickenPrefs;
   hardConstraints: ChickenHard;
+  /**
+   * 사용자가 말한 **희망 금액**. 상한이 아니다 — 넘어도 제외하지 않고, 이 금액에
+   * 가까운 것을 위로 올린다(STEP 5). 화면의 예산 질문이 이 값을 만든다.
+   *
+   * `hardConstraints.maxPriceKrw` 와 **다른 자리인 것이 핵심이다.** 그쪽은 환경 규칙
+   * CHICKEN_PRICE_LIMIT 이 severity: BLOCK 으로 보는 자리라, 값이 있으면 초과 후보를
+   * 반드시 빼야 한다(빼지 않으면 계약을 어긴 계획이 만들어진다). 희망 금액은 그런
+   * 약속이 아니므로 그 자리에 두지 않는다. 계약에 실릴 때는 팀 namespace 확장으로
+   * 간다 — core/canonical.ts 의 BUDGET_NAMESPACE.
+   */
+  budgetKrw?: number;
   /** 값별 출처·신뢰도 — 재질문 판정에 쓴다 (서버의 LOW_CONFIDENCE 규칙과 동일 기준). */
   fieldMetadata?: Record<string, { confidence: number; confirmedByUser: boolean }>;
   /** 외부 맥락 — 정렬 순서만 바꾼다. 없으면 맥락 없이 추천한다(가이드 권장 fallback). */
@@ -120,6 +131,37 @@ export function scoreCandidates(survivors: Candidate[], ctx: EngineContext): Sco
   const minP = Math.min(...prices);
   const maxP = Math.max(...prices);
 
+  /* 희망 금액을 말했으면 «가까울수록 높다», 아니면 «쌀수록 좋다».
+   *
+   * 두 경우를 하나로 합치지 않는다. 금액을 말하지 않은 사람에게 «가까울수록»은 기준이
+   * 없고, 말한 사람에게 «쌀수록»은 그가 말한 금액을 무시하는 것이다. 7,000원을 생각하고
+   * 온 사람에게 5,500원짜리를 맨 위에 놓는 것은 싼 것을 권하는 친절이 아니라 그가
+   * 말한 것을 듣지 않은 것이다.
+   *
+   * **척도는 후보들 사이의 거리로 정한다** — 가장 가까운 것이 만점, 가장 먼 것이 0.
+   * 「쌀수록 좋다」쪽이 최저가에 만점·최고가에 0을 주는 것과 같은 모양이라, 예산을
+   * 말했든 안 말했든 가격 축이 늘 같은 폭(0~25)으로 일한다.
+   *
+   * 절대 척도(«1,000원 벌어질 때마다 몇 점»)를 쓰지 않는 이유는 가게마다 가격대가
+   * 달라 같은 수가 다른 뜻이 되기 때문이다. 이 가게는 5,500~7,000원 안에 다 들어 있어
+   * 절대 척도로는 후보들이 사실상 구분되지 않는다.
+   *
+   * 이 척도의 성질 하나는 적어 둔다 — **닿을 수 없는 금액을 말해도 순서는 나온다.**
+   * 10,000원을 말하면 이 가게에는 그 근처가 없지만, 그중 가장 가까운 7,000원이 맨 위로
+   * 온다. «없습니다»라고 답하는 것보다 그편이 이 질문이 약속한 바에 맞는다. */
+  const target = ctx.budgetKrw;
+  const dists = target === undefined ? [] : prices.map((p) => Math.abs(p - target));
+  const minD = dists.length > 0 ? Math.min(...dists) : 0;
+  const maxD = dists.length > 0 ? Math.max(...dists) : 0;
+  const priceScore = (p: number | undefined): number => {
+    if (p === undefined) return WEIGHTS.price * 0.5;          // 값이 없으면 중립
+    if (target !== undefined) {
+      const d = Math.abs(p - target);
+      return maxD === minD ? WEIGHTS.price * 0.5 : WEIGHTS.price * (1 - (d - minD) / (maxD - minD));
+    }
+    return minP === maxP ? WEIGHTS.price * 0.5 : WEIGHTS.price * (1 - (p - minP) / (maxP - minP));
+  };
+
   const matchScore = (weight: number, pref: string | undefined, supported: string[] | undefined, attr?: string): number => {
     if (!definite(pref)) return weight * 0.5; // 선호 없음 → 중립(가점도 감점도 없음)
     const pool = attr !== undefined ? [attr] : (supported ?? []);
@@ -137,10 +179,7 @@ export function scoreCandidates(survivors: Candidate[], ctx: EngineContext): Sco
       spicy: matchScore(WEIGHTS.spicy, ctx.preferences.spicyLevel, c.supportedOptions?.SPICY_LEVEL, attrs.spicyLevel),
       bone: matchScore(WEIGHTS.bone, ctx.preferences.boneType, c.supportedOptions?.BONE_TYPE, attrs.boneType),
       service: matchScore(WEIGHTS.service, ctx.preferences.serviceType, c.supportedOptions?.SERVICE_TYPE),
-      price:
-        price === undefined || maxP === minP
-          ? WEIGHTS.price * 0.5
-          : WEIGHTS.price * (1 - (price - minP) / (maxP - minP)),
+      price: priceScore(price),
       // 가중치 100 밖의 순서 조정분. 후보를 제거하지 않으며, 0이면 맥락 미반영을 뜻한다.
       context: contextBonusFor(c, slot, serviceTypeChosen),
     };
