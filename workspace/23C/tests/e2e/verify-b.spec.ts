@@ -65,7 +65,7 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: /다음/ }).click();
     // 수량은 증감이고 1이 이미 떠 있다 — 그 값이 곧 답이므로 누를 것이 없다
     await page.getByRole("button", { name: /다음/ }).click();
-    await page.getByRole("button", { name: "없어요", exact: true }).click(); // 예산
+    await page.getByRole("button", { name: "상관없어요" }).click(); // 예산
     await page.getByRole("button", { name: /추천 보기|다음/ }).click();
 
     // 전부 답했으므로 생략 고지가 없어야 한다

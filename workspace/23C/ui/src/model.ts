@@ -162,8 +162,15 @@ export const QUESTIONS: Question[] = [
    * (recommendation.schema.json 의 recommendedCandidateId 는 ["string", "null"]),
    * hardConstraints.maxPriceKrw 가 들어오면 엔진은 여전히 BLOCK 규칙대로 뺀다.
    * 화면이 그 값을 만들지 않게 됐을 뿐이다(core/canonical.ts). */
+  /* 첫 선택지의 라벨은 「상관없어요」다. 질문이 「예산 상한이 있으세요?」였을 때는
+     「없어요」가 «상한이 없다»로 읽혔지만, 「예산은 얼마인가요?」에 「없어요」로 답하면
+     «금액이 없다»가 된다 — 돈이 없다는 뜻으로 읽힐 수 있는 자리에 그 말을 두지 않는다.
+     맵기와 같은 말을 쓰는 것이 뜻에도 맞는다: 고르지 않겠다는 답이다.
+
+     **값(value)은 "없음" 그대로 둔다.** 옛 저장본이 그 값을 들고 있고, buildRawInput 이
+     그것을 보고 예산을 안 보낸다. 화면 글자만 바꾸는 것이지 데이터를 바꾸는 것이 아니다. */
   { key: "budgetKrw", title: "예산은 얼마인가요?", options: [
-    { value: "없음", label: "없어요" }, { value: 5000, label: "5,000원" }, { value: 6000, label: "6,000원" }, { value: 7000, label: "7,000원" }, { value: 10000, label: "10,000원" } ] },
+    { value: "없음", label: "상관없어요" }, { value: 5000, label: "5,000원" }, { value: 6000, label: "6,000원" }, { value: 7000, label: "7,000원" }, { value: 10000, label: "10,000원" } ] },
 ];
 
 /* ───────── 알레르기를 두 걸음으로 묻는다 (디자인 S06) ─────────
@@ -224,7 +231,8 @@ export function answerLabel(key: string, v: unknown): string {
     return a.length === 0 || a[0] === "없음" ? "없음" : a.join("·");
   }
   if (key === "quantity") return `${v}개`;
-  if (key === "budgetKrw") return v === "없음" ? "없음" : `${Number(v).toLocaleString()}원`;
+  // 고른 선택지의 라벨과 같은 말로 보여준다 — 요약이 «없음»이면 고른 적 없는 말이 뜬다
+  if (key === "budgetKrw") return v === "없음" ? "상관없어요" : `${Number(v).toLocaleString()}원`;
   if (v === "매장") return "먹고 가기";
   return String(v);
 }
