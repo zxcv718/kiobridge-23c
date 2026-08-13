@@ -20,6 +20,22 @@ async function 홈으로(page: import("@playwright/test").Page, 주소: string):
   await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요/ })).toBeVisible();
 }
 
+/**
+ * 관문에서 직접 입력 폼을 편다.
+ *
+ * «직접 입력» 버튼은 토글이라 그냥 누르면 안 된다 — 헤드리스에는 카메라가 없어서
+ * 관문이 실패를 확인하는 순간 **폼을 저절로 펴 두는데**(QrConnect), 그 뒤에 누르면
+ * 도로 접힌다. 자동 펼침과 클릭의 경쟁이라 됐다 안 됐다 했다(병합 검증 실측).
+ * 이미 펴져 있으면 누르지 않는다.
+ */
+async function 직접입력펴기(page: import("@playwright/test").Page): Promise<void> {
+  const 입력칸 = page.locator('input[name="storeCode"]');
+  if (!(await 입력칸.isVisible().catch(() => false))) {
+    await page.getByRole("button", { name: "직접 입력" }).click();
+  }
+  await expect(입력칸).toBeVisible();
+}
+
 test("주소에 매장 코드가 있으면 홈이 어느 매장인지 밝힌다", async ({ page }) => {
   await 홈으로(page, "http://localhost:5173/?env=chicken-store");
 
@@ -67,7 +83,7 @@ test("연동을 마친 기기는 다시 열어도 관문이 아니라 홈부터 
   await page.goto("http://localhost:5173/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.getByRole("button", { name: "직접 입력" }).click();
+  await 직접입력펴기(page);
   await page.locator('input[name="storeCode"]').fill("chicken-store");
   await page.getByRole("button", { name: "이 코드로 연결하기" }).click();
   await expect(page.getByRole("heading", { name: "연결되었습니다" })).toBeVisible();
@@ -85,7 +101,7 @@ test("모르는 매장 코드로는 연동을 기억하지 않는다 — 다음 
   await page.goto("http://localhost:5173/");
   await page.evaluate(() => localStorage.clear());
   await page.reload();
-  await page.getByRole("button", { name: "직접 입력" }).click();
+  await 직접입력펴기(page);
   await page.locator('input[name="storeCode"]').fill("coffee-shop");
   await page.getByRole("button", { name: "이 코드로 연결하기" }).click();
   await expect(page.getByRole("heading", { name: "이 매장 정보는 아직 없습니다" })).toBeVisible();
