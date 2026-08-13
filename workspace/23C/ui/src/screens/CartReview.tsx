@@ -144,17 +144,16 @@ export function CartReview() {
     uiRec.engineCtx.preferences.quantity,
   );
 
-  const need = sels.filter((x) => x.origin !== "USER");
   /* 주문 방식 절 — SERVICE_TYPE 은 그 자리에서 고치는 버튼이 됐고, CUP 은 화면이 묻지
      않는 값이라(질문 6개) 계획에 실려 있을 때만 문장으로 보여준다. */
   const waySel = sels.find((x) => x.groupId === "SERVICE_TYPE");
   const cupSel = sels.find((x) => x.groupId === "CUP");
   /* 카드의 «옵션:» 줄 (시안) — 주문 방식·수량을 뺀 메뉴 옵션 값들. 수량은 메뉴 줄의
-     «x N개»가 이미 말하므로 두 번 적지 않는다. */
+     «x N개»가 이미 말하므로 두 번 적지 않는다.
+     «원하신 …은 없어 바꿨습니다» 보조줄은 없어졌다(3차 QA 2026-08-13 — 카드에는 선택된
+     옵션만 남긴다). 어긋남을 숨기는 것은 아니다 — 메뉴 확인의 «주의 필요»가 같은
+     사실을 담기 전에 말하고, 뒤로 한 칸이면 다시 볼 수 있다. */
   const opt = sels.filter((x) => !WAY_GROUPS.has(x.groupId) && x.groupId !== "QUANTITY");
-  /* 옵션 값 중 우리가 정했거나 바꾼 것 — 시안에는 없는 정보지만, 카드 보조줄로 이유를
-     밝힌다. 화면이 «고르신 대로»가 아닌 것을 고른 것처럼 말하면 안 된다. */
-  const optNeed = need.filter((x) => !WAY_GROUPS.has(x.groupId));
 
   // 성분 — 등록하신 알레르기가 이 메뉴에 들어 있지 않다는 사실 (fixture 의 후보 속성에서 읽는다)
   const declared = uiRec.engineCtx.hardConstraints.allergenIds ?? [];
@@ -217,12 +216,6 @@ export function CartReview() {
         {opt.length > 0 && (
           <p className="cart-sub">옵션: {opt.map((x) => OPTION_KO[x.id] ?? x.id).join(", ")}</p>
         )}
-        {/* 옵션 값 중 우리가 정했거나 바꾼 것은 이유를 함께 밝힌다 (시안에 없는 상태 — 정직이 우선) */}
-        {optNeed.map((x) => (
-          <p className="cart-sub" key={x.groupId}>
-            {GROUP_KO[x.groupId] ?? x.groupId}: {originNote(x)}
-          </p>
-        ))}
       </div>
 
       <hr className="cart-div" />

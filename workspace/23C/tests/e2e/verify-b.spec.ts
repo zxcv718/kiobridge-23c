@@ -51,7 +51,7 @@ test.describe("B계열 — 신규 동작", () => {
   /* 「상관없어요」가 남은 질문은 맵기 하나다 — 형태·이용 방식에서는 뺐다(시안의 «둘 중
      하나»를 흐리지 않으려고). 그래서 «전부 상관없어요»라는 상태는 화면에서 만들 수 없고,
      여기서 재는 것은 **상관없다고 답한 항목을 메뉴 값으로 정하고 그 사실을 밝히는가**다. */
-  test("B2 '상관없어요'로 답한 항목은 메뉴 값으로 정하고 그 사실을 밝힌다", async ({ page }) => {
+  test("B2 '상관없어요'로 답한 항목은 메뉴 값으로 정해지고, 카드는 그 값만 보여준다", async ({ page }) => {
     await start(page);
     await enterWizard(page);
     await page.getByRole("button", { name: "없어요", exact: true }).click(); // 알레르기 없음
@@ -71,7 +71,10 @@ test.describe("B계열 — 신규 동작", () => {
     // 전부 답했으므로 생략 고지가 없어야 한다
     await expect(page.getByText(/여쭤보지 않았습니다/)).toHaveCount(0);
     await page.getByRole("button", { name: "선택하기", exact: true }).click();
-    await expect(page.getByText(/상관없다고 하셔서 이 메뉴의 값으로 정했습니다/).first()).toBeVisible();
+    /* 카드에는 선택된 옵션 값만 남는다(3차 QA 2026-08-13) — «상관없다고 하셔서 …» 출처
+       문장은 걷어냈다. 실제로 정해진 값 자체는 «옵션:» 줄이 그대로 보여준다. */
+    await expect(page.locator(".cart-box .cart-sub", { hasText: "옵션:" })).toBeVisible();
+    await expect(page.locator(".cart-box").getByText(/상관없다고 하셔서/)).toHaveCount(0);
   });
 
   test("B4 확정되지 않은 추천을 두 번 만나면 안전 중단 전용 화면", async ({ page }) => {

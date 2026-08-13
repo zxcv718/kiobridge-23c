@@ -139,7 +139,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     expect(total).toBe(unit * qty);
   });
 
-  test("D4b 원한 값을 못 맞춘 옵션은 대체했다고 밝힌다", async ({ page }) => {
+  test("D4b 대체 안내는 장바구니 카드가 아니라 메뉴 확인의 «주의 필요»가 말한다", async ({ page }) => {
     await start(page);
     await toRecommend(page, CASE.normal);
     await page.getByRole("button", { name: "다시 추천받기" }).click();
@@ -160,13 +160,15 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await page.getByRole("button", { name: "수정 완료" }).click();
     await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 
-    /* 형태는 시안 재정렬(99:1798) 뒤로 «주문 방식» 목록이 아니라 카드 관할이다 —
-       대체 사실과 이유는 카드 보조줄이 말한다.
-       조사가 앞말에 맞아야 한다 — 받침이 없는 «뼈» 는 «뼈는» 이다(«뼈은» 이 아니다). */
-    const sub = page.locator(".cart-box .cart-sub", { hasText: "바꿨습니다" });
-    await expect(sub).toHaveCount(1);
-    await expect(sub).toContainText("형태");
-    await expect(sub).toContainText("원하신 뼈는 이 메뉴에 없어 바꿨습니다");
+    /* 카드에는 선택된 옵션만 남는다(3차 QA 2026-08-13) — «원하신 …은 없어 바꿨습니다»
+       보조줄이 장바구니에 서지 않는다. 대체 사실을 숨기는 것은 아니다: 뒤로 한 칸의
+       메뉴 확인 «주의 필요»가 같은 어긋남을 말한다(아래에서 그것까지 잰다). */
+    await expect(page.locator(".cart-box .cart-sub", { hasText: "바꿨습니다" })).toHaveCount(0);
+    await expect(page.locator(".cart-box .cart-sub", { hasText: "옵션:" })).toHaveCount(1);
+
+    await page.getByRole("button", { name: "뒤로" }).click();
+    const 주의 = page.locator(".q-sec", { has: page.getByText("주의 필요") });
+    await expect(주의).toContainText("원하신 형태는 뼈인데");
   });
 
   /* 옛 D5(«결제가 일어나지 않는다» 문구 노출)는 기획 2026-08-13 으로 문구와 함께 없어졌다 —
