@@ -66,7 +66,10 @@ export function CartEdit() {
         </>
       )}
     >
-      {/* ── 한 카드 — SummaryCard(185:209) 문법: 라벨 · 값(Bold) · 주황 «수정» ── */}
+      {/* ── 한 카드 — SummaryCard(185:209) 문법: 라벨 · 값(Bold) · 주황 «수정» ──
+          edit-stack 은 이 화면의 본문(인사말·제목·카드)을 세로 가운데로 모으는 CSS
+          갈고리다(cart.css, 2차 QA 목업의 구도). */}
+      <div className="edit-stack">
       <Card rows={[
         ...(uiRec && fixture && uiRec.rec.recommendedCandidateId ? [{
           label: "메뉴",
@@ -114,6 +117,7 @@ export function CartEdit() {
           )}
         </div>
       )}
+      </div>
     </Screen>
   );
 }

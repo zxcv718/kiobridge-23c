@@ -115,5 +115,14 @@ h3.cart-cap { margin: 22px 0 8px; font-size: 0.78em; }
    여기 있던 `.stopwrap`·`.stoplabel`·`.stopalert` 는 일러스트를 못 그린다는 전제 위에
    세워진 것이라, 시안대로 다시 그리면서 함께 걷어냈다. */
 
-/* S14 의 세로 가운데 정렬(:has(.edit-extra))은 없어졌다 — 2차 QA(2026-08-13)로 일곱
-   행이 접힘 없이 한 카드에 서면서 본문이 길어져, 가운데 둘 «덩어리»가 아니게 됐다. */
+/* ───────── S14 수정 — 본문 덩어리를 세로 가운데에 둔다 (2차 QA 목업 2026-08-13) ─────────
+ * 인사말·제목·일곱 행 카드가 한 덩어리로 화면 가운데에 선다. 갈고리는 edit-stack
+ * (CartEdit.tsx) — 접힘 시절의 .edit-extra 가 하던 것과 같은 문법이다.
+ * `safe center` 라 내용이 넘치면(선택지가 펴진 경우·큰 글씨) 가운데를 포기하고
+ * 위에서부터 흐른다 — 가운데 정렬은 넘칠 때 위쪽을 스크롤로 되돌아갈 수 없게
+ * 자른다는 함정을 안전 중단 화면에서 배웠다(lane-d D12 실측). */
+.kb-screen-body:has(.edit-stack) {
+  display: flex;
+  flex-direction: column;
+  justify-content: safe center;
+}
