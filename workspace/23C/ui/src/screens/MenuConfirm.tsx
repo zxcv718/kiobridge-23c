@@ -2,7 +2,7 @@ import React from "react";
 import { useFlow } from "../flow";
 import { Badge, Cta, Emphasize, Screen } from "../components";
 import { OPTION_KO } from "../model";
-import { candidateName, candidatePrice } from "../logic";
+import { candidateName, candidatePrice, withManualSelection } from "../logic";
 import { metConditionsFor, type MetCondition } from "../../../src/core/engine";
 import { ALLERGEN_KO, josa } from "./CartReview";
 import "./cart.css";
@@ -43,7 +43,7 @@ function whyClauses(met: MetCondition[]): Clause[] {
 }
 
 export function MenuConfirm() {
-  const { uiRec, fixture, setStep, openEdit, simple } = useFlow();
+  const { uiRec, fixture, setStep, setUiRec, setManual, openEdit, simple } = useFlow();
   if (!uiRec || !fixture) return null;
 
   const rec = uiRec.rec;
@@ -79,6 +79,22 @@ export function MenuConfirm() {
      선 그 메뉴**를 코어에 대조시킨다 — 엔진 1순위든 직접 선택이든 같은 잣대다. */
   const tail = whyClauses(metConditionsFor(fixture.candidates.find((c) => c.candidateId === id), uiRec.engineCtx));
 
+  /* 다른 메뉴 카드 — 지금 화면의 메뉴를 뺀 **생존 후보**를 점수순으로 가로에 편다
+     (2차 QA 2026-08-13: 메뉴에 관한 선택이 이 화면에서 한 번에 보이게).
+     제외된 후보를 되살리지 않는 것은 메뉴 선택 화면과 같은 결정이다(verify-b B9). */
+  const alts = Object.entries(rec.scoreBreakdown ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .map(([cid]) => cid)
+    .filter((cid) => cid !== id);
+
+  /** 카드를 누르면 그 메뉴가 그 자리에서 위 카드로 올라온다 — 직접 선택(MODIFY)이다.
+   *  화면을 떠나지 않으므로 «추천해요»·«주의 필요»도 새 메뉴 기준으로 즉시 다시 선다.
+   *  미확인 차단(blocked)은 그대로다 — 메뉴를 확인한 것이지 알레르기를 확인한 것이 아니다. */
+  const pickAlt = (cid: string) => {
+    setUiRec(withManualSelection(uiRec, fixture, cid));
+    setManual(true);
+  };
+
   return (
     <Screen
       label="메뉴 확인"
@@ -89,11 +105,11 @@ export function MenuConfirm() {
       title="이 메뉴를 선택하시겠어요?"
       actions={
         <>
-          {/* 순서는 기획 목업 그대로 — «다시 추천받기» 위, «선택하기» 아래 (기획 확인 2026-08-12).
-              같은 조건으로 다시 계산하면 같은 결과가 나오므로, «다시 추천받기»는 조건을
-              고쳐 다시 받는 화면으로 보낸다 (기획 3번: 옵션 수정 → 재추천과 같은 길). */}
-          <Cta label="다시 추천받기" onClick={openEdit} />
+          {/* 순서는 «선택하기»(주황)가 위, «다시 추천받기»가 아래 — 2차 QA(2026-08-13)로
+              기획 목업의 순서를 뒤집었다. 주 동작이 위에 서는 다른 화면들과 같아졌다.
+              «다시 추천받기»는 조건을 고쳐 다시 받는 화면으로 보낸다 (기획 3번). */}
           <Cta tone="primary" label="선택하기" disabled={blocked} onClick={() => setStep("confirm")} />
+          <Cta label="다시 추천받기" onClick={openEdit} />
         </>
       }
     >
@@ -142,6 +158,19 @@ export function MenuConfirm() {
               {rec.unmetConditions.map((u, i) => <li key={i}>{u}</li>)}
             </ul>
           </section>
+        )}
+
+        {/* 다른 메뉴 카드 — 목록 화면으로 나가지 않고 이 자리에서 바꿔잡는다 (2차 QA) */}
+        {alts.length > 0 && (
+          <div className="mc-alts" role="group" aria-label="다른 메뉴 바로 고르기">
+            {alts.map((cid) => (
+              <button key={cid} type="button" className="mc-altcard" onClick={() => pickAlt(cid)}>
+                <span className="mc-altcap">다른 메뉴</span>
+                <b className="menu-name">{candidateName(fixture, cid)}</b>
+                <small>{candidatePrice(fixture, cid)?.toLocaleString()}원</small>
+              </button>
+            ))}
+          </div>
         )}
 
         {!simple && (

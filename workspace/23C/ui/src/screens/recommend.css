@@ -87,3 +87,25 @@
   margin-left: auto; flex: none;
   color: var(--brand-strong); font-weight: 700; font-size: 0.88em;
 }
+
+/* ── 메뉴 확인 — 다른 메뉴 가로 카드 (2차 QA 2026-08-13) ──
+ * 메뉴에 관한 선택이 이 화면에서 한 번에 보인다: 목록 화면으로 나가지 않고
+ * 카드 한 장을 눌러 그 자리에서 바꿔잡는다. 카드는 위 추천 카드와 같은 문법
+ * (테두리 --line-soft·이름 Bold·가격 회색)이고, 줄이 넘치면 가로로 민다 —
+ * 세로로 쌓으면 화면이 목록이 되어 «추천 하나 + 대안들»의 위계가 사라진다. */
+.mc-alts {
+  display: flex; gap: 10px;
+  overflow-x: auto;
+  margin-top: 18px; padding: 2px 2px 8px;
+  -webkit-overflow-scrolling: touch;
+}
+.mc-altcard {
+  flex: 0 0 auto; min-width: 136px; min-height: 84px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  border: 1.5px solid var(--line-soft); border-radius: var(--kb-radius-md);
+  background: var(--card); padding: 12px 14px;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.mc-altcap { font-size: 0.72em; color: var(--muted); }
+.mc-altcard .menu-name { font-weight: 700; font-size: 0.95em; }
+.mc-altcard small { font-size: 0.88em; color: var(--muted); }

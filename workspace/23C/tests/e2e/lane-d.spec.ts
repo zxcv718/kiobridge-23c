@@ -151,14 +151,14 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
        이 자리는 두 번 옮겼다 — 처음엔 컵(질문이 없어짐), 다음엔 맵기(예산 방식이 바뀜).
        재는 대상은 세 번 다 같다: **못 맞춘 옵션을 사용자에게 밝히는가.** */
-    // 뼈/순살은 기획 4행에서 바로, 맵기는 «다른 항목 수정» 접힘 안에서 고친다
+    // 접힘은 없어졌다(2차 QA) — 뼈/순살도 맵기도 한 카드의 «수정»으로 바로 고친다
     await page.getByRole("button", { name: /^뼈\/순살 선택/ }).click();
     await page.getByRole("button", { name: "뼈", exact: true }).click();
-    await page.locator("details.home-saved > summary", { hasText: "다른 항목 수정" }).click();
     await page.getByRole("button", { name: /^맵기/ }).click();
     await page.getByRole("button", { name: "순한맛", exact: true }).click();
+    // «수정 완료»는 장바구니 확인으로 직행한다(2차 QA) — 메뉴 확인을 지나지 않는다
     await page.getByRole("button", { name: "수정 완료" }).click();
-    await page.getByRole("button", { name: "선택하기", exact: true }).click();
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 
     /* 형태는 시안 재정렬(99:1798) 뒤로 «주문 방식» 목록이 아니라 카드 관할이다 —
        대체 사실과 이유는 카드 보조줄이 말한다.
@@ -205,25 +205,22 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
   /* ───────── S14 수정 (Figma 114:2008) ───────── */
 
-  test("D6 수정 화면에서 글씨 크기·고대비·화면 안내를 바로 바꿀 수 있다", async ({ page }) => {
+  /* D6(수정 화면의 화면 보기 방식)은 없어졌다 — 2차 QA(2026-08-13)가 그 절을 통째로
+     걷어냈다. 화면 설정에 닿는 길은 프로필 3단계(verify-b C1)가 그대로 지킨다. */
+
+  test("D6 수정 화면은 한 카드다 — 주문 조건 일곱 행이 접힘 없이 다 보인다", async ({ page }) => {
     await start(page);
     await toRecommend(page, CASE.normal);
     await page.getByRole("button", { name: "다시 추천받기" }).click();
-
-    const app = page.locator(".app");
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
-    // 화면 보기 방식은 기획 4행 밖이라 «다른 항목 수정» 접힘 안으로 옮겨졌다
-    await page.locator("details.home-saved > summary", { hasText: "다른 항목 수정" }).click();
 
-    await page.getByRole("button", { name: "고대비 수정" }).click();
-    await expect(app).toHaveClass(/contrast/);
-
-    await page.getByRole("button", { name: "화면 안내 수정" }).click();
-    await expect(app).toHaveClass(/guide/);
-
-    // 기본이 «기본 크기»이므로(기획 2026-08-12) 누르면 큰 글씨가 켜진다
-    await page.getByRole("button", { name: "글씨 크기 수정" }).click();
-    await expect(app).toHaveClass(/large/);
+    // 2차 QA — «다른 항목 수정» 접힘도, 화면 보기 방식도 없다. 전부 한 카드 안이다.
+    await expect(page.getByText("다른 항목 수정")).toHaveCount(0);
+    await expect(page.getByText("화면 보기 방식")).toHaveCount(0);
+    for (const 라벨 of ["메뉴", "알레르기", "맵기", "뼈/순살 선택", "먹고가기/포장 선택", "수량", "예산"]) {
+      await expect(page.locator(".kb-row .kb-rowlabel", { hasText: 라벨 }).first(),
+        `수정 카드에 «${라벨}» 이 없습니다`).toBeVisible();
+    }
   });
 
   test("D7 수정 화면에는 조건을 고쳐 다시 추천받는 길이 남아 있다", async ({ page }) => {
@@ -233,19 +230,36 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await page.getByRole("button", { name: "다시 추천받기" }).click();
 
     /* 미확인을 «없음»으로 바로잡으면 확정된 추천으로 빠져나간다.
-       재확인 경로라 «다른 항목 수정»(알레르기 포함)은 저절로 펴져서 온다.
-       선택지 이름에는 그림이 함께 들어가므로(«✅ 없어요») 정확 일치로는 못 잡고,
-       다른 행에도 같은 글자가 나올 수 있어 알레르기 행 안으로 범위를 좁힌다.
-       행이 열려 있는지는 단정하지 않는다 — 열린 행을 한 번 더 누르면 도로 접혀
-       선택지가 사라진다(실제로 그렇게 걸렸다). */
-    const 알레르기행 = page.locator(".editrow", { hasText: "알레르기" });
-    const 없어요 = 알레르기행.locator("button", { hasText: "없어요" });
+       재확인 경로라 알레르기 선택지는 저절로 펴져서 온다. 선택지 이름에는 그림이
+       함께 들어가므로(«✅ 없어요») 정확 일치로는 못 잡는다. 펴짐을 단정하지 않고,
+       접혀 있으면 «알레르기 수정»으로 편다 — 한 번 더 누르면 도로 접히기 때문이다. */
+    const 없어요 = page.locator(".editbody button", { hasText: "없어요" });
     if (!(await 없어요.isVisible().catch(() => false))) {
-      await 알레르기행.locator("button").first().click();
+      await page.getByRole("button", { name: "알레르기 수정" }).click();
     }
     await 없어요.click();
     await page.getByRole("button", { name: "수정 완료" }).click();
-    await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
+    /* 확정된 추천이면 «수정 완료»는 장바구니 확인으로 직행한다(2차 QA 2026-08-13) —
+       메뉴 확인을 한 번 더 지나지 않는다. */
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
+  });
+
+  test("D14 메뉴 확인에서 다른 메뉴를 바로 골라잡을 수 있다 (2차 QA)", async ({ page }) => {
+    await start(page);
+    await toRecommend(page, CASE.normal);
+
+    // 대안 카드 — 지금 화면의 메뉴를 뺀 생존 후보가 가로로 선다
+    const 첫대안 = page.locator(".mc-altcard").first();
+    await expect(첫대안).toBeVisible();
+    const 대안이름 = await 첫대안.locator(".menu-name").innerText();
+    await 첫대안.click();
+    // 누르면 그 메뉴가 위 카드로 올라온다 — 화면을 떠나지 않는다
+    await expect(page.locator(".cart-name")).toHaveText(대안이름);
+
+    // 버튼 순서 — «선택하기»(주황)가 위, «다시 추천받기»가 아래 (2차 QA)
+    const 버튼 = page.locator(".kb-actions button");
+    await expect(버튼.first()).toHaveText("선택하기");
+    await expect(버튼.nth(1)).toHaveText("다시 추천받기");
   });
 
   /* ───────── S15 안내·저장 유도 (Figma 99:1830) ───────── */
@@ -334,20 +348,22 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await toRecommend(page, CASE.normal);
     await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
 
-    // 1회째 — 조건을 고칠 기회를 준다
+    // 1회째 — 조건을 고칠 기회를 준다. 수정 완료는 장바구니로 직행한다(2차 QA).
     await page.getByRole("button", { name: "다시 추천받기" }).click();
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
     await page.getByRole("button", { name: "수정 완료", exact: true }).click();
-    await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 
-    // 2회째 — 두 번을 다시 요청했으면 임의로 더 밀지 않고 직원에게 넘긴다
+    // 2회째 — 뒤로 물러나 다시 요청하면, 임의로 더 밀지 않고 직원에게 넘긴다
+    await page.getByRole("button", { name: "뒤로" }).click();
     await page.getByRole("button", { name: "다시 추천받기" }).click();
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();
 
     // «조건 다시 보기»로 나가면 기회가 다시 생긴다 — 이 화면이 덫이 되면 안 된다
     await page.getByRole("button", { name: "조건 다시 보기" }).click();
     await page.getByRole("button", { name: "수정 완료", exact: true }).click();
-    await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "뒤로" }).click();
     await page.getByRole("button", { name: "다시 추천받기" }).click();
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
   });

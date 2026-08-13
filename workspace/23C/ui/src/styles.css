@@ -231,16 +231,9 @@ h2 { font-size: 1.25em; margin: 0 0 6px; }
   .btnrow .btn { flex: 1 1 auto; }
 }
 
-/* 조건 수정 아코디언 — 확인 화면 요약 행 + 마법사 선택 버튼의 합성 (새 시각 언어 아님) */
-.editrow { border: 1.5px solid var(--line); border-radius: 12px; margin: 8px 0; overflow: hidden; background: var(--card); }
-.edithead {
-  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px;
-  padding: 12px 16px; background: var(--card); color: var(--fg); border: 0;
-  font-size: 1em; font-family: inherit; cursor: pointer; text-align: left;
-}
-.edithead[aria-expanded="true"] { border-bottom: 1.5px solid var(--line); }
-.editlabel { font-weight: 700; min-width: 92px; }
-.editvalue { flex: 1; color: var(--muted); font-weight: 600; }
+/* 조건 수정의 아코디언(.editrow/.edithead/.editlabel/.editvalue)은 없어졌다 —
+   2차 QA(2026-08-13)로 수정 화면(S14)이 접힘 없는 한 카드가 되면서 그 부품이
+   사라졌다. 선택지를 펴는 자리는 .editbody 하나다(카드 바로 아래). */
 .editbody { padding: 12px 16px 16px; }
 
 .field { display: block; margin: 10px 0; }

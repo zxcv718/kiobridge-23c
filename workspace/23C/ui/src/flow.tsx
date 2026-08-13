@@ -347,8 +347,20 @@ export function useFlowState() {
        반영된다 — 그것이 «수정»이다. 저장본이 없는 주문 도중의 조건 수정은 아무것도
        남기지 않는다 — 세션을 남길지는 주문을 마친 뒤 S15 가 묻는다. */
     if (savedSession) persistSession(answers);
-    // 고쳐서 다시 받는 경로 — 여기서도 미확정이면 시도 횟수가 올라가고, 2회째면 안전 중단이다
-    goRecommend(computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle, touchedA11y), fixture, now));
+    const u = computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle, touchedA11y), fixture, now);
+    /* 확정 추천이면 장바구니 확인으로 **직행**한다(2차 QA 2026-08-13) — 고친 조건의
+       결과를 곧장 주문 내역으로 보여주고, 메뉴 확인을 한 번 더 지나게 하지 않는다.
+       미확정(알레르기 모름 등)은 기존 길 그대로다 — 재확인 배너와 2회째 안전 중단은
+       goRecommend 가 잰다. 승인 차단을 쥔 화면을 건너뛰면 안 되기 때문이다. */
+    if (!isUnresolved(u.rec)) {
+      setReconfirmCount(0);
+      setUiRec(u);
+      setManual(false); // 엔진이 새로 뽑은 1위다 — 직접 선택 표식을 물려받지 않는다
+      setStep("confirm");
+      return;
+    }
+    // 미확정 — 여기서도 시도 횟수가 올라가고, 2회째면 안전 중단이다
+    goRecommend(u);
   };
 
   /**
