@@ -2,7 +2,7 @@ import React from "react";
 import { useFlow } from "../flow";
 import { A11Y_ITEMS, EDIT_LABELS, FLOW_STEPS, QUESTIONS, answerLabel } from "../model";
 import { candidateName, readUrlStoreCode } from "../logic";
-import { Card, Cta, Screen } from "../components";
+import { Badge, Card, Cta, Screen } from "../components";
 import "./profile.css";
 import "./qr.css";
 
@@ -148,6 +148,11 @@ export function Home() {
               <span aria-hidden="true">▾</span>
             </summary>
             <div className="home-savedbody">
+              {/* 무로그인 배지 (QA 1차 TC-CP-13) — 이 기록의 «성격»을 내용보다 먼저 말한다:
+                  계정에 올라간 것이 아니라 이 기기에만 임시로 남은 것이다. 자리는 PO 확정
+                  그대로 카드 위 한 줄이고, 부품은 메뉴 확인의 상태 알약(Badge)을 그대로 쓴다 —
+                  가라앉은 회색 바탕에 본문색이라 대비(15.3:1)도 그 부품의 것이다. */}
+              <p className="home-badge"><Badge>무로그인 · 이 기기에만 임시 저장됨</Badge></p>
               <Card label="이 기기에 저장된 기록" rows={savedRows} />
               <p className="p-note">
                 {savedCoversAll ? "저장된 항목은 다시 여쭤보지 않습니다." : "저장돼 있지 않은 것만 다시 여쭤봅니다."}

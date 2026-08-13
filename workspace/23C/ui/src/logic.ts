@@ -55,6 +55,27 @@ export function readUrlStoreCode(): string {
   return "";
 }
 
+/* ───────── 연동한 매장 코드의 기기 저장 (QA 1차 TC-XC-04) ─────────
+ * 강제 종료 후 다시 열면 관문(QR 스캔)이 아니라 홈부터 시작해야 한다. QR 연동에
+ * 성공한 매장 코드를 기기에 남기고, flow 의 첫 화면 판정이 주소(?env=)와 함께 본다.
+ *
+ * 매장 코드는 개인정보가 아니라 **기기의 매장 설정**이다 — 무로그인 저장 정책
+ * (프로필 kb23c-profile-v1 · 세션 kb23c-session-v1)과 별도 키로 두고, 홈의
+ * «새로 설정하기» 완전 초기화(flow.deleteSaved)도 이 키는 지우지 않는다. */
+export const STORE_KEY = "kb23c-store-v1";
+
+/** 연동에 성공한 매장 코드를 남긴다 — 실패·모르는 매장·건너뛰기는 부르지 않는다. */
+export function rememberStoreCode(code: string): void {
+  const c = code.trim();
+  if (c === "") return; // 성공이 아닌 것을 성공처럼 남기지 않는다
+  try { localStorage.setItem(STORE_KEY, c); } catch { /* 저장 불가 환경이면 그 방문만 관문부터 */ }
+}
+
+/** 기기에 남은 매장 코드 — 없으면 빈 문자열(관문부터 시작한다). */
+export function readStoredStoreCode(): string {
+  try { return localStorage.getItem(STORE_KEY)?.trim() ?? ""; } catch { return ""; }
+}
+
 export type { RawUserInput, ContextSignal };
 
 export interface UiRecommendation {

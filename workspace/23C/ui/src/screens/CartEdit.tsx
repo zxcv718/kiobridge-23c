@@ -5,6 +5,7 @@ import { ChoiceGrid } from "../components/ChoiceGrid";
 import { Stepper } from "../components/Stepper";
 import { EDIT_LABELS, QUANTITY_MAX, QUESTIONS, answerLabel } from "../model";
 import { candidateName } from "../logic";
+import chevronLeft from "../assets/icons/chevron-left.svg"; // 접힘 표식 — 뒤로가기와 같은 아이콘 (TC-CM-08)
 import "./cart.css";
 import "./profile.css"; // .p-edit — 요약 행의 주황 «수정» 링크 (시안 185:214, S03 과 같은 문법)
 
@@ -65,19 +66,25 @@ export function CartEdit() {
   const questionOf = (key: string) => QUESTIONS.find((x) => x.key === key)!;
 
   /* 디자인의 «수정»은 14px 텍스트 링크지만 여기서는 진짜 버튼이다 —
-     누르면 그 자리에서 화면이 바뀌고, 무엇이 바뀌었는지는 옆 값이 글자로 말한다. */
+     누르면 그 자리에서 화면이 바뀌고, 무엇이 바뀌었는지는 옆 값이 글자로 말한다.
+     모양은 기획 4행 카드의 «수정»(.p-edit — 시안 185:214 의 주황 링크 문법)과 같다 —
+     한 화면의 같은 말(수정)이 두 모양이던 것을 통일했다(QA 1차 TC-CM-08 ②).
+     테두리 버튼이던 때의 눌림 표시는 없어졌지만, 상태는 옆 값(«고대비 화면»/«기본
+     화면»)이 글자로 말하고 aria-pressed 가 낭독기에 남는다. */
   const viewRows: CardRow[] = VIEW_ROWS.map(({ key, label, on, off }) => ({
     label,
     value: a11y[key] ? on : off,
     action: (
-      <button type="button" className="rowfix" aria-pressed={a11y[key] === true}
+      <button type="button" className="p-edit" aria-pressed={a11y[key] === true}
         aria-label={`${label} 수정`} onClick={() => setFlag(key, !a11y[key])}>
         수정
       </button>
     ),
   }));
 
-  /** 접히는 행 하나 — 옛 화면의 아코디언 문법 그대로. 값은 기획 목업처럼 오른쪽에 선다. */
+  /** 접히는 행 하나 — 옛 화면의 아코디언 문법 그대로. 값은 기획 목업처럼 오른쪽에 선다.
+   *  표식은 ▼/▲ 글자가 아니라 뒤로가기(Header)와 같은 아이콘 문법이다 — 원형 회색 바탕
+   *  + chevron(QA 1차 TC-CM-08 ③). 열림은 CSS 회전이 말한다(cart.css .edit-fold). */
   const editRow = (key: string, label: string, body: React.ReactNode) => {
     const open = editOpen === key;
     return (
@@ -86,7 +93,9 @@ export function CartEdit() {
           onClick={() => setEditOpen(open ? null : key)}>
           <span className="editlabel">{label}</span>
           <span className="editvalue">{answerLabel(key, answers[key])}</span>
-          <span aria-hidden="true">{open ? "▲" : "▼"}</span>
+          <span className="edit-fold" aria-hidden="true">
+            <img className="kb-ico" src={chevronLeft} alt="" />
+          </span>
         </button>
         {open && <div className="editbody">{body}</div>}
       </div>

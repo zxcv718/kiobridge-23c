@@ -89,7 +89,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
   });
 
-  test("D2 메뉴 확인에는 되돌아갈 길이 있다", async ({ page }) => {
+  test("D2 메뉴 확인에는 되돌아갈 길이 있다 — 메뉴를 다시 고르는 길까지 이어진다", async ({ page }) => {
     await start(page);
     await toCartReview(page);
     await page.getByRole("button", { name: "뒤로" }).click();
@@ -97,6 +97,12 @@ test.describe("D계열 — 확인·수정·결과", () => {
     // 추천을 받아들이지 않을 길 — «다시 추천받기»가 조건 수정 화면으로 잇는다
     await page.getByRole("button", { name: "다시 추천받기" }).click();
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
+
+    /* 장바구니의 [수정하기]가 없어진 뒤(QA 1차 TC-CM-08) 메뉴를 다시 고르는 길은 이것
+       하나다: 뒤로 → 메뉴 확인 → 다시 추천받기 → 메뉴 «수정» → 메뉴 선택(점수순 목록).
+       입구가 하나뿐이므로 그 길이 실제로 끝까지 이어지는지를 여기서 못 박는다. */
+    await page.getByRole("button", { name: "메뉴 수정" }).click();
+    await expect(page.getByRole("heading", { name: /어떤 메뉴를 원하시나요/ })).toBeVisible();
   });
 
   /* ───────── S13 장바구니 확인 (Figma 99:1798) ───────── */
@@ -190,6 +196,11 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByText(/실제 결제·주문은 일어나지 않습니다/)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "다른 메뉴 보기" })).toHaveCount(0);
     await expect(page.getByText(/아래 강조된 항목은/)).toHaveCount(0);
+
+    /* [수정하기] 진입도 없어졌다(QA 1차 TC-CM-08) — 수량·주문 방식이 그 자리에서
+       고쳐지는 지금, 조건 수정 화면으로 가는 이 버튼은 인라인 수정과 겹치는 중복
+       입구였다. 조건·메뉴를 고치는 길은 뒤로 → 메뉴 확인의 «다시 추천받기»다(D2). */
+    await expect(page.getByRole("button", { name: "수정하기", exact: true })).toHaveCount(0);
   });
 
   /* ───────── S14 수정 (Figma 114:2008) ───────── */

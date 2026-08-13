@@ -13,7 +13,12 @@ import "./cart.css";
  * 화면목록 S13 — 장바구니(최종) 확인 (Figma 99:1798 · 2026-08-12 시안 대조로 재정렬).
  *
  * 레이아웃 — 매장 이름(캡션이자 화면 제목) → 메뉴 카드(수량 스테퍼·가격·성분·옵션) →
- * 구분선 → 주문 방식(선택 버튼) → 구분선 → 총 가격 → 수정하기 → 주문하기.
+ * 구분선 → 주문 방식(선택 버튼) → 구분선 → 총 가격 → 주문하기.
+ *
+ * 시안의 [수정하기] 버튼은 없어졌다(QA 1차 TC-CM-08) — 수량·주문 방식이 그 자리에서
+ * 고쳐지는 지금, 조건 수정 화면(S14)으로 가는 이 진입은 인라인 수정과 겹치는 중복
+ * 입구였다. 메뉴·다른 조건을 다시 고치는 길은 뒤로가기 → 메뉴 확인의 «다시 추천받기»다
+ * (S14 자체는 남는다 — 그 길과 홈 «저장된 내용 수정»의 유일한 입구다).
  * 큰 제목 문장은 시안에 없다 — 매장 이름 줄이 이 화면의 제목을 겸한다(h2 는 유지 —
  * 화면 제목이 h2 하나라는 전제를 낭독기와 e2e 가 쓴다. 크기는 CSS 가 시안의 15px 로 내린다).
  *
@@ -87,6 +92,27 @@ const CUP_SENTENCE: Record<string, string> = {
 /** 주문 방식 질문 — 마법사(S08)와 같은 질문·같은 부품으로 그 자리에서 고친다. */
 const SERVICE_Q = QUESTIONS.find((x) => x.key === "serviceType")!;
 
+/**
+ * 수량 행의 출처를 바로잡는다 (QA 1차 TC-CM-06).
+ *
+ * core/plan.ts 의 preferenceByGroup 에는 QUANTITY 가 없어서, 사용자가 «5개»를 직접
+ * 골랐어도 explainSelections 가 그 행을 AUTO(=상관없다고 하셔서)로 표시한다.
+ * 한때는 계획이 고른 수량 옵션의 값과 대조해 다르면 «대체»로 표시했는데, 그러면
+ * 눈금(1·2·3) 밖의 수량 5에 «원하신 5개는 이 메뉴에 없어 바꿨습니다»가 떴다 —
+ * 계약의 수량은 자유 정수(integer ≥ 1)이고 화면의 수량·가격·제출이 전부 사용자의
+ * 수를 그대로 쓰므로, 옵션 눈금은 키오스크 조작의 사정이지 주문의 사실이 아니다.
+ * 그래서 수량을 말한 사람의 행은 언제나 USER 다. 말한 적 없으면 AUTO 그대로 둔다 —
+ * 우리가 1로 정했다는 사실은 숨기지 않는다.
+ * (근본 수정은 plan.ts 의 preferenceByGroup 에 QUANTITY 를 더하는 것이다.)
+ */
+export function fixQuantityOrigin(sels: PlanSelection[], wantedQty: number | undefined): PlanSelection[] {
+  return sels.map((x) =>
+    x.groupId === "QUANTITY" && x.origin === "AUTO" && wantedQty !== undefined
+      ? { ...x, origin: "USER" as const }
+      : x,
+  );
+}
+
 /** 우리가 정했거나 바꾼 값의 사유 한 문장 — 주문 방식 줄과 카드 보조줄이 같이 쓴다. */
 function originNote(x: PlanSelection): string | null {
   if (x.origin === "AUTO") return "상관없다고 하셔서 이 메뉴의 값으로 정했습니다";
@@ -100,7 +126,7 @@ function originNote(x: PlanSelection): string | null {
 export function CartReview() {
   const {
     uiRec, fixture, live, sessionInput, setSessionInput, runSimulation,
-    setStep, openEdit, confirmOffline, answers, applyCartAnswers,
+    setStep, confirmOffline, answers, applyCartAnswers,
   } = useFlow();
   if (!uiRec || !fixture) return null;
 
@@ -112,25 +138,11 @@ export function CartReview() {
     { approved: true, decision: "APPROVE" }, uiRec.rec, fixture, uiRec.engineCtx,
   );
 
-  /* 수량의 출처를 바로잡는다.
-   *
-   * core/plan.ts 의 preferenceByGroup 에는 QUANTITY 가 없어서, 사용자가 «2개»를 직접
-   * 골랐어도 explainSelections 가 그 행을 AUTO(=상관없다고 하셔서)로 표시한다.
-   * 값 자체는 맞지만 **사유가 사실이 아니다** — 고른 사람에게 "안 골랐다"고 말하는 꼴이다.
-   * 계약 로직은 이 레인에서 고치지 않으므로, 화면에서 계획과 대조해 바로잡는다:
-   * 계획이 고른 수량 옵션의 값이 사용자가 말한 수량과 같으면 USER, 다르면 대체다.
-   * (근본 수정은 plan.ts 의 preferenceByGroup 에 QUANTITY 를 더하는 것이다.) */
-  const wantedQty = uiRec.engineCtx.preferences.quantity;
-  const qtyGroup = fixture.optionGroups.find((g) => g.groupId === "QUANTITY");
-  const qtyValueOf = (optionId: string): number | undefined =>
-    (qtyGroup?.options.find((o) => o.id === optionId) as { value?: number } | undefined)?.value;
-
-  const sels: PlanSelection[] = explainSelections(fixture, preview, uiRec.engineCtx).map((x): PlanSelection => {
-    if (x.groupId !== "QUANTITY" || x.origin !== "AUTO" || wantedQty === undefined) return x;
-    return qtyValueOf(x.id) === wantedQty
-      ? { ...x, origin: "USER" }
-      : { ...x, origin: "SUBSTITUTED", wanted: `${wantedQty}개` };
-  });
+  // 수량 행의 출처 보정 — 왜 이렇게 하는지는 fixQuantityOrigin 머리주석에 있다 (TC-CM-06)
+  const sels: PlanSelection[] = fixQuantityOrigin(
+    explainSelections(fixture, preview, uiRec.engineCtx),
+    uiRec.engineCtx.preferences.quantity,
+  );
 
   const need = sels.filter((x) => x.origin !== "USER");
   /* 주문 방식 절 — SERVICE_TYPE 은 그 자리에서 고치는 버튼이 됐고, CUP 은 화면이 묻지
@@ -171,17 +183,14 @@ export function CartReview() {
          h2 는 유지하고 크기만 CSS(.cart-store 스코프)가 시안의 15px 로 내린다. */
       title={<span className="cart-store">{store}</span>}
       actions={(
-        <>
-          {/* 시안 버튼 순서 그대로 — 수정하기(흰) 위, 주문하기(주황) 아래 */}
-          <Cta label="수정하기" onClick={openEdit} />
-          <Cta tone="primary" disabled={blocked} label="주문하기"
-            onClick={live ? runSimulation : confirmOffline} />
-        </>
+        /* [수정하기]는 없어졌다(파일머리 주석 · QA 1차 TC-CM-08) — 주 버튼 하나만 남는다 */
+        <Cta tone="primary" disabled={blocked} label="주문하기"
+          onClick={live ? runSimulation : confirmOffline} />
       )}
     >
       {blocked && (
         <p className="banner warn" role="alert">
-          확실하지 않은 정보가 있어요. 임의로 판단하지 않습니다 — «수정하기»에서 조건을 확인해 주시거나, 직원 도움을 이용해 주세요.
+          확실하지 않은 정보가 있어요. 임의로 판단하지 않습니다 — 뒤로 가서 조건을 다시 확인해 주시거나, 직원 도움을 이용해 주세요.
         </p>
       )}
 
