@@ -101,6 +101,54 @@ test("연동을 마친 기기는 다시 열어도 관문이 아니라 홈부터 
   expect(await page.evaluate(() => localStorage.getItem("kb23c-store-v1"))).toBe("chicken-store");
 });
 
+test("S04 «이번만 사용»이면 매장 연동도 남지 않는다 — 다음 방문은 관문부터다", async ({ page }) => {
+  /* TC-XC-04 후속(사용자 확정 2026-08-13) — 복구 지점은 저장 방식이 가른다.
+     «이번만 사용»을 골랐는데 매장 코드만 남아 관문을 건너뛰면, 저장 안 하기로 한
+     기기가 «연동된 기기»로 남는다. */
+  await page.goto("http://localhost:5173/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await 직접입력펴기(page);
+  await page.locator('input[name="storeCode"]').fill("chicken-store");
+  await page.getByRole("button", { name: "이 코드로 연결하기" }).click();
+  await page.getByRole("button", { name: "이 매장으로 계속하기" }).click();
+
+  await page.getByRole("button", { name: "시작하기" }).click();
+  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "이번만 사용" }).click();
+
+  expect(await page.evaluate(() => localStorage.getItem("kb23c-store-v1")),
+    "«이번만 사용»인데 매장 코드가 기기에 남아 있습니다").toBeNull();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /매장 QR|QR을 읽을 수 없습니다/ })).toBeVisible();
+});
+
+test("S04 «저장하기»면 관문을 건너뛰고, 프로필을 지우면 관문이 돌아온다", async ({ page }) => {
+  await page.goto("http://localhost:5173/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await 직접입력펴기(page);
+  await page.locator('input[name="storeCode"]').fill("chicken-store");
+  await page.getByRole("button", { name: "이 코드로 연결하기" }).click();
+  await page.getByRole("button", { name: "이 매장으로 계속하기" }).click();
+
+  await page.getByRole("button", { name: "시작하기" }).click();
+  for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
+  await page.getByRole("button", { name: "저장하기" }).click();
+
+  // 재실행 — 관문 없이 재방문 홈부터 (프로필이 남아 있으므로 «다시 오셨네요»)
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
+
+  // 프로필을 지우면(새로 설정하기) 매장 연동도 함께 지워진다 — 다음 방문은 관문부터
+  await page.getByRole("button", { name: "새로 설정하기" }).click();
+  await page.getByRole("button", { name: /네, 지우고 새로 시작할게요/ }).click();
+  expect(await page.evaluate(() => localStorage.getItem("kb23c-store-v1")),
+    "프로필을 지웠는데 매장 코드가 남아 있습니다").toBeNull();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /매장 QR|QR을 읽을 수 없습니다/ })).toBeVisible();
+});
+
 test("모르는 매장 코드로는 연동을 기억하지 않는다 — 다음 방문은 여전히 관문부터다", async ({ page }) => {
   await page.goto("http://localhost:5173/");
   await page.evaluate(() => localStorage.clear());

@@ -79,6 +79,21 @@ export async function 저장된내용펼치기(page: Page): Promise<void> {
   await expect(page.getByRole("region", { name: "이 기기에 저장된 기록" })).toBeVisible();
 }
 
+/**
+ * 주문을 마친 뒤(저장본을 비우지 않고) 홈으로 돌아온다.
+ *
+ * S04 에서 «저장하기»를 골랐다면 매장 연동도 남아(TC-XC-04 후속) 관문 없이 홈이 바로
+ * 서고, «이번만 사용»이었다면 관문이 먼저 선다 — 어느 쪽이 왔는지 보고 지난다.
+ */
+export async function 홈으로돌아가기(page: Page): Promise<void> {
+  await page.goto(HOME);
+  const 관문 = page.getByRole("button", { name: "QR 없이 계속하기" });
+  const 홈제목 = page.getByRole("heading", { name: /다시 오셨네요|KioBridge에 오신 걸 환영해요/ });
+  await expect(관문.or(홈제목).first()).toBeVisible();
+  if (await 관문.isVisible().catch(() => false)) await 관문.click();
+  await expect(홈제목).toBeVisible();
+}
+
 /** 홈을 연다. 저장본을 비우므로 늘 «최초 방문» 상태에서 시작한다.
  *  매장 QR 링크 없이 열면 연동 관문이 홈보다 먼저 나온다(기획 2026-08-12) —
  *  관문 자체는 lane-b.spec.ts 가 검사하므로 여기서는 «QR 없이» 지나 홈에 선다.

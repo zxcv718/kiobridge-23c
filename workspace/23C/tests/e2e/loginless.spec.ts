@@ -9,7 +9,7 @@
  * 손봐야 하는지 바로 보인다.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { 아무거나답하고다음, 저장된내용펼치기, HOME, approveToCartReview, enterWizard, finishOrder, openHome } from "./nav";
+import { 아무거나답하고다음, 저장된내용펼치기, 홈으로돌아가기, approveToCartReview, enterWizard, finishOrder, openHome } from "./nav";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -29,8 +29,7 @@ async function 저장하고재방문(page: Page): Promise<void> {
   }
   await approveToCartReview(page);
   await finishOrder(page, true); // S15 에서도 «저장하기» — 세션까지 남긴다
-  await page.goto(HOME);
-  await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
+  await 홈으로돌아가기(page); // 저장하기를 고른 기기라 관문 없이 재방문 홈이 바로 선다(TC-XC-04)
   await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
 }
 

@@ -15,7 +15,8 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import type { Evidence, ParticipantSubmission, PublicFixture } from "@kiobridge/participant-sdk";
 import {
   computeRecommendation, withManualSelection, recommendKeeping, buildUiSubmission, runOnSimulator,
-  fetchFixture, readUrlStoreCode, readStoredStoreCode, type UiRecommendation, type RunOutcome,
+  fetchFixture, forgetStoreCode, readUrlStoreCode, readStoredStoreCode, rememberStoreCode,
+  type UiRecommendation, type RunOutcome,
 } from "./logic";
 import { MAX_RECONFIRM_ATTEMPTS, shouldSafetyStop, isUnresolved } from "../../src/core/ask";
 import { PROFILE_VERSION, SESSION_VERSION } from "../../src/core/saved";
@@ -247,6 +248,9 @@ export function useFlowState() {
       localStorage.removeItem(PROFILE_KEY);
       localStorage.removeItem(SESSION_KEY);
     } catch { /* 무시 */ }
+    /* 매장 연동도 함께 지운다(TC-XC-04 후속) — 프로필을 지운 기기의 다음 방문은
+       관문부터다. 재실행 복구 지점은 저장 방식이 갈라야 한다. */
+    forgetStoreCode();
     setSavedProfile(null);
     setSavedSession(null);
   };
@@ -371,8 +375,18 @@ export function useFlowState() {
    */
   const setStoreIntent = (next: boolean) => {
     setStoreToggle(next);
-    if (next) persistProfile();
-    else { try { localStorage.removeItem(PROFILE_KEY); } catch { /* 무시 */ } setSavedProfile(null); }
+    /* 매장 연동(STORE_KEY)의 생명주기도 이 결정을 따른다(TC-XC-04 후속, 사용자 확정
+       2026-08-13) — 저장하기면 이번 매장을 기억해 재실행이 관문을 건너뛰고, 이번만
+       사용이면 잊어 재실행이 관문부터다. fixture 기준이라 ?env= 링크로 들어온 방문도
+       저장하기를 고르면 같은 대접을 받는다. */
+    if (next) {
+      persistProfile();
+      rememberStoreCode(fixture?.manifest.environmentId ?? "");
+    } else {
+      try { localStorage.removeItem(PROFILE_KEY); } catch { /* 무시 */ }
+      setSavedProfile(null);
+      forgetStoreCode();
+    }
     if (uiRec) setUiRec({ ...uiRec, raw: { ...uiRec.raw, storeProfile: next } }); // retentionPolicy에 반영
   };
 

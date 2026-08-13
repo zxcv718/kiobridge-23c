@@ -10,7 +10,7 @@
  * 고르는 순간 지난번 답변이 빈 값으로 덮이고 있었다. **저장을 고른 사람이 잃는다.**
  */
 import { expect, test, type Page } from "@playwright/test";
-import { 아무거나답하고다음, 저장된내용펼치기, HOME, approveToCartReview, enterWizard, finishOrder, openHome } from "./nav";
+import { 아무거나답하고다음, 저장된내용펼치기, 홈으로돌아가기, approveToCartReview, enterWizard, finishOrder, openHome } from "./nav";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -43,8 +43,7 @@ async function 저장본만들기(page: Page): Promise<void> {
   }
   await approveToCartReview(page);
   await finishOrder(page, true); // S15 «오늘 입력한 내용을 저장할까요?» → 저장하기
-  await page.goto(HOME);
-  await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
+  await 홈으로돌아가기(page); // 저장하기를 고른 기기라 관문 없이 재방문 홈이 바로 선다(TC-XC-04)
   await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
   expect((await 세션저장본(page))?.answers?.allergies, "세션 저장본이 만들어지지 않았습니다").toBeDefined();
   expect(await 프로필저장본(page), "프로필 저장본이 만들어지지 않았습니다").not.toBeNull();
