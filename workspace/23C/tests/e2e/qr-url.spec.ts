@@ -58,3 +58,40 @@ test("주소에 아무것도 없으면 연동 관문이 먼저 나온다 — 홈
   await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요/ })).toBeVisible();
   await expect(page.getByText(/매장 QR로 들어오셨어요/)).toHaveCount(0);
 });
+
+test("연동을 마친 기기는 다시 열어도 관문이 아니라 홈부터 시작한다", async ({ page }) => {
+  /* QA 1차 TC-XC-04 — 강제 종료 후 재실행하면 QR 스캔부터 다시 시작했다. 연동에
+     성공한 매장 코드를 기기에 남기고(kb23c-store-v1), 다음 방문은 관문을 건너뛴다.
+     헤드리스에는 카메라가 없으므로 연동은 «직접 입력»으로 마친다 — 카메라와 직접
+     입력은 같은 판정(decide)을 지나므로 재는 것은 같다. */
+  await page.goto("http://localhost:5173/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "직접 입력" }).click();
+  await page.locator('input[name="storeCode"]').fill("chicken-store");
+  await page.getByRole("button", { name: "이 코드로 연결하기" }).click();
+  await expect(page.getByRole("heading", { name: "연결되었습니다" })).toBeVisible();
+
+  // 강제 종료 후 재실행의 재현 — 새로고침. 관문 없이 홈이 바로 나온다.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /KioBridge에 오신 걸 환영해요/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /매장 QR을 스캔해주세요|QR을 읽을 수 없습니다/ })).toHaveCount(0);
+
+  // 남는 것은 정본 환경 ID 다 — 사용자 기록(프로필·세션)과 별개의 «기기의 매장 설정»
+  expect(await page.evaluate(() => localStorage.getItem("kb23c-store-v1"))).toBe("chicken-store");
+});
+
+test("모르는 매장 코드로는 연동을 기억하지 않는다 — 다음 방문은 여전히 관문부터다", async ({ page }) => {
+  await page.goto("http://localhost:5173/");
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.getByRole("button", { name: "직접 입력" }).click();
+  await page.locator('input[name="storeCode"]').fill("coffee-shop");
+  await page.getByRole("button", { name: "이 코드로 연결하기" }).click();
+  await expect(page.getByRole("heading", { name: "이 매장 정보는 아직 없습니다" })).toBeVisible();
+
+  // 성공이 아닌 것을 성공처럼 남기지 않는다 — 새로고침하면 관문이 다시 선다
+  expect(await page.evaluate(() => localStorage.getItem("kb23c-store-v1"))).toBeNull();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /매장 QR|QR을 읽을 수 없습니다/ })).toBeVisible();
+});

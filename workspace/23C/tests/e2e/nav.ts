@@ -81,7 +81,9 @@ export async function 저장된내용펼치기(page: Page): Promise<void> {
 
 /** 홈을 연다. 저장본을 비우므로 늘 «최초 방문» 상태에서 시작한다.
  *  매장 QR 링크 없이 열면 연동 관문이 홈보다 먼저 나온다(기획 2026-08-12) —
- *  관문 자체는 lane-b.spec.ts 가 검사하므로 여기서는 «QR 없이» 지나 홈에 선다. */
+ *  관문 자체는 lane-b.spec.ts 가 검사하므로 여기서는 «QR 없이» 지나 홈에 선다.
+ *  연동을 마친 기기는 관문을 건너뛰지만(kb23c-store-v1, QA 1차 TC-XC-04), 그 기록도
+ *  localStorage 라 아래 clear() 가 함께 지운다 — «클리어 후 관문» 전제는 그대로다. */
 export async function openHome(page: Page): Promise<void> {
   await page.goto(HOME);
   await page.evaluate(() => localStorage.clear());

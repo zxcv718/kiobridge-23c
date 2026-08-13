@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useFlow } from "../flow";
-import { parseStoreCode } from "../logic";
+import { parseStoreCode, rememberStoreCode } from "../logic";
 import { Cta, Screen } from "../components";
 import { FLOW_STEPS } from "../model";
 import "./qr.css";
@@ -80,7 +80,13 @@ export function QrConnect() {
   const decide = useCallback((raw: string) => {
     const code = parseStoreCode(raw);
     setReadCode(code);
-    setPhase(code !== "" && code.toLowerCase() === envRef.current.toLowerCase() ? "connected" : "unknownStore");
+    const ok = code !== "" && code.toLowerCase() === envRef.current.toLowerCase();
+    /* 연동 성공은 기기에 남는다(QA 1차 TC-XC-04) — 다음에 열면 관문을 건너뛰고 홈부터다.
+       남기는 값은 읽은 원문이 아니라 정본(fixture 의 environmentId)이다 — 연동 완료
+       화면이 환경 ID 를 정본으로 적는 것과 같은 이유다. 모르는 매장·건너뛰기는 성공이
+       아니므로 남기지 않는다. */
+    if (ok) rememberStoreCode(envRef.current);
+    setPhase(ok ? "connected" : "unknownStore");
   }, []);
 
   /* 카메라가 켜져 있어야 하는 국면. 이 값이 false 로 바뀌는 순간 아래 정리 함수가 돌면서
