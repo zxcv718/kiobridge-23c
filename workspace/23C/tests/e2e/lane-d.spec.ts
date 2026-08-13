@@ -264,6 +264,33 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(버튼.nth(1)).toHaveText("다시 추천받기");
   });
 
+  test("D15 메뉴가 지원하지 않는 주문 방식은 누를 수 없고, 이유를 말한다 (3차 QA)", async ({ page }) => {
+    /* 포장 전용 닭강정(TAKE_OUT 전용)을 담는다 — 새우·대두 알레르기 + 포장 + 5,000원이면
+       엔진이 이 메뉴를 1위로 뽑는다(실측). 하나만 가능한 메뉴에서 불가능한 쪽을 누르게
+       두면, 메뉴 유지 고정이 실패해 결제 직전에 메뉴가 소리 없이 바뀐다 — 그 사고를
+       버튼 비활성 + 이유 한 줄로 막는다(사용자 확정 2026-08-13). */
+    await start(page);
+    await enterWizard(page);
+    await answerWizard(page, [["새우", "대두"], "보통맛", "순살", "포장하기", "1개", "5,000원"]);
+    await approveToCartReview(page);
+    await expect(page.locator(".cart-name")).toHaveText("포장 전용 닭강정");
+
+    // 불가능한 쪽은 눌리지 않고, 가능한 쪽은 눌린 채다
+    await expect(page.getByRole("button", { name: "먹고 가기" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "포장하기" })).toBeEnabled();
+
+    // 왜 못 누르는지 화면이 말한다 — 그리고 바꾸려면 어디로 가야 하는지도
+    await expect(page.getByText("이 메뉴는 포장만 가능해요")).toBeVisible();
+    await expect(page.getByText(/뒤로 가서 메뉴를 다시 골라 주세요/)).toBeVisible();
+
+    // 둘 다 가능한 메뉴에서는 두 버튼 다 살아 있다 (기존 D5 경로의 전제 재확인)
+    await page.getByRole("button", { name: "뒤로" }).click();
+    await page.locator(".mc-altcard", { hasText: "매운 순살 닭강정" }).click();
+    await page.getByRole("button", { name: "선택하기", exact: true }).click();
+    await expect(page.getByRole("button", { name: "먹고 가기" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "포장하기" })).toBeEnabled();
+  });
+
   /* ───────── S15 안내·저장 유도 (Figma 99:1830) ───────── */
 
   test("D8 주문을 마치면 S15 가 세션 저장을 묻고, 결과 화면은 알리기만 한다", async ({ page }) => {

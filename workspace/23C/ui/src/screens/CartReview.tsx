@@ -92,6 +92,15 @@ const CUP_SENTENCE: Record<string, string> = {
 /** 주문 방식 질문 — 마법사(S08)와 같은 질문·같은 부품으로 그 자리에서 고친다. */
 const SERVICE_Q = QUESTIONS.find((x) => x.key === "serviceType")!;
 
+/** 답변 값(매장/포장) ↔ 계약 enum — 담긴 메뉴의 supportedOptions 와 대조할 때 쓴다. */
+const SVC_ENUM: Record<string, string> = { 매장: "DINE_IN", 포장: "TAKE_OUT" };
+
+/** 한쪽만 가능한 메뉴의 이유 문장 — 열쇠는 «유일하게 가능한» 쪽이다. */
+const SVC_ONLY_NOTE: Record<string, string> = {
+  TAKE_OUT: "이 메뉴는 포장만 가능해요. 먹고 가시려면 뒤로 가서 메뉴를 다시 골라 주세요.",
+  DINE_IN: "이 메뉴는 먹고 가기만 가능해요. 포장하시려면 뒤로 가서 메뉴를 다시 골라 주세요.",
+};
+
 /**
  * 수량 행의 출처를 바로잡는다 (QA 1차 TC-CM-06).
  *
@@ -160,6 +169,16 @@ export function CartReview() {
   const unsure = declared.includes("UNKNOWN");
   const candidate = fixture.candidates.find((c) => c.candidateId === id) as
     (Candidate & { attributes?: { allergenIds?: string[] } }) | undefined;
+
+  /* 이 메뉴가 지원하는 주문 방식만 누를 수 있다(사용자 확정 2026-08-13). 불가능한 쪽을
+     열어 두면 메뉴 유지 고정(recommendKeeping)이 실패해 결제 직전에 메뉴가 소리 없이
+     바뀐다 — 장바구니의 «메뉴는 안 바뀐다» 계약이 정확히 그 사고를 막으려는 것이다.
+     방식 때문에 메뉴를 바꾸는 결정은 메뉴 확인 화면(대안 카드·다시 추천받기)의 관할이라,
+     여기서는 잠그고 아래 한 줄이 어디로 가야 하는지 말한다. */
+  const svcSupported = candidate?.supportedOptions?.SERVICE_TYPE ?? [];
+  const svcDisabled = svcSupported.length > 0
+    ? SERVICE_Q.options.map((o) => o.value).filter((v) => !svcSupported.includes(SVC_ENUM[String(v)]))
+    : [];
   const inMenu = candidate?.attributes?.allergenIds ?? [];
   const free = declared.filter((a) => ALLERGEN_KO[a] && !inMenu.includes(a)).map((a) => ALLERGEN_KO[a]);
 
@@ -220,9 +239,12 @@ export function CartReview() {
 
       <hr className="cart-div" />
       <h3 className="cart-cap">주문 방식</h3>
-      {/* 눌린 값은 사용자의 답이다. 메뉴가 그 방식을 지원하지 않으면 아래 보조줄이
-          실제로 어떻게 되는지 밝힌다 — 고른 것처럼 꾸미지 않는 선이 이 화면의 계약이다. */}
-      <ChoiceGrid q={SERVICE_Q} answers={answers} setAnswers={pickAnswers} />
+      {/* 눌린 값은 사용자의 답이다. 이 메뉴가 지원하지 않는 쪽은 잠겨 있고,
+          왜 잠겼는지는 바로 아래 한 줄이 말한다 — 고른 것처럼 꾸미지 않는 선이 이 화면의 계약이다. */}
+      <ChoiceGrid q={SERVICE_Q} answers={answers} setAnswers={pickAnswers} disabledValues={svcDisabled} />
+      {svcSupported.length === 1 && SVC_ONLY_NOTE[svcSupported[0]] && (
+        <p className="cart-sub">{SVC_ONLY_NOTE[svcSupported[0]]}</p>
+      )}
       {waySel && waySel.origin !== "USER" && (
         <p className="cart-sub">{GROUP_KO[waySel.groupId] ?? waySel.groupId}: {originNote(waySel)}</p>
       )}
