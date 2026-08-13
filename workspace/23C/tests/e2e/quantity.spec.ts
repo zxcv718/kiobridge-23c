@@ -10,7 +10,7 @@
  *   ③ 아래끝·위끝에서 막다른 길이 되지 않는가
  */
 import { expect, test, type Page } from "@playwright/test";
-import { enterWizard, openHome } from "./nav";
+import { approveToCartReview, enterWizard, openHome } from "./nav";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -89,6 +89,34 @@ test("누르는 자리가 48px 이상이고, 낭독기에는 수 입력 하나�
   /* 단위는 화면에도 낭독기에도 붙이지 않는다 — 시안(99:1292)은 주황 숫자 하나만 두고,
      무엇의 수인지는 제목(「얼마나 드실 건가요?」)과 이 입력의 이름이 이미 말한다. */
   await expect(spin).not.toHaveAttribute("aria-valuetext", /.*/);
+});
+
+test("수량 5는 값·가격에 5로 반영되고, «메뉴에 없어 바꿨다»고 말하지 않는다", async ({ page }) => {
+  /* QA 1차 TC-CM-06 재현 — 수량 옵션 눈금(1·2·3) 밖의 5를 고르면 수량·가격은 맞게
+     나오면서 «원하신 5개는 이 메뉴에 없어 바꿨습니다»가 함께 떴다. 계약의 수량은
+     자유 정수라 눈금은 키오스크 조작의 사정이지 주문의 사실이 아니다 — 존중된 수량에
+     대체 안내를 붙이지 않는다(CartReview.fixQuantityOrigin). */
+  await 수량질문까지(page);
+  const 늘리기 = page.getByRole("button", { name: "하나 늘리기" });
+  for (let i = 0; i < 4; i++) await 늘리기.click();
+  expect(await 지금값(page)).toContain("5");
+  await page.getByRole("button", { name: "다음", exact: true }).click();
+  // 마지막 질문(예산)을 첫 선택지로 지나 추천 → 장바구니 확인
+  await page.locator(".choices .choice").first().click();
+  await page.getByRole("button", { name: /다음|추천 보기/ }).click();
+  await approveToCartReview(page);
+
+  // 수량과 총 가격이 5 그대로다 — 여기가 맞는데 안내만 틀렸던 것이 QA 현상이다
+  await expect(page.getByRole("spinbutton", { name: "수량" })).toHaveAttribute("aria-valuenow", "5");
+  const won = (s: string) => Number(s.replace(/[^\d]/g, ""));
+  const unit = won(await page.locator(".cart-price").innerText());
+  const total = won(await page.locator(".cart-total b").innerText());
+  expect(unit).toBeGreaterThan(0);
+  expect(total).toBe(unit * 5);
+
+  // 존중된 수량에는 보조줄이 붙지 않는다 (D3 과 같은 문법 — «수량:» 행 자체가 없어야 한다)
+  await expect(page.locator(".cart-box")).not.toContainText("원하신 5개");
+  await expect(page.locator(".cart-box")).not.toContainText("수량:");
 });
 
 test("키보드 방향키로도 바꿀 수 있다", async ({ page }) => {
