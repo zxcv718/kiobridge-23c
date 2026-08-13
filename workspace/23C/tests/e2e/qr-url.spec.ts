@@ -25,15 +25,19 @@ async function 홈으로(page: import("@playwright/test").Page, 주소: string):
  *
  * «직접 입력» 버튼은 토글이라 그냥 누르면 안 된다 — 헤드리스에는 카메라가 없어서
  * 관문이 실패를 확인하는 순간 **폼을 저절로 펴 두는데**(QrConnect), 그 뒤에 누르면
- * 도로 접힌다. 자동 펼침과 클릭의 경쟁이라 됐다 안 됐다 했다(병합 검증 실측).
- * 이미 펴져 있으면 누르지 않는다.
+ * 도로 접힌다. «닫혀 있으면 누른다»로 좁혀도 부족했다: 확인과 클릭 **사이**에 자동
+ * 펼침이 끼면 클릭이 방금 열린 폼을 닫고, 자동 펼침은 한 번뿐이라 영영 닫힌 채
+ * 남는다(병합 검증에서 두 방향 다 실측). 그래서 확인→클릭 한 벌을 통째로 재시도한다 —
+ * 어느 순서로 끼어들어도 다음 바퀴가 다시 연다.
  */
 async function 직접입력펴기(page: import("@playwright/test").Page): Promise<void> {
   const 입력칸 = page.locator('input[name="storeCode"]');
-  if (!(await 입력칸.isVisible().catch(() => false))) {
-    await page.getByRole("button", { name: "직접 입력" }).click();
-  }
-  await expect(입력칸).toBeVisible();
+  await expect(async () => {
+    if (!(await 입력칸.isVisible())) {
+      await page.getByRole("button", { name: "직접 입력" }).click();
+    }
+    await expect(입력칸).toBeVisible({ timeout: 500 });
+  }).toPass({ timeout: 10_000 });
 }
 
 test("주소에 매장 코드가 있으면 홈이 어느 매장인지 밝힌다", async ({ page }) => {

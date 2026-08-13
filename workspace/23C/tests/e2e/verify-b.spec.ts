@@ -108,17 +108,9 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: "다시 추천받기" }).click();
     await page.getByRole("button", { name: "수정 완료" }).click();
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();
-    /* «아무 준비도 시작되지 않았다»는 안심은 그대로 있다 — 승인 전이므로 실행 계획도,
-       장바구니도 없다. 시안(99:1337)에 없는 문단이라 접혀 있을 뿐 없어지지 않았고,
-       한 번 눌러 닿는다 — 접었다는 이유로 세지 않으면 정말 사라진 날에도 통과한다. */
-    const 왜멈췄나 = page.locator("details.home-saved", {
-      has: page.locator("summary", { hasText: "왜 멈췄나요?" }),
-    });
-    await expect(왜멈췄나).toHaveCount(1);
-    await 왜멈췄나.locator("summary").click();
-    await expect(왜멈췄나).toContainText("정상적으로 끝난 것이 아닙니다");
-    await expect(왜멈췄나)
-      .toContainText("실행 계획이 만들어지지 않았고, 장바구니에도 아무것도 담기지 않았습니다");
+    /* «왜 멈췄나요?» 접힘은 1차 QA 후 사용자 결정으로 걷어냈다(2026-08-13) —
+       화면은 시안(99:1337) 조각과 출구 두 개뿐이다. 다시 생기면 여기서 걸린다. */
+    await expect(page.getByText("왜 멈췄나요?")).toHaveCount(0);
   });
 
   test("B6 v3 저장본이 살아남고 프로필·세션 키로 쪼개져 옮겨진다", async ({ page }) => {

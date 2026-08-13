@@ -52,10 +52,9 @@
   .stop-figma-illus { width: 136px; height: 120px; }
 }
 
-/* 시안에 없지만 요건상 남기는 설명은 접어 둔다(FIGMA_RULES §2.1) — 접힌 줄 자체는
-   home-saved(profile.css)를 그대로 쓰고, 여기서는 자리만 잡는다. 가운데 정렬은 제목까지고
-   문단은 왼쪽에서 시작해야 읽힌다. */
-.stop-figma { margin: 24px 0 0; text-align: left; }
+/* 이제 내용 없는 표식이다 — «왜 멈췄나요?» 접힘은 1차 QA 후 사용자 결정으로 걷어냈다
+   (2026-08-13). 위의 :has(.stop-figma) 갈고리와 가운데 정렬 앵커 노릇만 남는다. */
+.stop-figma { margin: 0; }
 
 /* ───────── S15 매장명 캡션 (Figma 114:2559) ─────────
  * 14px Medium · secondary · 아래 카드와 25px. 시안은 «ChickenStore» 라는 자리표시자를

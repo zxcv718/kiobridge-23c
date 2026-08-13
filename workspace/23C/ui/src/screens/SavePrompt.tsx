@@ -15,8 +15,9 @@ import "./finish.css";
  * 한때는 결과 화면이 저장 여부를 알리기만 했는데, 그러면 세션을 남길지 **묻는 자리**가
  * 흐름 어디에도 없었다.
  *
- * 버튼 순서는 시안 그대로 — «이번만 사용»이 위, «저장하기»(주황)가 아래다. S04 와
- * 반대인 것을 알고 따른다: 시안이 이 화면에서는 저장을 아래 강조 자리에 두었다.
+ * 버튼 순서는 «저장하기»(주황)가 위, «이번만 사용»이 아래다 — 시안(99:1830)은 반대였지만
+ * 1차 QA 후 사용자 결정(2026-08-13)으로 바꿨다. S04 와 같은 순서가 되어, 저장을 묻는
+ * 두 화면에서 주 동작의 자리가 같아졌다.
  */
 export function SavePrompt() {
   const { answers, fixture, saveSession, discardSession, setStep } = useFlow();
@@ -31,8 +32,8 @@ export function SavePrompt() {
       title="오늘 입력한 내용을 저장할까요?"
       subtitle="다음 방문 시 입력 과정 없이 바로 메뉴를 추천 받을 수 있어요."
       actions={<>
-        <Cta label="이번만 사용" onClick={() => { discardSession(); setStep("result"); }} />
         <Cta tone="primary" label="저장하기" onClick={() => { saveSession(); setStep("result"); }} />
+        <Cta label="이번만 사용" onClick={() => { discardSession(); setStep("result"); }} />
       </>}
     >
       {/* save-prompt 는 이 화면의 세로 구도(위 여백·성근 간격)를 켜는 CSS 갈고리를

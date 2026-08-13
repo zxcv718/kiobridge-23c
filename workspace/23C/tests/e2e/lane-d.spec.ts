@@ -296,15 +296,18 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D11 내려받기 두 파일의 방향 안내와 오류 주입 7종이 그대로 있다", async ({ page }) => {
     await start(page);
     await toCartReview(page);
-    /* CTA 가 시안 라벨 «주문하기» 하나가 되면서, 라이브 여부는 라이브에서만 나오는
-       세션 ID 입력칸으로 잰다. */
-    const live = await page.getByText(/공식 시뮬레이터 세션에 제출하기/).count();
+    /* 라이브 여부는 화면이 아니라 API 로 잰다 — 세션 ID 입력칸으로 재던 시절이 있었는데,
+       그 칸은 심사 시연용이라 걷어냈다(1차 QA 후 사용자 결정 2026-08-13). 화면과 같은
+       프록시(/api → :4000)에 같은 fixture 경로를 물어본다. */
+    const live = await page.evaluate(async () => {
+      try { return (await fetch("/api/v1/environments/chicken-store/fixture")).ok; } catch { return false; }
+    });
     /* 예전에는 여기서 test.skip 을 했다. 하지만 **스킵된 테스트는 증거가 아니다** —
        오류 주입 7종은 계약 시연의 핵심인데, API 가 꺼져 있다는 이유로 조용히 넘어가면
        그것이 사라져도 아무도 모른다. 공식 검증은 늘 API 를 띄운 채 돌리므로,
        안 떠 있으면 넘어가는 대신 이유와 해법을 말하며 멈춘다. */
     expect(live, "Simulation API(:4000)가 떠 있어야 이 검사를 할 수 있습니다 — `npm run start:api`")
-      .toBeGreaterThan(0);
+      .toBe(true);
 
     await finishOrder(page);
     await expect(page.locator(".dlnote")).toContainText("서로 다른 파일입니다");
@@ -323,6 +326,31 @@ test.describe("D계열 — 확인·수정·결과", () => {
   });
 
   /* ───────── S12 안전 중단 (Figma 99:1337) ───────── */
+
+  test("D13 «다시 추천받기» 두 번째 클릭이면 안전 중단으로 간다 (TC-CM-01)", async ({ page }) => {
+    /* QA 기대문 그대로 — 확정 추천이어도 다시 추천을 **두 번** 요청하면 S12 다.
+       미확인 알레르기만 세던 판정으로는 이 화면에 닿는 일반 경로가 없었다(1차 QA 실측). */
+    await start(page);
+    await toRecommend(page, CASE.normal);
+    await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
+
+    // 1회째 — 조건을 고칠 기회를 준다
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
+    await page.getByRole("button", { name: "수정 완료", exact: true }).click();
+    await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
+
+    // 2회째 — 두 번을 다시 요청했으면 임의로 더 밀지 않고 직원에게 넘긴다
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();
+
+    // «조건 다시 보기»로 나가면 기회가 다시 생긴다 — 이 화면이 덫이 되면 안 된다
+    await page.getByRole("button", { name: "조건 다시 보기" }).click();
+    await page.getByRole("button", { name: "수정 완료", exact: true }).click();
+    await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
+  });
 
   test("D12 안전 중단은 시안 그대로 그리고, 빠져나갈 길을 하나 더 남긴다", async ({ page }) => {
     /* 첫 미확정에서는 멈추지 않는다 — 조건을 고칠 기회를 한 번 준다. 그대로 다시 받으면

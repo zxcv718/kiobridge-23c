@@ -17,7 +17,7 @@ import {
   computeRecommendation, withManualSelection, recommendKeeping, buildUiSubmission, runOnSimulator,
   fetchFixture, readUrlStoreCode, readStoredStoreCode, type UiRecommendation, type RunOutcome,
 } from "./logic";
-import { shouldSafetyStop, isUnresolved } from "../../src/core/ask";
+import { MAX_RECONFIRM_ATTEMPTS, shouldSafetyStop, isUnresolved } from "../../src/core/ask";
 import { PROFILE_VERSION, SESSION_VERSION } from "../../src/core/saved";
 import {
   A11Y_DEFAULT, CALC_MS, PROFILE_KEY, QUESTIONS, SESSION_KEY, buildRawInput, loadStores,
@@ -39,7 +39,6 @@ export function useFlowState() {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [uiRec, setUiRec] = useState<UiRecommendation | null>(null);
   const [manual, setManual] = useState(false);
-  const [sessionInput, setSessionInput] = useState("");
   const [runLog, setRunLog] = useState<string[]>([]);
   const [outcome, setOutcome] = useState<RunOutcome | null>(null);
   /** 실행에 쓴 제출물 원본 — 오류 주입은 이것을 새 세션에 다시 올려 재실행한다 */
@@ -58,6 +57,15 @@ export function useFlowState() {
   const [demoHour, setDemoHour] = useState<number | null>(null); // 프리셋의 시간대 시연용
   /** 확정되지 않은 추천을 몇 번 만났는가 — 2회째면 안전 중단(S12) */
   const [reconfirmCount, setReconfirmCount] = useState(0);
+  /**
+   * «다시 추천받기»를 몇 번 눌렀는가 — 2회째면 확정 추천이어도 안전 중단(S12).
+   *
+   * 미확인 카운터(reconfirmCount)와 따로 세는 이유: QA(1차 TC-CM-01)의 기대는
+   * «다시 추천받기 2회 클릭 시 안전 중단»인데, 확정 추천은 미확인 카운터를 매번 0으로
+   * 되돌려서 그 판정만으로는 이 화면에 닿는 일반 경로가 없었다. 두 번을 다시 요청한
+   * 사람에게 세 번째 계산을 들이미는 대신 직원에게 넘기는 것이 이 화면의 몫이다.
+   */
+  const [retryCount, setRetryCount] = useState(0);
   /**
    * 알레르기 질문의 둘째 걸음(항목 목록)에 들어와 있는가 — 디자인 S06 기본/확장.
    *
@@ -122,7 +130,7 @@ export function useFlowState() {
    */
   const startWizard = () => {
     setAnswers({}); setQIndex(0); setManual(false); setFromSaved(false); setCarried([]);
-    setDemoHour(null); setReconfirmCount(0);
+    setDemoHour(null); setReconfirmCount(0); setRetryCount(0);
     resetRun(); setStep("wizard");
   };
 
@@ -185,7 +193,7 @@ export function useFlowState() {
     setA11y(nextA11y);
     setCarried(QUESTIONS.map((q) => q.key).filter((k) => next[k] !== undefined));
     setFromSaved(true); setStoreToggle(!!savedProfile);
-    setManual(false); setDemoHour(null); resetRun();
+    setManual(false); setDemoHour(null); setRetryCount(0); resetRun();
     const loaded = QUESTIONS.map((qq) => qq.key).filter((k) => next[k] !== undefined);
     const start = nextToAsk(0, loaded);
     if (start >= QUESTIONS.length) {
@@ -217,7 +225,7 @@ export function useFlowState() {
     const d = new Date();
     if (nextHour !== null) d.setHours(nextHour, 0, 0, 0);
     setAnswers(p.answers); setA11y(nextA11y); setDemoHour(nextHour);
-    setFromSaved(false); setStoreToggle(false); setManual(false); resetRun();
+    setFromSaved(false); setStoreToggle(false); setManual(false); setRetryCount(0); resetRun();
     goRecommend(
       computeRecommendation(buildRawInput(p.answers, nextA11y, false, false), fixture, nextHour === null ? new Date() : d),
       0, // 시연 프리셋은 새 흐름이다 — 이전 시도 횟수를 물려받지 않는다
@@ -243,8 +251,13 @@ export function useFlowState() {
     setSavedSession(null);
   };
 
-  /** 추천 화면 → 조건 수정: 재확인 사유(알레르기)가 있으면 그 행을 바로 열어 준다 */
+  /** 추천 화면 → 조건 수정(«다시 추천받기»): 재확인 사유(알레르기)가 있으면 그 행을 바로
+   *  열어 준다. **두 번째 요청이면 조건 수정 대신 안전 중단이다**(QA 1차 TC-CM-01) —
+   *  덫은 아니다: S12 의 «조건 다시 보기»가 카운터를 되돌려 기회를 다시 준다. */
   const openEdit = () => {
+    const n = retryCount + 1;
+    setRetryCount(n);
+    if (n >= MAX_RECONFIRM_ATTEMPTS) { setStep("stopped"); return; }
     setEditOpen(uiRec?.rec.requiresReconfirmation ? "allergies" : null);
     setStep("edit");
   };
@@ -304,7 +317,7 @@ export function useFlowState() {
     if (savedProfile) setA11y(savedProfile.a11y);
     setFromSaved(true);
     setStoreToggle(!!savedProfile); // 프로필 저장 의사 — 프로필을 남겨 둔 사람만 켠 채 온다
-    setCarried([]); setManual(false); setDemoHour(null); setReconfirmCount(0);
+    setCarried([]); setManual(false); setDemoHour(null); setReconfirmCount(0); setRetryCount(0);
     resetRun(); setUiRec(null); setEditOpen(null);
     setStep("edit");
   };
@@ -366,7 +379,9 @@ export function useFlowState() {
     setStep("run"); setRunLog([]); setRunError(null); setSubmitted(null); setErrResults({});
     try {
       const submission = buildUiSubmission(uiRec, fixture, true, manual);
-      const r = await runOnSimulator(submission, sessionInput || undefined, (label) => setRunLog((l) => [...l, label]));
+      /* 세션 ID 는 늘 새로 발급받는다 — 기존 세션에 잇는 입력칸(S13)은 심사 시연용이었고
+         1차 QA 후 사용자 결정으로 걷어냈다(2026-08-13). */
+      const r = await runOnSimulator(submission, undefined, (label) => setRunLog((l) => [...l, label]));
       setSubmitted(submission);
       setOutcome(r);
       // 주문이 끝났다 — 결과로 가기 전에 이번 세션을 남길지 S15 가 묻는다.
@@ -400,15 +415,15 @@ export function useFlowState() {
 
   return {
     // 상태
-    step, a11y, fixture, live, qIndex, answers, uiRec, manual, sessionInput, runLog,
+    step, a11y, fixture, live, qIndex, answers, uiRec, manual, runLog,
     outcome, submitted, runError, errResults, savedProfile, savedSession, fromSaved,
     storeToggle, editOpen,
-    carried, demoHour, reconfirmCount, profileStep, allergyOpen,
+    carried, demoHour, reconfirmCount, retryCount, profileStep, allergyOpen,
     // 파생값
     now, simple, rawInput, savedCoversAll, q, answered, ev, askTotal, askPos,
     // 조작
-    setStep, setA11y, setFlag, setQIndex, setAnswers, setUiRec, setManual, setSessionInput,
-    setSubmitted, setErrResults, setStoreToggle, setEditOpen, setReconfirmCount,
+    setStep, setA11y, setFlag, setQIndex, setAnswers, setUiRec, setManual,
+    setSubmitted, setErrResults, setStoreToggle, setEditOpen, setReconfirmCount, setRetryCount,
     setProfileStep, setAllergyOpen,
     t, staffBtn, nextToAsk, advance, startWizard, startFromSaved, applyPreset, deleteSaved, editSaved,
     openEdit, applyEditAndRecommend, applyCartAnswers, setStoreIntent, saveSession, discardSession,

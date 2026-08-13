@@ -125,7 +125,7 @@ function originNote(x: PlanSelection): string | null {
 
 export function CartReview() {
   const {
-    uiRec, fixture, live, sessionInput, setSessionInput, runSimulation,
+    uiRec, fixture, live, runSimulation,
     setStep, confirmOffline, answers, applyCartAnswers,
   } = useFlow();
   if (!uiRec || !fixture) return null;
@@ -246,11 +246,9 @@ export function CartReview() {
         <b>{(unit * qty).toLocaleString()}원</b>
       </div>
 
-      {live && (
-        <label className="field">공식 시뮬레이터 세션에 제출하기 (선택 — 시뮬레이터 화면의 세션 ID 입력)
-          <input value={sessionInput} onChange={(e) => setSessionInput(e.target.value)} placeholder="예: SIM-20260806-003 (비우면 새 세션)" />
-        </label>
-      )}
+      {/* «공식 시뮬레이터 세션 ID 입력»칸이 여기 있었다 — 심사 시연용 재생 기능이었는데
+          주문하는 사람의 화면에 낄 물건이 아니라 걷어냈다(1차 QA 후 사용자 결정 2026-08-13).
+          라이브 실행은 그대로 된다: 비우면 새 세션이던 동작이 이제 항상 새 세션일 뿐이다. */}
     </Screen>
   );
 }
