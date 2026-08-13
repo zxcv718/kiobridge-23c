@@ -227,7 +227,7 @@ export function buildRecommendation(candidates: Candidate[], ctx: EngineContext)
     excludedCandidates: excluded,
     scoreBreakdown: Object.fromEntries(ranked.map((s) => [s.candidate.candidateId, s.total])),
     recommendationReasons: [], // STEP 6에서 채운다 (buildSubmission 조립 순서와 동일)
-    unmetConditions: unmetConditions(top, ctx),
+    unmetConditions: unmetConditionsFor(top?.candidate, ctx),
     confidence,
     requiresReconfirmation: confidence < RECONFIRM_THRESHOLD,
   };
@@ -236,10 +236,12 @@ export function buildRecommendation(candidates: Candidate[], ctx: EngineContext)
 /** 값을 한국어로 — 표에 없으면 원값을 그대로 둔다(모르는 값을 지어내지 않는다). */
 const ko = (table: Record<string, string>, v: string | undefined): string => (v === undefined ? "" : table[v] ?? v);
 
-function unmetConditions(top: Scored | undefined, ctx: EngineContext): string[] {
-  if (!top) return [];
+/** 후보 하나를 조건과 대본다 — 1순위 추천뿐 아니라 **직접 고른 메뉴**도 이 검사를 받는다
+    (ui/src/logic.ts withManualSelection). 화면의 «주의 필요»가 이 문장들을 그대로 단다. */
+export function unmetConditionsFor(candidate: Candidate | undefined, ctx: EngineContext): string[] {
+  if (!candidate) return [];
   const out: string[] = [];
-  const attrs = (top.candidate as { attributes?: { spicyLevel?: string; boneType?: string } }).attributes ?? {};
+  const attrs = (candidate as { attributes?: { spicyLevel?: string; boneType?: string } }).attributes ?? {};
   /* 사용자가 볼 문장에 영문 enum 을 그대로 내보내지 않는다. 한때 여기가
      「선호하신 맵기(MILD)와 다른 맵기입니다」였다 — 같은 화면 아래쪽 추천 사유는
      SPICY_KO 를 제대로 쓰고 있어서, 한 화면에서 「순한맛을 선호하셔서…」와
@@ -253,8 +255,14 @@ function unmetConditions(top: Scored | undefined, ctx: EngineContext): string[] 
     out.push(`원하신 맵기는 ${ko(SPICY_KO, ctx.preferences.spicyLevel)}인데, 이 메뉴는 ${ko(SPICY_KO, attrs.spicyLevel)}입니다`);
   if (definite(ctx.preferences.boneType) && attrs.boneType !== ctx.preferences.boneType)
     out.push(`원하신 형태는 ${ko(BONE_KO, ctx.preferences.boneType)}인데, 이 메뉴는 ${ko(BONE_KO, attrs.boneType)}입니다`);
-  if (definite(ctx.preferences.cupOption) && !(top.candidate.supportedOptions?.CUP ?? []).includes(ctx.preferences.cupOption!))
+  if (definite(ctx.preferences.cupOption) && !(candidate.supportedOptions?.CUP ?? []).includes(ctx.preferences.cupOption!))
     out.push(`선호하신 컵 옵션을 이 메뉴에서는 선택할 수 없습니다`);
+  /* 예산은 희망 금액이라 넘는 메뉴도 추천된다(budgetKrw 주석). 그러니 넘었다는 사실은
+     여기서 말해야 한다 — 값을 고르기 전에 알 길이 이 목록뿐이다. 예산보다 싼 것은
+     주의가 아니므로 초과일 때만 말한다. */
+  const price = (candidate as { price?: number }).price;
+  if (ctx.budgetKrw !== undefined && price !== undefined && price > ctx.budgetKrw)
+    out.push(`원하신 예산은 ${ctx.budgetKrw.toLocaleString()}원인데, 이 메뉴는 ${price.toLocaleString()}원입니다`);
   return out;
 }
 

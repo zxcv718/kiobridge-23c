@@ -138,6 +138,34 @@ describe("STEP 7 alternatives — 제외 후보를 되살리지 않는다", () =
 });
 
 /**
+ * 예산은 상한이 아니라 희망 금액이다 — 넘는 메뉴도 추천될 수 있다(STEP 5 주석).
+ * 그래서 넘었을 때는 «주의 필요»가 반드시 말해야 한다. 실제로 빠져 있었다 —
+ * 예산 5,000원에 5,500원 메뉴가 추천됐는데 주의 필요에는 맵기 이야기만 있었다.
+ */
+describe("주의 필요 — 예산 초과", () => {
+  // 이 가게의 최저가는 5,500원이다. 5,000원을 말하면 «가장 가까운 것»으로 5,500원이 오고, 그 순간 예산을 넘는다.
+  const 예산5천 = ctx({
+    preferences: { serviceType: "DINE_IN", spicyLevel: "MILD", boneType: "BONE", quantity: 1 },
+    hardConstraints: { allergenIds: [] },
+  });
+
+  it("예산 5,000원에 5,500원 메뉴 → 초과를 주의 필요로 말한다", () => {
+    const rec = buildRecommendation(fx.candidates, { ...예산5천, budgetKrw: 5000 });
+    expect(rec.unmetConditions).toContain("원하신 예산은 5,000원인데, 이 메뉴는 5,500원입니다");
+  });
+
+  it("예산 안이면 가격 문장이 없다 — 예산보다 싼 것은 주의가 아니다", () => {
+    const rec = buildRecommendation(fx.candidates, { ...예산5천, budgetKrw: 10000 });
+    expect((rec.unmetConditions ?? []).filter((s) => s.includes("예산"))).toEqual([]);
+  });
+
+  it("예산을 말하지 않으면 가격 문장이 없다", () => {
+    const rec = buildRecommendation(fx.candidates, 예산5천);
+    expect((rec.unmetConditions ?? []).filter((s) => s.includes("예산"))).toEqual([]);
+  });
+});
+
+/**
  * 사용자에게 나가는 문장에 **영문 enum 이 섞이지 않는가.**
  *
  * 실제로 한 번 샜다 — 추천 화면의 「선호하신 맵기(MILD)와 다른 맵기입니다」. 바로 아래
