@@ -2,7 +2,9 @@ import React from "react";
 import type { Candidate } from "@kiobridge/participant-sdk";
 import { useFlow } from "../flow";
 import { Cta, Screen } from "../components";
-import { GROUP_KO, OPTION_KO } from "../model";
+import { ChoiceGrid } from "../components/ChoiceGrid";
+import { Stepper } from "../components/Stepper";
+import { GROUP_KO, OPTION_KO, QUANTITY_MAX, QUESTIONS } from "../model";
 import { buildExecutionPlanCore, explainSelections, type PlanSelection } from "../../../src/core/plan";
 import { candidateName, candidatePrice } from "../logic";
 import "./cart.css";
@@ -10,16 +12,22 @@ import "./cart.css";
 /**
  * 화면목록 S13 — 장바구니(최종) 확인 (Figma 99:1798 · 2026-08-12 시안 대조로 재정렬).
  *
- * 레이아웃은 시안 그대로다 — 매장 이름(캡션이자 화면 제목) → 메뉴 카드(수량·가격·
- * 성분·옵션) → 구분선 → 주문 방식(✓ 문장) → 구분선 → 총 가격 → 수정하기 → 주문하기.
+ * 레이아웃 — 매장 이름(캡션이자 화면 제목) → 메뉴 카드(수량 스테퍼·가격·성분·옵션) →
+ * 구분선 → 주문 방식(선택 버튼) → 구분선 → 총 가격 → 수정하기 → 주문하기.
  * 큰 제목 문장은 시안에 없다 — 매장 이름 줄이 이 화면의 제목을 겸한다(h2 는 유지 —
  * 화면 제목이 h2 하나라는 전제를 낭독기와 e2e 가 쓴다. 크기는 CSS 가 시안의 15px 로 내린다).
  *
  * 실제로 만들어질 실행계획을 그대로 읽어 보여준다 — 화면과 계획이 어긋날 수 없다.
  * 필수 옵션은 "상관없어요"여도 하나가 정해지므로 그 사실을 숨기지 않고,
- * 각 값이 어떻게 정해졌는지(USER·AUTO·SUBSTITUTED)를 구분해 밝힌다 —
- * 시안의 «✓ 포장해 갈게요» 줄은 전부 같은 모양이지만, 우리가 정했거나 바꾼 줄만
- * 상자로 띄우고 이유를 적는다. 그 줄들이 이 화면이 존재하는 이유다.
+ * 각 값이 어떻게 정해졌는지(USER·AUTO·SUBSTITUTED)를 구분해 밝힌다 — 우리가 정했거나
+ * 바꾼 값은 보조줄이 이유를 적는다.
+ *
+ * **수량과 주문 방식은 그 자리에서 고칠 수 있다**(기획 2026-08-13). 시안의
+ * «✓ 포장해 갈게요» 문장 줄과 «x 1개» 글자가 질문 화면과 같은 부품(선택 버튼·스테퍼)이
+ * 됐고, 안내 문구(«강조된 항목은…»·«결제는 일어나지 않습니다»)와 «다른 메뉴 보기»
+ * 버튼은 같은 기획으로 없어졌다. 고쳐도 **확정한 메뉴는 바뀌지 않는다**
+ * (flow.applyCartAnswers → logic.recommendKeeping) — 주문 방식은 엔진 점수에 들어가는
+ * 값이라, 그냥 다시 계산하면 최종 확인 화면에서 메뉴가 갑자기 바뀔 수 있다.
  *
  * 시안의 값(매운맛 닭강정 · 17,800원 · "옵션: 매운맛, 뼈" · «Chicken Order»)은 목업이라
  * 쓰지 않는다. 메뉴·가격은 fixture 에서, 옵션·주문 방식은 **실행계획에서** 읽는다.
@@ -67,14 +75,17 @@ export function josa(word: string, withJong: string, withoutJong: string): strin
  * 읽는 능력도 같이 남긴다. */
 const WAY_GROUPS = new Set(["SERVICE_TYPE", "CUP"]);
 
-/** 시안(114:2117)의 주문 방식 문장 — 값이 곧 문장이 된다. 표에 없는 값은 이름만 적는다. */
-const WAY_SENTENCE: Record<string, string> = {
-  TAKE_OUT: "포장해 갈게요",
-  DINE_IN: "매장에서 먹고 갈게요",
+/** 컵 값의 문장(시안 114:2117 문법) — 화면이 컵을 묻지 않으므로 계획에 실려 온 값을
+ *  읽어 보여주기만 한다. 표에 없는 값은 이름만 적는다. 주문 방식(TAKE_OUT·DINE_IN)의
+ *  문장은 없어졌다 — 그 자리가 선택 버튼이 되면서 값이 문장이 아니라 눌림이 됐다. */
+const CUP_SENTENCE: Record<string, string> = {
   PAPER: "종이컵을 사용할게요",
   REGULAR: "일반컵을 사용할게요",
   NONE: "컵은 사용하지 않을게요",
 };
+
+/** 주문 방식 질문 — 마법사(S08)와 같은 질문·같은 부품으로 그 자리에서 고친다. */
+const SERVICE_Q = QUESTIONS.find((x) => x.key === "serviceType")!;
 
 /** 우리가 정했거나 바꾼 값의 사유 한 문장 — 주문 방식 줄과 카드 보조줄이 같이 쓴다. */
 function originNote(x: PlanSelection): string | null {
@@ -89,7 +100,7 @@ function originNote(x: PlanSelection): string | null {
 export function CartReview() {
   const {
     uiRec, fixture, live, sessionInput, setSessionInput, runSimulation,
-    setStep, openEdit, confirmOffline,
+    setStep, openEdit, confirmOffline, answers, applyCartAnswers,
   } = useFlow();
   if (!uiRec || !fixture) return null;
 
@@ -122,7 +133,10 @@ export function CartReview() {
   });
 
   const need = sels.filter((x) => x.origin !== "USER");
-  const way = sels.filter((x) => WAY_GROUPS.has(x.groupId));
+  /* 주문 방식 절 — SERVICE_TYPE 은 그 자리에서 고치는 버튼이 됐고, CUP 은 화면이 묻지
+     않는 값이라(질문 6개) 계획에 실려 있을 때만 문장으로 보여준다. */
+  const waySel = sels.find((x) => x.groupId === "SERVICE_TYPE");
+  const cupSel = sels.find((x) => x.groupId === "CUP");
   /* 카드의 «옵션:» 줄 (시안) — 주문 방식·수량을 뺀 메뉴 옵션 값들. 수량은 메뉴 줄의
      «x N개»가 이미 말하므로 두 번 적지 않는다. */
   const opt = sels.filter((x) => !WAY_GROUPS.has(x.groupId) && x.groupId !== "QUANTITY");
@@ -142,6 +156,11 @@ export function CartReview() {
   /* 확실하지 않은 정보가 남아 있으면 여기서도 확정할 수 없다 — 메뉴 확인 화면과 같은 계약이다.
      이 화면만 빠져나가는 길이 되면 «임의로 판단하지 않는다»는 선언이 거짓이 된다. */
   const blocked = uiRec.rec.requiresReconfirmation;
+
+  /* ChoiceGrid 는 setAnswers(함수 갱신) 문법을 쓴다 — 여기서는 고른 즉시 메뉴를 고정한
+     재계산이 따라와야 하므로, 갱신값을 여기서 셈해 applyCartAnswers 로 넘긴다. */
+  const pickAnswers: React.Dispatch<React.SetStateAction<Record<string, unknown>>> = (updater) =>
+    applyCartAnswers(typeof updater === "function" ? updater(answers) : updater);
 
   return (
     <Screen
@@ -170,8 +189,14 @@ export function CartReview() {
         <p className="cart-cap">메뉴</p>
         <div className="cart-menuline">
           <span className="cart-name">{candidateName(fixture, id)}</span>
-          <span className="cart-qty">x {qty}개</span>
           <span className="cart-price">{unit.toLocaleString()}원</span>
+        </div>
+        {/* «x 1개» 글자였던 자리 — 질문 화면(S10)과 같은 스테퍼로 그 자리에서 고친다 */}
+        <div className="cart-qtyrow">
+          <span className="cart-cap">수량</span>
+          <Stepper label="수량" value={qty} max={QUANTITY_MAX}
+            onChange={(n) => { if (n !== qty) applyCartAnswers({ ...answers, quantity: n }); }}
+            atMaxNote={<>한 번에 {QUANTITY_MAX}개까지 고르실 수 있어요.</>} />
         </div>
         {free.length > 0 && <p className="cart-sub">성분: <b>{free.join(", ")}</b> 없음</p>}
         {unsure && (
@@ -192,37 +217,18 @@ export function CartReview() {
       </div>
 
       <hr className="cart-div" />
-      {/* 저희가 정했거나 바꾼 것이 있을 때만 말한다 — 전부 고르신 그대로인 화면에는
-          아무 문장도 얹지 않는다(기획 2026-08-12, «모두 고르신 그대로입니다» 삭제).
-          상자로 띄운 줄이 무엇인지 여기서 밝히므로 «강조된 것이 왜 강조됐는지»가
-          색에만 기대지 않는다. */}
-      {need.length > 0 && (
-        <p className="cart-legend">아래 강조된 항목은 저희가 정했거나 바꾼 것입니다 — 항목마다 이유를 적었습니다.</p>
+      <h3 className="cart-cap">주문 방식</h3>
+      {/* 눌린 값은 사용자의 답이다. 메뉴가 그 방식을 지원하지 않으면 아래 보조줄이
+          실제로 어떻게 되는지 밝힌다 — 고른 것처럼 꾸미지 않는 선이 이 화면의 계약이다. */}
+      <ChoiceGrid q={SERVICE_Q} answers={answers} setAnswers={pickAnswers} />
+      {waySel && waySel.origin !== "USER" && (
+        <p className="cart-sub">{GROUP_KO[waySel.groupId] ?? waySel.groupId}: {originNote(waySel)}</p>
       )}
-      {way.length > 0 && (
-        <>
-          <h3 className="cart-cap">주문 방식</h3>
-          <ul className="sellist cart-sel">
-            {way.map((x) => (
-              <li key={x.groupId} data-origin={x.origin}>
-                {/* 표식은 장식이다 — 누가 정했는지는 아래 문장이 말한다 */}
-                <span className="cart-chk" aria-hidden="true">{x.origin === "USER" ? "✓" : "!"}</span>
-                <p className="cart-selmain">
-                  {/* 시안의 «✓ 포장해 갈게요» — 값이 곧 문장이다 */}
-                  <b className="sv">{WAY_SENTENCE[x.id] ?? (OPTION_KO[x.id] ?? x.id)}</b>
-                  {x.origin === "USER" && <span className="srline">고르신 대로</span>}
-                </p>
-                {x.origin !== "USER" && <p className="so">{originNote(x)}</p>}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-      {need.length > 0 && (
-        /* 대안은 «메뉴 선택» 화면이 맡는다 — 점수순 목록에서 직접 고른다 (노션 기획). */
-        <button type="button" className="btn ghost cart-alt" onClick={() => setStep("menuSelect")}>
-          다른 메뉴 보기
-        </button>
+      {cupSel && (
+        <p className="cart-sub">
+          {CUP_SENTENCE[cupSel.id] ?? (OPTION_KO[cupSel.id] ?? cupSel.id)}
+          {cupSel.origin !== "USER" && <> — {originNote(cupSel)}</>}
+        </p>
       )}
 
       <hr className="cart-div" />
@@ -230,9 +236,6 @@ export function CartReview() {
         <span>총 가격</span>
         <b>{(unit * qty).toLocaleString()}원</b>
       </div>
-
-      {/* 시뮬레이션이라는 사실은 주문을 확정하기 직전에 말한다 — 그게 이 말이 필요한 자리다 */}
-      <p className="hint cart-foot">장바구니 확인까지만 진행합니다 — 실제 결제·주문은 일어나지 않습니다.</p>
 
       {live && (
         <label className="field">공식 시뮬레이터 세션에 제출하기 (선택 — 시뮬레이터 화면의 세션 ID 입력)

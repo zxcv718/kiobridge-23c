@@ -19,14 +19,10 @@
  *    디자인은 14px 텍스트 링크지만, 우리가 선언한 터치 타깃 보증이 48px 이고
  *    tests/a11y.test.ts 가 `cursor: pointer` 를 준 모든 규칙을 그 기준으로 잰다.
  *
- * ③ **체크 동그라미는 장식이다.**
- *    ✓ 만으로 «누가 정했는지»를 말하지 않는다. 그 뜻은 옆 문장이 전한다
- *    (.sellist .so) — 동그라미에는 aria-hidden 을 건다.
- *
- * ④ **디자인에 없는 상태를 하나 더 그린다.**
- *    디자인의 «✓ 포장해 갈게요» 줄은 전부 같은 모양이다. 우리는 사용자가 고른 줄만
- *    그렇게 두고, **우리가 정했거나 바꾼 줄**은 상자로 띄운다. 그 줄들이 이 화면이
- *    존재하는 이유라서, 다른 줄과 똑같이 흐르면 화면의 요점이 사라진다.
+ * ③ **S13 의 «✓ 문장» 선택 목록은 없어졌다(기획 2026-08-13).**
+ *    주문 방식이 그 자리에서 고칠 수 있는 선택 버튼(ChoiceGrid, styles.css .choices)이
+ *    되면서 .sellist.cart-sel · .cart-chk · .cart-selmain 규칙과 안내 문구·«다른 메뉴
+ *    보기» 버튼의 규칙(.cart-legend · .cart-foot · .cart-alt)을 함께 걷어냈다.
  */
 
 /* ───────── 공통: 구분선·캡션·카드 안 카드 ───────── */
@@ -43,9 +39,19 @@ h3.cart-cap { margin: 22px 0 8px; font-size: 0.78em; }
 }
 .cart-menuline { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .cart-name { font-size: 1.2em; font-weight: 700; word-break: keep-all; }
-/* 수량은 메뉴 이름과 같은 색·굵기다 — 시안에서 한 줄로 같이 읽히는 값이라 흐려 두지 않는다 */
-.cart-qty { font-weight: 400; color: var(--fg); }
 .cart-price { font-weight: 700; margin-left: auto; white-space: nowrap; }
+/* «x N개» — S13 은 스테퍼로 바뀌며 안 쓰지만, 결과 화면(Result)의 주문 계획 절이 아직 쓴다 */
+.cart-qty { font-weight: 400; color: var(--fg); }
+/* S13 의 «x 1개» 글자였던 자리 — 캡션과 스테퍼(S10 과 같은 부품)가 한 줄에 선다.
+   질문 화면의 스테퍼는 화면 전체를 혼자 쓰는 크기(72×64px 표적 · 2em 숫자 · clamp 여백)라
+   카드 안에 그대로 넣으면 카드가 터진다 — 표적은 우리가 선언한 터치 타깃 보증(48px,
+   FIGMA_RULES)까지 만 내리고, 숫자·간격은 카드의 글자 크기에 맞춘다. */
+.cart-qtyrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 0; }
+.cart-qtyrow .cart-cap { margin: 0; white-space: nowrap; flex-shrink: 0; }
+.cart-qtyrow .stepper-wrap { margin: 0; gap: 6px; }
+.cart-qtyrow .stepper { gap: 12px; }
+.cart-qtyrow .stepbtn { min-width: 48px; min-height: 48px; font-size: 1.15em; }
+.cart-qtyrow .stepval { font-size: 1.2em; min-width: 1.8em; }
 .cart-sub { color: var(--muted); font-size: 0.82em; margin: 10px 0 0; }
 .cart-sub b { color: var(--fg); }
 
@@ -54,11 +60,6 @@ h3.cart-cap { margin: 22px 0 8px; font-size: 0.78em; }
 .cart-total span { color: var(--muted); font-size: 0.82em; font-weight: 500; }
 .cart-total b { font-size: 1.5em; font-weight: 700; }
 
-/* 본문 안의 보조 버튼 — 화면 아래 CTA 와 섞이지 않게 한 줄을 다 쓰지 않는다 */
-.cart-alt { margin-top: 10px; }
-.cart-foot { margin: 18px 0 0; }
-/* 선택 목록의 읽는 법 — 줄마다 반복하는 대신 여기서 한 번만 말한다 */
-.cart-legend { color: var(--muted); font-size: 0.82em; margin: 0 0 4px; word-break: keep-all; }
 
 /* ───────── S13 매장 이름 줄 (Figma 99:1798) ─────────
  * 시안의 이 줄은 15px Medium 본문색이고, 이 화면에는 큰 제목 문장이 따로 없다 —
@@ -68,38 +69,8 @@ h3.cart-cap { margin: 22px 0 8px; font-size: 0.78em; }
  * (0.68em = .kb-title 1.22em 기준 15px — 0.83em 은 본문 18px 기준값이라 여기선 다르다) */
 .kb-title .cart-store { font-size: 0.68em; font-weight: 500; color: var(--fg); }
 
-/* ───────── S13 선택 목록 (Figma 114:2116 «order option») ─────────
- * 디자인의 «✓ + 한 문장» 줄에 출처 한 줄을 더한 것. 고른 대로인 줄은 테두리 없이
- * 흐르고(디자인 그대로), 우리가 정했거나 바꾼 줄만 상자가 된다 — ④. */
-.sellist.cart-sel { margin: 0; }
-.sellist.cart-sel li {
-  grid-template-columns: calc(var(--fs) * 0.89) 1fr;
-  align-items: center;
-  gap: 2px 10px;
-  border: 0; background: none; border-radius: 0;
-  padding: 6px 0; margin: 0;
-}
-.sellist.cart-sel li[data-origin="AUTO"],
-.sellist.cart-sel li[data-origin="SUBSTITUTED"] {
-  border: 1.5px solid var(--warn); background: var(--warn-weak);
-  border-radius: var(--kb-radius-sm); padding: 12px 14px; margin: 8px 0;
-}
-/* 값과 사유는 표식 오른쪽 한 칸에 모인다 — 좁은 화면에서 값이 동그라미 밑으로 내려가지 않게 */
-.cart-selmain { grid-column: 2; margin: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.sellist.cart-sel .so { grid-column: 2; margin: 0; }
-.sellist.cart-sel .sg { font-size: 0.86em; }
-.cart-chk {
-  grid-column: 1; align-self: center;
-  display: flex; align-items: center; justify-content: center;
-  /* 시안의 표식은 16px 다. 누르는 요소가 아니라 표시라 48px 보증과 무관하다.
-     다만 16px 을 그대로 박지 않고 본문 크기에 매단다 — 시안의 16px 은 본문 18px 기준이고
-     (0.89 × 18 = 16), 큰 글씨를 켠 사람은 글씨가 안 보여서 켠 사람이다. 글자만 20% 커지고
-     이 표식만 그대로면, «우리가 정한 값»이라는 유일한 시각 신호가 정작 그 사람에게서만
-     상대적으로 작아진다. 안쪽 글자도 같은 비율로 줄여 «!»가 동그라미에 닿지 않게 둔다. */
-  width: calc(var(--fs) * 0.89); height: calc(var(--fs) * 0.89); border-radius: 999px;
-  background: var(--fg); color: var(--card);
-  font-size: 0.5em; font-weight: 700; line-height: 1;
-}
+/* S13 선택 목록(.sellist.cart-sel · .cart-chk · .cart-selmain)은 ③ 으로 없어졌다 —
+   주문 방식은 이제 styles.css 의 .choices/.choice(질문 화면과 같은 버튼)가 그린다. */
 
 /* 메뉴 확인의 강조 규칙은 recommend.css 의 .mc-flow 절에 있다 —
    조건 문장이 «추천해요» 목록(.reasons)으로 옮겨지면서 .mc-why 는 없어졌다. */

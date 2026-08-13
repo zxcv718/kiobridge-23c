@@ -101,6 +101,24 @@ export function withManualSelection(u: UiRecommendation, fixture: PublicFixture,
   return { ...u, rec };
 }
 
+/**
+ * 조건을 고쳐 다시 계산하되 **이미 확정한 메뉴는 유지한다** — 장바구니(S13)의 그 자리 수정.
+ *
+ * 주문 방식은 엔진 점수에 들어가므로(WEIGHTS.service) 그냥 다시 계산하면 최종 확인
+ * 화면에서 메뉴가 갑자기 바뀔 수 있다. 유지 대상이 새 계산의 1위면 그대로 쓰고,
+ * 아니면 직접 선택으로 고정해 «주의 필요»를 그 메뉴 기준으로 다시 잰다.
+ * 되살릴 수 있는 것은 생존 후보뿐이다(startFromSaved 의 되살리기와 같은 규칙).
+ */
+export function recommendKeeping(
+  raw: RawUserInput, fixture: PublicFixture, keepId: string | null, now: Date = new Date(),
+): { u: UiRecommendation; pinned: boolean } {
+  const base = computeRecommendation(raw, fixture, now);
+  const pinned = keepId !== null
+    && base.rec.recommendedCandidateId !== keepId
+    && Object.keys(base.rec.scoreBreakdown ?? {}).includes(keepId);
+  return { u: pinned ? withManualSelection(base, fixture, keepId) : base, pinned };
+}
+
 export function buildUiSubmission(
   u: UiRecommendation, fixture: PublicFixture, approved: boolean, manual: boolean,
 ): ParticipantSubmission {

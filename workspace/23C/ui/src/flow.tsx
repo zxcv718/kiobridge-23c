@@ -14,7 +14,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Evidence, ParticipantSubmission, PublicFixture } from "@kiobridge/participant-sdk";
 import {
-  computeRecommendation, withManualSelection, buildUiSubmission, runOnSimulator,
+  computeRecommendation, withManualSelection, recommendKeeping, buildUiSubmission, runOnSimulator,
   fetchFixture, readUrlStoreCode, type UiRecommendation, type RunOutcome,
 } from "./logic";
 import { shouldSafetyStop, isUnresolved } from "../../src/core/ask";
@@ -275,6 +275,25 @@ export function useFlowState() {
     setStep("edit");
   };
 
+  /**
+   * 장바구니(S13)에서 수량·주문 방식을 **그 자리에서** 고친다 — 화면을 떠나지 않는다.
+   *
+   * 조건 수정 화면(applyEditAndRecommend)과 달리 계산 화면을 지나지 않고, **확정한
+   * 메뉴를 유지한다**(logic.recommendKeeping). 주문 방식은 엔진 점수에 들어가는 값이라
+   * 그냥 다시 계산하면 최종 확인 화면에서 메뉴가 갑자기 바뀔 수 있다. 고정이 실제로
+   * 일어났으면(엔진 1위 ≠ 유지한 메뉴) 이후 제출은 직접 선택(MODIFY)이다.
+   */
+  const applyCartAnswers = (next: Record<string, unknown>) => {
+    if (!fixture || !uiRec) return;
+    setAnswers(next);
+    const { u, pinned } = recommendKeeping(
+      buildRawInput(next, a11y, fromSaved, storeToggle, touchedA11y),
+      fixture, uiRec.rec.recommendedCandidateId, now,
+    );
+    setUiRec(u);
+    if (pinned) setManual(true);
+  };
+
   const applyEditAndRecommend = () => {
     if (!fixture) return;
     if (storeToggle) persist();
@@ -365,7 +384,7 @@ export function useFlowState() {
     setSubmitted, setErrResults, setStoreToggle, setEditOpen, setReconfirmCount,
     setProfileStep, setAllergyOpen,
     t, staffBtn, nextToAsk, advance, startWizard, startFromSaved, applyPreset, deleteSaved, editSaved,
-    openEdit, applyEditAndRecommend, toggleStore, setStoreIntent, finishOrder,
+    openEdit, applyEditAndRecommend, applyCartAnswers, toggleStore, setStoreIntent, finishOrder,
     confirmOffline, runSimulation, goRecommend,
   };
 }
