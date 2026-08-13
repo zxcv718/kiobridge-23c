@@ -121,7 +121,7 @@ test.describe("B계열 — 신규 동작", () => {
       .toContainText("실행 계획이 만들어지지 않았고, 장바구니에도 아무것도 담기지 않았습니다");
   });
 
-  test("B6 v3 저장본이 살아남고 v4 키로 옮겨진다", async ({ page }) => {
+  test("B6 v3 저장본이 살아남고 프로필·세션 키로 쪼개져 옮겨진다", async ({ page }) => {
     await page.goto("http://localhost:5173/");
     await page.evaluate(() => {
       localStorage.clear();
@@ -137,10 +137,16 @@ test.describe("B계열 — 신규 동작", () => {
     await 저장된내용펼치기(page);
     await expect(page.getByText(/땅콩/)).toBeVisible();
 
+    /* 저장소가 프로필·세션 둘로 나뉘었다(QA 1차 2026-08-13) — 옛 통합 저장본은
+       화면 설정이 프로필 키로, 답변이 세션 키로 가고, 옛 키는 지워진다. */
     const moved = await page.evaluate(() => ({
-      v4: localStorage.getItem("kb23c-saved-settings-v4") !== null,
+      profile: localStorage.getItem("kb23c-profile-v1") !== null,
+      session: localStorage.getItem("kb23c-session-v1") !== null,
+      v4: localStorage.getItem("kb23c-saved-settings-v4") === null,
       v3: localStorage.getItem("kb23c-saved-settings-v3") === null,
     }));
+    expect(moved.profile).toBe(true);
+    expect(moved.session).toBe(true);
     expect(moved.v4).toBe(true);
     expect(moved.v3).toBe(true);
   });
@@ -179,15 +185,17 @@ test.describe("B계열 — 신규 동작", () => {
     // CTA 는 시안 라벨 «주문하기» 하나다 — 라이브(실행)든 체험 모드(계획 보관)든 같다
     await page.getByRole("button", { name: "주문하기", exact: true }).click();
 
-    /* 결과 화면(S15)은 저장을 **다시 묻지 않는다.** 저장 여부는 프로필 단계(S03)에서
-       이미 한 번 물었고, 같은 결정을 두 번 묻는 것은 통제권이 아니라 부담만 늘린다.
-       여기서는 어떻게 됐는지 사실로 알리고, 마음을 바꿀 길만 남긴다. */
-    await expect(page.getByRole("heading", { name: /^(이 기기에 저장했습니다|저장하지 않았습니다)$/ })).toBeVisible();
-    await expect(page.getByText(/다음에도 쓰시게 저장할까요/)).toHaveCount(0);
+    /* 주문이 끝나면 S15 «안내·저장 유도»가 **세션(오늘의 답변·메뉴)** 저장을 묻는다
+       (QA 1차 2026-08-13). 프로필(화면 설정)은 S03 에서 이미 정했으므로 같은 결정을
+       두 번 묻는 것이 아니다 — 두 저장은 대상이 다르다. 범위를 쪼개 묻지 않는 것은
+       그대로다. */
+    await expect(page.getByRole("heading", { name: /오늘 입력한 내용을 저장할까요/ })).toBeVisible();
     await expect(page.getByRole("group", { name: "저장 범위" })).toHaveCount(0); // 범위는 묻지 않는다
+    await page.getByRole("button", { name: "이번만 사용", exact: true }).click();
 
-    // 이 흐름은 S03 에서 기본값(이번만 사용)으로 지나왔으므로 «저장 안 함»이어야 한다
+    // 결과 화면은 그 결정을 사실로 알린다 — 다시 묻지 않는다
     await expect(page.getByRole("heading", { name: "저장하지 않았습니다" })).toBeVisible();
+    await expect(page.getByText(/저장할까요/)).toHaveCount(0);
     // 마음을 바꿀 길은 남아 있다 — 뒤집으면 그 자리에서 저장된다
     await page.getByRole("button", { name: "이 기기에 저장하기" }).click();
     await expect(page.getByRole("heading", { name: "이 기기에 저장했습니다" })).toBeVisible();

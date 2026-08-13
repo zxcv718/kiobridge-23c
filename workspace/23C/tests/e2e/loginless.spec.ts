@@ -16,9 +16,9 @@ test.use({ viewport: { width: 390, height: 844 } });
 /**
  * 저장본을 만들고 홈으로 돌아온다.
  *
- * **주문을 끝까지 마쳐야 한다.** S03 에서 «저장하기»를 고른 시점에 한 번 남기지만
- * 그때는 아직 답변이 없다 — 답변과 확정된 메뉴는 주문이 끝날 때 남는다. 질문만 답하고
- * 멈추면 «화면 설정»만 든 저장본이 되어, 저장 내용을 재는 검사가 헛돌게 된다.
+ * **주문을 끝까지 마쳐야 한다.** 저장소가 둘로 나뉘어(QA 1차 2026-08-13) 프로필(화면
+ * 설정)은 S03 «저장하기»가, 답변·확정 메뉴(세션)는 주문 뒤 S15 «저장하기»가 남긴다.
+ * 질문만 답하고 멈추면 «화면 설정»만 든 저장본이 되어, 저장 내용을 재는 검사가 헛돌게 된다.
  */
 async function 저장하고재방문(page: Page): Promise<void> {
   await openHome(page);
@@ -28,7 +28,7 @@ async function 저장하고재방문(page: Page): Promise<void> {
     await 아무거나답하고다음(page);
   }
   await approveToCartReview(page);
-  await finishOrder(page);
+  await finishOrder(page, true); // S15 에서도 «저장하기» — 세션까지 남긴다
   await page.goto(HOME);
   await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
   await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
@@ -70,8 +70,9 @@ test("5번 — «이번 한 번만»이 기본값이다", async ({ page }) => {
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
 
   await expect(page.getByRole("button", { name: "이번만 사용" })).toBeVisible();
-  // 아무것도 고르지 않은 채로는 아무것도 저장되지 않는다
-  const 저장됨 = await page.evaluate(() => localStorage.getItem("kb23c-saved-settings-v4") !== null);
+  // 아무것도 고르지 않은 채로는 아무것도 저장되지 않는다 — 프로필도 세션도
+  const 저장됨 = await page.evaluate(() =>
+    localStorage.getItem("kb23c-profile-v1") !== null || localStorage.getItem("kb23c-session-v1") !== null);
   expect(저장됨, "고르기도 전에 저장돼 있습니다").toBe(false);
 });
 
@@ -87,7 +88,8 @@ test("6번 — 한 번의 조작으로 지워지고, 지웠다고 알린다", as
      되돌릴 수 없는 일을 확인받는 것이 아니다 — 삭제는 여전히 첫 화면에서 바로 닿는다. */
   await page.getByRole("button", { name: /네, 지우고 새로 시작할게요/ }).click();
 
-  const 남았나 = await page.evaluate(() => localStorage.getItem("kb23c-saved-settings-v4"));
+  const 남았나 = await page.evaluate(() =>
+    localStorage.getItem("kb23c-profile-v1") ?? localStorage.getItem("kb23c-session-v1"));
   expect(남았나, "지웠다고 했는데 기기에 남아 있습니다").toBeNull();
 });
 

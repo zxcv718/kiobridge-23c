@@ -35,6 +35,7 @@ import { MenuSelect } from "./screens/MenuSelect";
 import { CartReview } from "./screens/CartReview";
 import { CartEdit } from "./screens/CartEdit";
 import { Running } from "./screens/Running";
+import { SavePrompt } from "./screens/SavePrompt";
 import { Result } from "./screens/Result";
 import { SafetyStop } from "./screens/SafetyStop";
 import { StaffHelp } from "./screens/StaffHelp";
@@ -53,7 +54,8 @@ const SCREENS: Record<Step, React.ComponentType> = {
   confirm: CartReview,        // S13 장바구니 확인
   edit: CartEdit,             // S14 수정
   run: Running,               // 가상 키오스크 실행 중
-  result: Result,             // 결과 + S15 안내
+  savePrompt: SavePrompt,     // S15 안내·저장 유도 — 세션(답변·메뉴)을 남길지 묻는다
+  result: Result,             // 결과 화면
   stopped: SafetyStop,        // S12 안전 중단
   staff: StaffHelp,           // 직원 호출
 };

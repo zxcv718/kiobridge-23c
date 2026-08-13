@@ -195,11 +195,23 @@ export async function approveToCartReview(page: Page): Promise<void> {
   await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 }
 
-/** 주문을 확정해 결과 화면까지 (라이브·체험 모드 모두 시안 라벨 «주문하기» 하나다). */
-export async function finishOrder(page: Page): Promise<void> {
+/**
+ * 주문을 확정해 결과 화면까지 (라이브·체험 모드 모두 시안 라벨 «주문하기» 하나다).
+ *
+ * 주문이 성공하면 결과 앞에 **S15 «안내·저장 유도»**가 선다(QA 1차 2026-08-13) —
+ * 세션(오늘의 답변·메뉴)을 남길지 여기서 정한다. 실행이 실패하면 결과로 바로 간다.
+ *
+ * @param save S15 에서 «저장하기»를 고를지. 기본은 «이번만 사용».
+ */
+export async function finishOrder(page: Page, save = false): Promise<void> {
   await page.getByRole("button", { name: "주문하기", exact: true }).click();
   /* level 2 를 지정한다 — 결과 화면 본문에 «주문 계획» 소제목(h3)이 생겨
      이름만으로 찾으면 둘이 걸린다. 화면 제목은 언제나 h2 하나뿐이다. */
-  await expect(page.getByRole("heading", { level: 2, name: /실행 결과|주문이 완성되었습니다|실행하지 못했습니다/ }))
-    .toBeVisible({ timeout: 20_000 });
+  const 저장질문 = page.getByRole("heading", { level: 2, name: /오늘 입력한 내용을 저장할까요/ });
+  const 결과 = page.getByRole("heading", { level: 2, name: /실행 결과|주문이 완성되었습니다|실행하지 못했습니다/ });
+  await expect(저장질문.or(결과)).toBeVisible({ timeout: 20_000 });
+  if (await 저장질문.count()) {
+    await page.getByRole("button", { name: save ? "저장하기" : "이번만 사용", exact: true }).click();
+  }
+  await expect(결과).toBeVisible({ timeout: 20_000 });
 }

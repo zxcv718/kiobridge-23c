@@ -12,7 +12,10 @@
 import { expect, test, type Page } from "@playwright/test";
 import { 아무거나답하고다음 } from "./nav";
 
-const STORAGE_KEY = "kb23c-saved-settings-v4";
+/* S03(저장 방식)이 다루는 것은 **프로필(화면 설정)** 저장소다 — 세션(답변·메뉴)은
+   주문을 마친 뒤 S15 가 따로 묻는다(QA 1차 2026-08-13, 저장소 분리). */
+const PROFILE_KEY = "kb23c-profile-v1";
+const SESSION_KEY = "kb23c-session-v1";
 
 /** 저장본 없는 «최초 방문» 홈에서 시작한다. 연동 관문은 «QR 없이»로 지난다. */
 async function home(page: Page) {
@@ -171,17 +174,17 @@ test.describe("A계열 — 프로필 흐름", () => {
        없어졌고, 대신 저장본 자체를 본다. 지키는 것은 그대로다:
        ① 고르기 전에는 아무것도 저장되지 않는다(공용 기기에서 조용히 저장하지 않는다)
        ② 고른 대로 실제로 저장되고, 되돌리면 실제로 지워진다 — 화면 표시가 아니라 사실로. */
-    const stored = () => page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
+    const stored = () => page.evaluate((k) => localStorage.getItem(k), PROFILE_KEY);
     expect(await stored(), "고르기도 전에 저장돼 있습니다").toBeNull();
 
     await page.getByRole("button", { name: "저장하기" }).click();
-    expect(await stored(), "«저장하기»를 골랐는데 저장본이 없습니다").not.toBeNull();
+    expect(await stored(), "«저장하기»를 골랐는데 프로필 저장본이 없습니다").not.toBeNull();
 
     // 뒤로 돌아와 마음을 바꾸면 그 자리에서 지워진다 (S03 은 세션 시작의 «뒤로»로 다시 온다)
     await page.getByRole("button", { name: "뒤로" }).click();
     await expect(page.getByRole("heading", { name: "선택하신 내용을 확인해주세요" })).toBeVisible();
     await page.getByRole("button", { name: "이번만 사용" }).click();
-    expect(await stored(), "«이번만 사용»으로 바꿨는데 저장본이 남아 있습니다").toBeNull();
+    expect(await stored(), "«이번만 사용»으로 바꿨는데 프로필 저장본이 남아 있습니다").toBeNull();
   });
 
   test("A7 S03 에서 무엇을 고르든 곧장 세션 시작으로 간다", async ({ page }) => {
@@ -226,6 +229,11 @@ test.describe("A계열 — 프로필 흐름", () => {
     await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "주문하기", exact: true }).click();
+    /* 주문이 끝나면 S15 «안내·저장 유도»가 세션 저장을 묻는다(QA 1차) — 저장하기를 고른다. */
+    await expect(page.getByRole("heading", { level: 2, name: /오늘 입력한 내용을 저장할까요/ }))
+      .toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: "저장하기", exact: true }).click();
+
     /* 화면 제목(.kb-title)만 본다. 예전에는 role=heading 에 세 후보를 «|» 로 묶어 두었는데,
        그중 「주문 계획」은 화면 제목이 아니라 결과 화면 **안쪽 절 제목**(h3.cart-cap)이다.
        Simulation API 가 없는 체험 모드에서는 그 절이 함께 나오므로 heading 이 둘이 되고,
@@ -237,12 +245,16 @@ test.describe("A계열 — 프로필 흐름", () => {
     await expect(page.locator(".kb-title"), "결과 화면에 닿지 못했습니다")
       .toHaveText(/실행 결과|주문이 완성되었습니다|실행하지 못했습니다/);
 
-    // 답변까지 함께 남았는가 — startWizard 가 저장 의사를 지웠다면 여기서 걸린다
+    // S03 의 프로필 저장 의사가 살아남았는가 — startWizard 가 지웠다면 여기서 걸린다
+    const profile = await page.evaluate((k) => localStorage.getItem(k), PROFILE_KEY);
+    expect(profile, "저장하기를 골랐는데 프로필 저장본이 없습니다").not.toBeNull();
+
+    // 이번 답변은 S15 의 «저장하기»로 세션에 남는다
     const saved = await page.evaluate((k) => {
       const s = localStorage.getItem(k);
       return s ? (JSON.parse(s) as { answers?: Record<string, unknown> }) : null;
-    }, STORAGE_KEY);
-    expect(saved, "저장하기를 골랐는데 저장본이 없습니다").not.toBeNull();
+    }, SESSION_KEY);
+    expect(saved, "S15 에서 저장하기를 골랐는데 세션 저장본이 없습니다").not.toBeNull();
     expect(saved!.answers?.allergies, "저장본에 이번 답변이 없습니다").toBeDefined();
   });
 

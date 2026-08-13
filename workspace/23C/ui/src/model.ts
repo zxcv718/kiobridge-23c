@@ -8,7 +8,10 @@
  * 여기에 있는 것은 전부 React 를 모른다 — 렌더링은 screens/ 와 components/ 가 한다.
  */
 import type { RawUserInput } from "./logic";
-import { migrateSaved, type SavedSettings as CoreSaved } from "../../src/core/saved";
+import {
+  migrateProfile, migrateSaved, migrateSession, splitSaved,
+  type SavedProfile as CoreProfile, type SavedSession,
+} from "../../src/core/saved";
 
 /**
  * 흐름의 화면 하나하나. App.tsx 의 라우팅 표가 이 유니온을 그대로 덮는다
@@ -18,7 +21,7 @@ export type Step =
   | "connect"                                          // QR 연동 — 흐름의 1걸음 (매장 QR 링크로 열리면 건너뛴다)
   | "start" | "profile" | "saveChoice" | "sessionStart"
   | "wizard" | "calculating" | "menuConfirm" | "menuSelect"
-  | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
+  | "confirm" | "run" | "savePrompt" | "result" | "staff" | "edit" | "stopped";
 
 /**
  * 흐름 다섯 걸음의 이름 (Figma StepIndicator 181:177 의 문법).
@@ -237,16 +240,26 @@ export const EDIT_LABELS: Record<string, string> = {
   quantity: "수량", allergies: "알레르기", budgetKrw: "예산",
 };
 
-/** 요약 행에 보여줄 현재 값 (답변은 이미 한국어 라벨/숫자로 저장돼 있다) */
+/** 질문 선택지에서 값에 해당하는 화면 라벨을 찾는다 — 없으면 값 그대로. */
+const optionLabel = (key: string, v: unknown): string =>
+  QUESTIONS.find((q) => q.key === key)?.options.find((o) => o.value === v)?.label ?? String(v);
+
+/** 요약 행에 보여줄 현재 값 — 사용자가 고른 **선택지의 라벨**과 같은 말로 보여준다. */
 export function answerLabel(key: string, v: unknown): string {
   if (v === undefined) return "아직 선택 안 함";
   if (key === "allergies") {
     const a = (v as string[]) ?? [];
-    return a.length === 0 || a[0] === "없음" ? "없음" : a.join("·");
+    /* 항목도 화면 라벨로 옮긴다 — 저장값은 «콩»이지만 화면 글자는 「대두」다(위 options
+       주석 참조). 구분자는 시안 99:1830 그대로 쉼표다(«대두, 새우»). */
+    return a.length === 0 || a[0] === "없음" ? "없음" : a.map((x) => optionLabel(key, x)).join(", ");
   }
   if (key === "quantity") return `${v}개`;
   // 고른 선택지의 라벨과 같은 말로 보여준다 — 요약이 «없음»이면 고른 적 없는 말이 뜬다
   if (key === "budgetKrw") return v === "없음" ? "상관없어요" : `${Number(v).toLocaleString()}원`;
+  // 시안 99:1830 은 «보통맛»이라 쓴다 — 값(보통)이 아니라 사용자가 누른 라벨이다
+  if (key === "spicyLevel") return optionLabel(key, v);
+  /* 이용 방식은 시안이 «먹고 가기»·«포장»이라 쓴다 — «포장하기»(버튼 라벨)가 아니라
+     여기만 값 그대로가 시안과 같다. */
   if (v === "매장") return "먹고 가기";
   return String(v);
 }
@@ -296,50 +309,56 @@ export const PRESETS: Preset[] = [
  *   저장 여부를 사용자가 선택 · 저장된 내용 확인 · 수정 · 삭제 ·
  *   공용기기 자동저장 방지 · 자동으로 불러온 정보의 재확인
  *
- * 그래서 묻는 것은 **켤지 말지 하나뿐**이다. 저장 범위를 나누지 않는 이유는
- * core/saved.ts 에 적었다 — 공용기기의 답은 부분 저장이 아니라 저장 끄기다. */
-export const STORAGE_KEY = "kb23c-saved-settings-v4";
-/** v3 저장본을 버리지 않는다 — 형식이 바뀌었다고 사용자 설정이 사라지면 안 된다. */
-export const LEGACY_KEY = "kb23c-saved-settings-v3";
+ * 저장소는 **둘**이다(QA 1차 2026-08-13). 프로필(화면 설정)은 S04 «프로필 저장 완료»가,
+ * 세션(답변·확정 메뉴)은 S15 «안내·저장 유도»가 각각 주인이다 — 한 덩어리로 두면
+ * 세션을 지울 때 프로필까지 같이 사라진다(실제로 그랬고, 그것이 이 분리의 이유다).
+ * 저장 범위를 더 잘게 나누지 않는 이유는 core/saved.ts 에 적었다 —
+ * 공용기기의 답은 부분 저장이 아니라 저장 끄기다. */
+export const PROFILE_KEY = "kb23c-profile-v1";
+export const SESSION_KEY = "kb23c-session-v1";
+/** 옛 통합 저장본 — 새 키가 비어 있으면 한 번 읽어 둘로 쪼개 옮기고 지운다. */
+const COMBINED_V4_KEY = "kb23c-saved-settings-v4";
+const COMBINED_V3_KEY = "kb23c-saved-settings-v3";
 
-/** 화면에서 쓰는 저장본 — core 형식에 UI 의 A11y 타입을 입힌 것 */
-export interface SavedSettings extends Omit<CoreSaved, "a11y"> {
+/** 화면에서 쓰는 프로필 저장본 — core 형식에 UI 의 A11y 타입을 입힌 것 */
+export interface SavedProfile extends Omit<CoreProfile, "a11y"> {
   a11y: A11y;
 }
+/** 세션 저장본은 core 형식 그대로다 — UI 타입을 입힐 것이 없다. */
+export type { SavedSession };
 
-/** 해석은 core/saved.ts 가 한다 — localStorage 는 무엇이든 들어올 수 있는 입구다. */
-export const readSaved = (key: string): SavedSettings | null => {
+const readRaw = (key: string): unknown => {
   try {
     const s = localStorage.getItem(key);
-    if (!s) return null;
-    const m = migrateSaved(JSON.parse(s));
-    return m ? { ...m, a11y: { ...A11Y_DEFAULT, ...(m.a11y as Partial<A11y>) } } : null;
+    return s ? JSON.parse(s) : null;
   } catch { return null; }
 };
 
-export const loadSaved = (): SavedSettings | null => {
-  const cur = readSaved(STORAGE_KEY);
-  if (cur) return cur;
-  const old = readSaved(LEGACY_KEY); // 구버전 저장본을 새 키로 옮기고 계속 쓴다
-  if (!old) return null;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(old));
-    localStorage.removeItem(LEGACY_KEY);
-  } catch { /* 저장 불가 환경이면 이번 세션만 메모리로 쓴다 */ }
-  return old;
-};
-
-export function savedSummary(s: SavedSettings): string {
-  const a = s.answers;
-  const parts: string[] = [];
-  for (const q of QUESTIONS) {
-    if (a[q.key] === undefined) continue;
-    parts.push(`${EDIT_LABELS[q.key] ?? q.key} ${answerLabel(q.key, a[q.key])}`);
+/** 해석은 core/saved.ts 가 한다 — localStorage 는 무엇이든 들어올 수 있는 입구다. */
+export const loadStores = (): { profile: SavedProfile | null; session: SavedSession | null } => {
+  let p = migrateProfile(readRaw(PROFILE_KEY));
+  let s = migrateSession(readRaw(SESSION_KEY));
+  if (!p && !s) {
+    // 새 키가 둘 다 비었으면 옛 통합 저장본(v4 → v3 순)을 찾아 쪼개 옮긴다 —
+    // 형식이 바뀌었다고 사용자 설정이 사라지면 안 된다.
+    const legacy = migrateSaved(readRaw(COMBINED_V4_KEY)) ?? migrateSaved(readRaw(COMBINED_V3_KEY));
+    if (legacy) {
+      const split = splitSaved(legacy);
+      p = split.profile;
+      s = split.session;
+      try {
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(split.profile));
+        if (split.session) localStorage.setItem(SESSION_KEY, JSON.stringify(split.session));
+        localStorage.removeItem(COMBINED_V4_KEY);
+        localStorage.removeItem(COMBINED_V3_KEY);
+      } catch { /* 저장 불가 환경이면 이번 세션만 메모리로 쓴다 */ }
+    }
   }
-  const on = A11Y_ITEMS.filter((i) => s.a11y[i.key] === true).map((i) => i.label);
-  if (on.length) parts.push(on.join("·"));
-  return parts.join(" · ");
-}
+  return {
+    profile: p ? { ...p, a11y: { ...A11Y_DEFAULT, ...(p.a11y as Partial<A11y>) } } : null,
+    session: s,
+  };
+};
 
 /** 마법사 답변 + 접근성 설정 → RawUserInput (코어 계약 입력). */
 export function buildRawInput(

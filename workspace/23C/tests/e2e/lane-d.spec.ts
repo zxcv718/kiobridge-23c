@@ -237,14 +237,25 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
   });
 
-  /* ───────── S15 안내 (Figma 99:1830) ───────── */
+  /* ───────── S15 안내·저장 유도 (Figma 99:1830) ───────── */
 
-  test("D8 결과 화면은 저장을 다시 «묻지» 않고 결과를 알린다", async ({ page }) => {
+  test("D8 주문을 마치면 S15 가 세션 저장을 묻고, 결과 화면은 알리기만 한다", async ({ page }) => {
     await start(page);
     await toCartReview(page);
-    await finishOrder(page);
 
-    // 프로필 단계에서 이미 물었으므로 여기서 또 묻지 않는다
+    // 주문 확정 → S15 «안내·저장 유도» (QA 1차 2026-08-13 — 세션 저장을 묻는 자리는 여기다)
+    await page.getByRole("button", { name: "주문하기", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 2, name: /오늘 입력한 내용을 저장할까요/ }))
+      .toBeVisible({ timeout: 20_000 });
+
+    // 시안의 여섯 행 — 오늘 «입력한» 내용이 그대로 보인다
+    for (const 라벨 of ["알레르기", "맵기 선호", "뼈/순살 선택", "수량", "먹고가기/포장 선택", "예산"]) {
+      await expect(page.locator(".kb-row .kb-rowlabel", { hasText: 라벨 }).first(),
+        `S15 카드에 «${라벨}» 이 없습니다`).toBeVisible();
+    }
+
+    // «이번만 사용»을 고르면 결과 화면은 그 사실을 알린다 — 다시 묻지 않는다
+    await page.getByRole("button", { name: "이번만 사용", exact: true }).click();
     await expect(page.getByText(/저장할까요/)).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "저장하지 않았습니다" })).toBeVisible();
 

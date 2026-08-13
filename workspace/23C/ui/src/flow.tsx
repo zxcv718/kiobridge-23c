@@ -18,10 +18,11 @@ import {
   fetchFixture, readUrlStoreCode, type UiRecommendation, type RunOutcome,
 } from "./logic";
 import { shouldSafetyStop, isUnresolved } from "../../src/core/ask";
-import { SAVED_VERSION } from "../../src/core/saved";
+import { PROFILE_VERSION, SESSION_VERSION } from "../../src/core/saved";
 import {
-  A11Y_DEFAULT, CALC_MS, QUESTIONS, STORAGE_KEY, buildRawInput, loadSaved, prefersReducedMotion,
-  type A11y, type Preset, type SavedSettings, type Step,
+  A11Y_DEFAULT, CALC_MS, PROFILE_KEY, QUESTIONS, SESSION_KEY, buildRawInput, loadStores,
+  prefersReducedMotion,
+  type A11y, type Preset, type SavedProfile, type SavedSession, type Step,
 } from "./model";
 
 export function useFlowState() {
@@ -42,9 +43,12 @@ export function useFlowState() {
   const [submitted, setSubmitted] = useState<ParticipantSubmission | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
   const [errResults, setErrResults] = useState<Record<string, string>>({});
-  const [saved, setSaved] = useState<SavedSettings | null>(null);
+  /* 저장본은 둘로 나뉜다(QA 1차 2026-08-13) — 프로필(화면 설정)과 세션(답변·확정 메뉴).
+     각자 저장·삭제가 따로 논다. 프로필은 S04 가, 세션은 S15 가 주인이다. */
+  const [savedProfile, setSavedProfile] = useState<SavedProfile | null>(null);
+  const [savedSession, setSavedSession] = useState<SavedSession | null>(null);
   const [fromSaved, setFromSaved] = useState(false);
-  const [storeToggle, setStoreToggle] = useState(false); // "이번 한 번만"이 기본값 — 저장은 명시적 선택
+  const [storeToggle, setStoreToggle] = useState(false); // 프로필 저장 의사 — "이번 한 번만"이 기본값
   const [editOpen, setEditOpen] = useState<string | null>(null); // 조건 수정 화면에서 펼쳐진 행 (한 번에 하나)
   /** 저장본에서 불러온 항목의 key — 마법사에서 건너뛰고, 무엇이 불러와졌는지 화면에 밝힌다 */
   const [carried, setCarried] = useState<string[]>([]);
@@ -78,7 +82,9 @@ export function useFlowState() {
 
   useEffect(() => {
     fetchFixture().then((r) => { setFixture(r.fixture); setLive(r.live); });
-    setSaved(loadSaved());
+    const stores = loadStores();
+    setSavedProfile(stores.profile);
+    setSavedSession(stores.session);
   }, []);
 
   /** 프리셋이 시각을 지정했으면 그 시각으로, 아니면 지금으로 계산한다. */
@@ -166,25 +172,27 @@ export function useFlowState() {
     setQIndex(n);
   };
 
-  /** 저장된 설정으로 시작 — 배너에서 내용을 보여준 뒤의 클릭이므로 '확인받은 자동 불러오기'다. */
+  /** 저장된 설정으로 시작 — 배너에서 내용을 보여준 뒤의 클릭이므로 '확인받은 자동 불러오기'다.
+   *  세션(지난 답변)이 없고 프로필만 있어도 온다 — 그때는 화면 설정만 입고 처음부터 묻는다. */
   const startFromSaved = () => {
-    if (!fixture || !saved) return;
-    const next = { ...saved.answers };
+    if (!fixture || (!savedSession && !savedProfile)) return;
+    const next = { ...(savedSession?.answers ?? {}) };
+    const nextA11y = savedProfile?.a11y ?? a11y;
     setAnswers(next);
-    setA11y(saved.a11y);
+    setA11y(nextA11y);
     setCarried(QUESTIONS.map((q) => q.key).filter((k) => next[k] !== undefined));
-    setFromSaved(true); setStoreToggle(true);
+    setFromSaved(true); setStoreToggle(!!savedProfile);
     setManual(false); setDemoHour(null); resetRun();
     const loaded = QUESTIONS.map((qq) => qq.key).filter((k) => next[k] !== undefined);
     const start = nextToAsk(0, loaded);
     if (start >= QUESTIONS.length) {
       // 저장본에 6문항이 다 있어 더 여쭤볼 것이 없다 = 지난번 주문을 그대로 되살리는 경우다
-      const u = computeRecommendation(buildRawInput(next, saved.a11y, true, true, touchedA11y), fixture, new Date());
+      const u = computeRecommendation(buildRawInput(next, nextA11y, true, !!savedProfile, touchedA11y), fixture, new Date());
       /* 지난번에 직접 고른 메뉴를 되살린다.
        * 답변만 재현하면 엔진이 다시 1위를 뽑으므로, 대안을 골랐던 경우 지난번과 달라진다.
        * 되살리는 대상은 scoreBreakdown 에 남은 **생존 후보뿐**이다 — 그 사이 품절되었거나
        * 알레르기를 새로 등록해 제외된 메뉴는 여기서 되살아나지 않는다. */
-      const wanted = saved.lastCandidateId;
+      const wanted = savedSession?.lastCandidateId;
       const pinned = !!wanted
         && Object.keys(u.rec.scoreBreakdown ?? {}).includes(wanted)
         && u.rec.recommendedCandidateId !== wanted;
@@ -214,7 +222,9 @@ export function useFlowState() {
   };
 
   /**
-   * 저장본을 지운다.
+   * 저장본을 **전부** 지운다 — 홈의 «처음부터 새로 시작»은 완전 초기화다(QA 확정 2026-08-13).
+   * 프로필·세션이 따로 노는 것은 저장·삭제의 «주인»이 다르다는 뜻이지, 새로 시작하는
+   * 사람에게 반쪽만 지워 주라는 뜻이 아니다 — 이후 프로필 생성부터 다시 밟는다.
    *
    * 지우기 직전에 되묻는다(홈의 «네, 지우고 새로 시작할게요»). 한때는 지운 **뒤**에도
    * «지웠습니다»를 한 줄 띄웠는데, 되묻기에서 이미 «되돌릴 수 없습니다»를 읽고 직접
@@ -222,8 +232,12 @@ export function useFlowState() {
    * 한 번이면 된다.
    */
   const deleteSaved = () => {
-    try { localStorage.removeItem(STORAGE_KEY); } catch { /* 무시 */ }
-    setSaved(null);
+    try {
+      localStorage.removeItem(PROFILE_KEY);
+      localStorage.removeItem(SESSION_KEY);
+    } catch { /* 무시 */ }
+    setSavedProfile(null);
+    setSavedSession(null);
   };
 
   /** 추천 화면 → 조건 수정: 재확인 사유(알레르기)가 있으면 그 행을 바로 열어 준다 */
@@ -233,26 +247,43 @@ export function useFlowState() {
   };
 
   /**
-   * 저장. 이번 답변 전부와 화면 설정, 그리고 확정된 메뉴를 함께 남긴다.
-   * 부분 저장은 없다 — 무엇을 남길지 사용자에게 또 묻지 않기로 했다(core/saved.ts 참조).
+   * 프로필(화면 설정)을 남긴다 — S04 «저장하기»의 몫이다. 답변은 여기 없다.
+   * 옛 통합 저장에 있던 «저장하기를 고른 순간 지난 답변이 빈 값으로 덮이는» 함정은
+   * 분리로 통째로 사라졌다 — 프로필 저장은 애초에 답변을 만지지 않는다.
    */
-  const persist = () => {
-    const id = uiRec?.rec.recommendedCandidateId ?? saved?.lastCandidateId;
-    /* 아직 아무것도 답하지 않았으면 **지난번 답변을 지우지 않는다.**
-     *
-     * 저장은 두 번 일어난다 — S03 에서 «저장하기»를 고른 즉시(화면 설정), 그리고 주문이
-     * 끝날 때(답변·확정 메뉴). 그런데 첫 번째 시점의 answers 는 비어 있어서, 그대로 쓰면
-     * «저장하기»를 고른 순간 지난번 알레르기·맵기가 빈 값으로 덮였다. 저장을 **고른**
-     * 사람이 데이터를 잃는 것이고, 거기서 그만두면 영영 사라진다.
-     * 바로 아래 lastCandidateId 는 같은 이유로 이미 지켜지고 있었다 — 답변만 빠져 있었다. */
-    const next = Object.keys(answers).length > 0 ? { ...answers } : { ...(saved?.answers ?? {}) };
-    const s: SavedSettings = {
-      v: SAVED_VERSION,
-      answers: next, a11y, savedAt: new Date().toISOString(),
+  const persistProfile = (nextA11y: A11y = a11y) => {
+    const p: SavedProfile = { v: PROFILE_VERSION, a11y: nextA11y, savedAt: new Date().toISOString() };
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); setSavedProfile(p); } catch { /* 저장 불가 환경이면 조용히 건너뜀 */ }
+  };
+
+  /**
+   * 세션(답변·확정 메뉴)을 남긴다 — S15 «저장하기»와 저장본 수정이 부른다.
+   * candidateId 를 넘기지 않으면 이미 저장돼 있던 지난 메뉴를 지킨다 — 답만 고치는
+   * 수정(S14)이 지난 메뉴까지 지우면 «지난번과 똑같이 주문하기»가 성립하지 않는다.
+   */
+  const persistSession = (nextAnswers: Record<string, unknown>, candidateId?: string) => {
+    const id = candidateId ?? savedSession?.lastCandidateId;
+    const s: SavedSession = {
+      v: SESSION_VERSION,
+      answers: { ...nextAnswers }, savedAt: new Date().toISOString(),
       ...(id ? { lastCandidateId: id } : {}),
     };
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); setSaved(s); } catch { /* 저장 불가 환경이면 조용히 건너뜀 */ }
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); setSavedSession(s); } catch { /* 저장 불가 환경이면 조용히 건너뜀 */ }
   };
+
+  /** S15 «저장하기» — 이번 답변과 확정 메뉴를 세션으로 남긴다. 프로필은 건드리지 않는다. */
+  const saveSession = () => persistSession(answers, uiRec?.rec.recommendedCandidateId ?? undefined);
+
+  /** S15 «이번만 사용»과 결과 화면 «저장 지우기» — 세션만 지운다. 프로필은 S04 의 결정이다. */
+  const discardSession = () => {
+    try { localStorage.removeItem(SESSION_KEY); } catch { /* 무시 */ }
+    setSavedSession(null);
+  };
+
+  /* 저장하기로 한 사람의 화면 설정은 바뀔 때마다 저장본이 따라간다 — S04 의 결정은 그 순간의
+     스냅샷이 아니라 «내 화면 설정을 이 기기에 남긴다»는 의사이기 때문이다. 수정 화면(S14)에서
+     켠 고대비도 다음 방문에 남아야 그 결정이 지켜진다. */
+  useEffect(() => { if (storeToggle) persistProfile(); }, [a11y, storeToggle]);
 
   /**
    * 저장된 내용을 **고친다** — 무로그인 가이드 4번의 «조회·수정·삭제» 중 수정.
@@ -265,11 +296,11 @@ export function useFlowState() {
    * «다시 안 묻는 것»으로 표시하면 정작 고치러 온 화면에서 절반이 숨는다.
    */
   const editSaved = () => {
-    if (!saved) return;
-    setAnswers({ ...saved.answers });
-    setA11y(saved.a11y);
+    if (!savedSession) return;
+    setAnswers({ ...savedSession.answers });
+    if (savedProfile) setA11y(savedProfile.a11y);
     setFromSaved(true);
-    setStoreToggle(true);   // 이미 저장해 둔 사람이다 — 고친 값도 남는 것이 기대에 맞는다
+    setStoreToggle(!!savedProfile); // 프로필 저장 의사 — 프로필을 남겨 둔 사람만 켠 채 온다
     setCarried([]); setManual(false); setDemoHour(null); setReconfirmCount(0);
     resetRun(); setUiRec(null); setEditOpen(null);
     setStep("edit");
@@ -296,43 +327,35 @@ export function useFlowState() {
 
   const applyEditAndRecommend = () => {
     if (!fixture) return;
-    if (storeToggle) persist();
+    /* 저장된 세션을 고치러 온 사람(홈 → 저장된 내용 수정)의 답은 그 자리에서 저장본에
+       반영된다 — 그것이 «수정»이다. 저장본이 없는 주문 도중의 조건 수정은 아무것도
+       남기지 않는다 — 세션을 남길지는 주문을 마친 뒤 S15 가 묻는다. */
+    if (savedSession) persistSession(answers);
     // 고쳐서 다시 받는 경로 — 여기서도 미확정이면 시도 횟수가 올라가고, 2회째면 안전 중단이다
     goRecommend(computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle, touchedA11y), fixture, now));
   };
 
   /**
-   * 저장 «의사»를 정한다. 켜면 그 자리에서 남길 수 있는 만큼 남기고, 끄면 즉시 지운다.
-   *
-   * 묻는 자리가 주문 전(S03)으로 옮겨지면서 «묻는 시점»과 «남길 것이 갖춰지는 시점»이
-   * 갈렸다. 프로필 단계에서는 아직 고른 메뉴가 없으므로, 그때 저장하면 답변과 화면
-   * 설정만 남고 `lastCandidateId` 가 비어 «지난번과 똑같이 주문하기» 가 성립하지 않는다.
-   * 그래서 의사만 여기서 받고, 주문이 확정되는 순간 finishOrder 가 다시 남긴다.
+   * 프로필 저장 «의사»를 정한다(S04 «프로필 저장 완료»). 켜면 화면 설정을 그 자리에서
+   * 남기고, 끄면 즉시 지운다. **세션은 건드리지 않는다** — 지난 주문 기록(답변·메뉴)의
+   * 주인은 S15 다(QA 1차 2026-08-13). 한 덩어리이던 때는 여기 «이번만 사용»이 지난
+   * 주문 기록까지 지웠다 — 그것이 이번 분리로 고친 결함이다.
    */
   const setStoreIntent = (next: boolean) => {
     setStoreToggle(next);
-    if (next) persist();
-    else { try { localStorage.removeItem(STORAGE_KEY); } catch { /* 무시 */ } setSaved(null); }
+    if (next) persistProfile();
+    else { try { localStorage.removeItem(PROFILE_KEY); } catch { /* 무시 */ } setSavedProfile(null); }
     if (uiRec) setUiRec({ ...uiRec, raw: { ...uiRec.raw, storeProfile: next } }); // retentionPolicy에 반영
   };
-  /** 토글 버튼용 — 지금 값의 반대로 뒤집는다. */
-  const toggleStore = () => setStoreIntent(!storeToggle);
-
-  /**
-   * 주문이 확정됐다. 저장하기로 해 두었으면 **이 시점에** 다시 남긴다 —
-   * 이제 확정된 메뉴가 있으므로 다음 방문에 그대로 되살릴 수 있다.
-   */
-  const finishOrder = () => { if (storeToggle) persist(); };
 
   /**
    * 서버가 없는 환경(외부 배포본)의 «주문 확정하기».
-   * 실행 대신 계획을 만들어 보관하고 결과 화면으로 간다 — 지나는 자리는 실행 경로와 같다.
+   * 실행 대신 계획을 만들어 보관하고 저장 유도(S15)로 간다 — 지나는 자리는 실행 경로와 같다.
    */
   const confirmOffline = () => {
     if (!fixture || !uiRec) return;
     setSubmitted(buildUiSubmission(uiRec, fixture, true, manual));
-    finishOrder();
-    setStep("result");
+    setStep("savePrompt");
   };
 
   const runSimulation = async () => {
@@ -343,8 +366,8 @@ export function useFlowState() {
       const r = await runOnSimulator(submission, sessionInput || undefined, (label) => setRunLog((l) => [...l, label]));
       setSubmitted(submission);
       setOutcome(r);
-      finishOrder();
-      setStep("result");
+      // 주문이 끝났다 — 결과로 가기 전에 이번 세션을 남길지 S15 가 묻는다.
+      setStep("savePrompt");
     } catch (e) {
       setRunError(String((e as Error)?.message ?? e));
       setStep("result");
@@ -354,7 +377,7 @@ export function useFlowState() {
   /* 저장본에 6문항이 다 들어 있으면 되살리는 순간 더 여쭤볼 것이 없다 = 지난번 주문 그대로다.
      저장해 둔 플래그가 아니라 **실제로 들어 있는 답변**을 보고 판단한다 — 옛 형식에서 옮겨온
      부분 저장본이라면 남은 질문을 다시 여쭤봐야 하고, 문구도 그에 맞아야 한다. */
-  const savedCoversAll = !!saved && QUESTIONS.every((qq) => saved.answers[qq.key] !== undefined);
+  const savedCoversAll = !!savedSession && QUESTIONS.every((qq) => savedSession.answers[qq.key] !== undefined);
   const q = QUESTIONS[qIndex];
   /* 알레르기만 «값이 있는가»로 부족하다. 항목 목록에서 고른 것을 전부 해제하면 빈 배열이
      남는데, 그건 답이 아니라 «아직 안 골랐다»이다. 빈 채로 넘어가면 알레르기가 없는
@@ -375,7 +398,8 @@ export function useFlowState() {
   return {
     // 상태
     step, a11y, fixture, live, qIndex, answers, uiRec, manual, sessionInput, runLog,
-    outcome, submitted, runError, errResults, saved, fromSaved, storeToggle, editOpen,
+    outcome, submitted, runError, errResults, savedProfile, savedSession, fromSaved,
+    storeToggle, editOpen,
     carried, demoHour, reconfirmCount, profileStep, allergyOpen,
     // 파생값
     now, simple, rawInput, savedCoversAll, q, answered, ev, askTotal, askPos,
@@ -384,7 +408,7 @@ export function useFlowState() {
     setSubmitted, setErrResults, setStoreToggle, setEditOpen, setReconfirmCount,
     setProfileStep, setAllergyOpen,
     t, staffBtn, nextToAsk, advance, startWizard, startFromSaved, applyPreset, deleteSaved, editSaved,
-    openEdit, applyEditAndRecommend, applyCartAnswers, toggleStore, setStoreIntent, finishOrder,
+    openEdit, applyEditAndRecommend, applyCartAnswers, setStoreIntent, saveSession, discardSession,
     confirmOffline, runSimulation, goRecommend,
   };
 }
