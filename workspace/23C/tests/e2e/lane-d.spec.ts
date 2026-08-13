@@ -308,10 +308,10 @@ test.describe("D계열 — 확인·수정·결과", () => {
         `S15 카드에 «${라벨}» 이 없습니다`).toBeVisible();
     }
 
-    // «이번만 사용»을 고르면 결과 화면은 그 사실을 알린다 — 다시 묻지 않는다
+    // «이번만 사용»을 골라도 결과 화면은 이점을 들어 한 번 더 권한다 (QA 4차 2026-08-13)
     await page.getByRole("button", { name: "이번만 사용", exact: true }).click();
-    await expect(page.getByText(/저장할까요/)).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: "저장하지 않았습니다" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "오늘 입력한 내용을 저장할까요?" })).toBeVisible();
+    await expect(page.getByText(/다음 방문 시 입력 과정 없이/)).toBeVisible();
 
     // 마음을 바꿀 길은 남아 있다 — 새 질문이 아니라 뒤집기 버튼 하나
     await page.getByRole("button", { name: "이 기기에 저장하기" }).click();
@@ -319,7 +319,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByText(/저장할까요/)).toHaveCount(0);
 
     await page.getByRole("button", { name: /저장 지우기/ }).click();
-    await expect(page.getByRole("heading", { name: "저장하지 않았습니다" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "오늘 입력한 내용을 저장할까요?" })).toBeVisible();
   });
 
   test("D9 결과 화면은 무엇이 저장되는지를 항목으로 보여준다", async ({ page }) => {

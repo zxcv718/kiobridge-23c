@@ -188,9 +188,9 @@ test.describe("B계열 — 신규 동작", () => {
     await expect(page.getByRole("group", { name: "저장 범위" })).toHaveCount(0); // 범위는 묻지 않는다
     await page.getByRole("button", { name: "이번만 사용", exact: true }).click();
 
-    // 결과 화면은 그 결정을 사실로 알린다 — 다시 묻지 않는다
-    await expect(page.getByRole("heading", { name: "저장하지 않았습니다" })).toBeVisible();
-    await expect(page.getByText(/저장할까요/)).toHaveCount(0);
+    // 결과 화면은 이점을 들어 한 번 더 권한다 (QA 4차 2026-08-13) — 아래 저장 버튼이 답이 된다
+    await expect(page.getByRole("heading", { name: "오늘 입력한 내용을 저장할까요?" })).toBeVisible();
+    await expect(page.getByText(/다음 방문 시 입력 과정 없이/)).toBeVisible();
     // 마음을 바꿀 길은 남아 있다 — 뒤집으면 그 자리에서 저장된다
     await page.getByRole("button", { name: "이 기기에 저장하기" }).click();
     await expect(page.getByRole("heading", { name: "이 기기에 저장했습니다" })).toBeVisible();
