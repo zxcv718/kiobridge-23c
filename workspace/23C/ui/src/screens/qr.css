@@ -48,7 +48,7 @@
 
 /* 진행 중 안내 — 문제가 아니라 상태이므로 경고 배너를 쓰지 않는다.
    카메라를 못 쓰는 경우에는 이 자리에 `.banner warn` 이 대신 들어간다. */
-.qr-status { margin: 10px 0 0; font-size: 0.9em; color: var(--muted); }
+.qr-status { margin: 10px 0 0; font-size: 0.9em; color: var(--muted); text-align: center; }
 
 /* ───────── S01-B 연결 완료 (확정 시안 PNG 2026-08-12) ─────────
  * 초록 확인 원 + 매장 카드. 원과 ✓ 는 장식이다(aria-hidden) — 성공은 제목
