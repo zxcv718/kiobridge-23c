@@ -7,7 +7,7 @@ import type {
 } from "@kiobridge/participant-sdk";
 import { nowIso8601Utc } from "@kiobridge/profile-contract";
 import { buildProfile, buildChickenContext, type RawUserInput } from "../../src/core/canonical";
-import { buildRecommendation, explainCore, alternativesFromRecommendation, type EngineContext } from "../../src/core/engine";
+import { buildRecommendation, explainCore, alternativesFromRecommendation, unmetConditionsFor, type EngineContext } from "../../src/core/engine";
 import { buildExecutionPlanCore } from "../../src/core/plan";
 import { buildContextSignals, type ContextSignal } from "../../src/core/context";
 import { buildAccessibilityEvidence, buildTeamExtensions, buildTeamMetadata } from "../../src/core/submission-meta";
@@ -82,10 +82,15 @@ export function computeRecommendation(raw: RawUserInput, fixture: PublicFixture,
 
 /** 사용자가 대안을 직접 고른 경우 — 추천을 사용자 선택으로 교체 (MANUAL_SELECTION) */
 export function withManualSelection(u: UiRecommendation, fixture: PublicFixture, candidateId: string): UiRecommendation {
-  const name = fixture.candidates.find((c) => c.candidateId === candidateId)?.name ?? candidateId;
+  const candidate = fixture.candidates.find((c) => c.candidateId === candidateId);
+  const name = candidate?.name ?? candidateId;
   const rec: Recommendation = {
     ...u.rec,
     recommendedCandidateId: candidateId,
+    /* «주의 필요»는 고른 메뉴 기준으로 다시 잰다. 스프레드로 물려주면 옛 1순위의
+       문장이 남는다 — 예산 5,000원에 6,000원짜리를 골랐는데 화면이 «이 메뉴는
+       5,500원입니다»라고 말한 것이 실제로 그 병이었다. 맵기·형태도 마찬가지다. */
+    unmetConditions: unmetConditionsFor(candidate, u.engineCtx),
     recommendationReasons: [
       `직접 고르신 "${name}"(으)로 진행합니다.`,
       ...u.rec.recommendationReasons.filter((r) => !r.startsWith("직접 고르신")),
@@ -94,6 +99,24 @@ export function withManualSelection(u: UiRecommendation, fixture: PublicFixture,
   };
   rec.alternativeCandidateIds = alternativesFromRecommendation(fixture.candidates, rec);
   return { ...u, rec };
+}
+
+/**
+ * 조건을 고쳐 다시 계산하되 **이미 확정한 메뉴는 유지한다** — 장바구니(S13)의 그 자리 수정.
+ *
+ * 주문 방식은 엔진 점수에 들어가므로(WEIGHTS.service) 그냥 다시 계산하면 최종 확인
+ * 화면에서 메뉴가 갑자기 바뀔 수 있다. 유지 대상이 새 계산의 1위면 그대로 쓰고,
+ * 아니면 직접 선택으로 고정해 «주의 필요»를 그 메뉴 기준으로 다시 잰다.
+ * 되살릴 수 있는 것은 생존 후보뿐이다(startFromSaved 의 되살리기와 같은 규칙).
+ */
+export function recommendKeeping(
+  raw: RawUserInput, fixture: PublicFixture, keepId: string | null, now: Date = new Date(),
+): { u: UiRecommendation; pinned: boolean } {
+  const base = computeRecommendation(raw, fixture, now);
+  const pinned = keepId !== null
+    && base.rec.recommendedCandidateId !== keepId
+    && Object.keys(base.rec.scoreBreakdown ?? {}).includes(keepId);
+  return { u: pinned ? withManualSelection(base, fixture, keepId) : base, pinned };
 }
 
 export function buildUiSubmission(

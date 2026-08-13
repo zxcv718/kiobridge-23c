@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { buildRecommendation, type EngineContext } from "../src/core/engine";
 import { buildExecutionPlanCore , substitutionsFor , explainSelections } from "../src/core/plan";
-import { computeRecommendation, buildUiSubmission, summarizeOrderPlan } from "../ui/src/logic";
+import { computeRecommendation, buildUiSubmission, summarizeOrderPlan, withManualSelection, type UiRecommendation } from "../ui/src/logic";
 import { loadChickenFixture } from "./helpers";
 
 const fx = loadChickenFixture();
@@ -295,5 +295,40 @@ describe("체험 모드 summarizeOrderPlan", () => {
     const s = summarizeOrderPlan(buildUiSubmission(u, fx, false, false), fx);
     expect(s.stepCount).toBe(0);
     expect(s.stopsAtReviewBoundary).toBe(false);
+  });
+});
+
+/**
+ * 메뉴를 직접 고르면(withManualSelection) «주의 필요»도 고른 메뉴 기준이어야 한다.
+ *
+ * 실제로 틀렸다 — 예산 5,000원에 5,500원 1순위가 떴다가, 메뉴 선택에서 6,000원짜리를
+ * 골랐는데 화면은 여전히 «이 메뉴는 5,500원입니다»라고 말했다. unmetConditions 가
+ * 옛 1순위의 문장을 스프레드로 물려받고 있었다. 맵기·형태 문장도 같은 병이 있다.
+ */
+describe("메뉴 직접 선택 — 주의 필요를 다시 계산한다", () => {
+  // 순한맛·뼈·매장·예산 5,000원 → 1순위는 매운 뼈 닭강정(CHICKEN-003 · 5,500원)
+  const engineCtx: EngineContext = {
+    preferences: { serviceType: "DINE_IN", spicyLevel: "MILD", boneType: "BONE", quantity: 1 },
+    hardConstraints: { allergenIds: [] },
+    budgetKrw: 5000,
+  };
+  const uiOf = (): UiRecommendation => {
+    const r = buildRecommendation(fx.candidates, engineCtx);
+    return { raw: {} as UiRecommendation["raw"], rec: r, ctx: {} as UiRecommendation["ctx"], engineCtx, signals: [] };
+  };
+
+  it("직접 고른 메뉴(6,000원)의 가격으로 예산 문장을 다시 쓴다", () => {
+    const picked = withManualSelection(uiOf(), fx, "CHICKEN-002"); // 순한 순살 · 6,000원
+    expect(picked.rec.unmetConditions).toContain("원하신 예산은 5,000원인데, 이 메뉴는 6,000원입니다");
+    expect(picked.rec.unmetConditions).not.toContain("원하신 예산은 5,000원인데, 이 메뉴는 5,500원입니다");
+  });
+
+  it("고른 메뉴가 선호와 맞으면 그 문장은 사라진다 — 맵기가 그렇다", () => {
+    const before = uiOf();
+    expect(before.rec.unmetConditions?.some((s) => s.includes("맵기"))).toBe(true); // 1순위는 매운맛
+    const picked = withManualSelection(before, fx, "CHICKEN-002"); // 순한맛이라 맵기 문장이 빠진다
+    expect(picked.rec.unmetConditions?.some((s) => s.includes("맵기"))).toBe(false);
+    // 대신 형태(뼈→순살)는 어긋나므로 그 문장이 있어야 한다
+    expect(picked.rec.unmetConditions?.some((s) => s.includes("형태"))).toBe(true);
   });
 });

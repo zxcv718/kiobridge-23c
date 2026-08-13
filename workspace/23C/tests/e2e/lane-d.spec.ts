@@ -101,22 +101,15 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
   /* ───────── S13 장바구니 확인 (Figma 99:1798) ───────── */
 
-  test("D3 장바구니 확인은 실행계획을 읽어 각 옵션의 출처를 구분해 밝힌다", async ({ page }) => {
+  test("D3 장바구니 확인의 주문 방식은 고른 값이 눌린 선택 버튼이다", async ({ page }) => {
     await start(page);
     await toCartReview(page);
 
-    /* 시안 재정렬(99:1798)로 목록에는 주문 방식(이용 방식)만 남고, 맵기·형태는 카드의
-       «옵션:» 줄이, 수량은 «x N개»가 말한다. 컵 줄은 질문이 빠지면서 같이 사라졌다 —
-       실행계획이 CUP 액션을 사용자가 컵을 말했을 때만 만든다(core/plan.ts). */
-    const rows = page.locator(".sellist li[data-origin]");
-    await expect(rows.first()).toBeVisible();
-    expect(await rows.count()).toBeGreaterThanOrEqual(1);
-
-    // 출처는 세 가지뿐이며 전부 글자로 설명된다 (색만으로 말하지 않는다)
-    for (const o of await rows.evaluateAll((els) => els.map((e) => e.getAttribute("data-origin")))) {
-      expect(["USER", "AUTO", "SUBSTITUTED"]).toContain(o);
-    }
-    await expect(page.locator('.sellist li[data-origin="USER"]').first()).toContainText("고르신 대로");
+    /* 시안 재정렬(99:1798)의 «✓ 포장해 갈게요» 문장 줄은 그 자리에서 고칠 수 있는
+       선택 버튼이 됐다(기획 2026-08-13) — 마법사에서 고른 값이 눌린 채로 온다.
+       맵기·형태는 여전히 카드의 «옵션:» 줄이 말한다. */
+    await expect(page.getByRole("button", { name: "포장하기" })).toHaveAttribute("aria-pressed", "true"); // CASE.normal 은 포장이다
+    await expect(page.getByRole("button", { name: "먹고 가기" })).toHaveAttribute("aria-pressed", "false");
 
     /* 직접 고른 수량을 «상관없다고 하셔서»로 말하지 않는다 — 카드의 수량 보조줄은
        우리가 정했거나 바꿨을 때만 붙는다(이 흐름에서는 사용자가 골랐으므로 없어야 한다) */
@@ -132,7 +125,8 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
     const won = (s: string) => Number(s.replace(/[^\d]/g, ""));
     const unit = won(await page.locator(".cart-price").innerText());
-    const qty = won(await page.locator(".cart-qty").innerText());
+    // 수량은 «x N개» 글자가 아니라 그 자리에서 고칠 수 있는 스테퍼가 말한다 (2026-08-13)
+    const qty = Number(await page.getByRole("spinbutton", { name: "수량" }).getAttribute("aria-valuenow"));
     const total = won(await page.locator(".cart-total b").innerText());
     expect(unit).toBeGreaterThan(0);
     expect(qty).toBe(2);
@@ -167,14 +161,35 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(sub).toHaveCount(1);
     await expect(sub).toContainText("형태");
     await expect(sub).toContainText("원하신 뼈는 이 메뉴에 없어 바꿨습니다");
-    // 대체가 있으면 다른 메뉴를 볼 길을 함께 준다
-    await expect(page.getByRole("button", { name: "다른 메뉴 보기" })).toBeVisible();
   });
 
-  test("D5 장바구니 확인은 결제가 일어나지 않는다는 사실을 밝힌다", async ({ page }) => {
+  /* 옛 D5(«결제가 일어나지 않는다» 문구 노출)는 기획 2026-08-13 으로 문구와 함께 없어졌다 —
+     안내 문구·«다른 메뉴 보기» 대신 수량·주문 방식을 그 자리에서 고치는 화면이 됐다. */
+  test("D5 장바구니에서 수량·주문 방식을 그 자리에서 고칠 수 있다 — 메뉴는 그대로다", async ({ page }) => {
     await start(page);
     await toCartReview(page);
-    await expect(page.getByText(/실제 결제·주문은 일어나지 않습니다/)).toBeVisible();
+
+    const won = (s: string) => Number(s.replace(/[^\d]/g, ""));
+    const unit = won(await page.locator(".cart-price").innerText());
+
+    // 수량을 하나 올리면 총 가격이 그 자리에서 따라온다
+    await page.getByRole("button", { name: "하나 늘리기" }).click();
+    await expect(page.getByRole("spinbutton", { name: "수량" })).toHaveAttribute("aria-valuenow", "2");
+    await expect.poll(async () => won(await page.locator(".cart-total b").innerText())).toBe(unit * 2);
+
+    // 주문 방식은 다른 쪽을 누르면 그 자리에서 바뀐다
+    await page.getByRole("button", { name: "먹고 가기" }).click();
+    await expect(page.getByRole("button", { name: "먹고 가기" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "포장하기" })).toHaveAttribute("aria-pressed", "false");
+
+    /* 고쳐도 확정한 메뉴는 바뀌지 않는다 — 주문 방식은 엔진 점수에 들어가는 값이라
+       그냥 다시 계산하면 최종 확인 화면에서 메뉴가 갑자기 바뀔 수 있다(logic.recommendKeeping) */
+    await expect(page.getByText("매운 순살 닭강정")).toBeVisible();
+
+    // 이 화면을 덮던 안내 문구·버튼은 없어졌다 (기획 2026-08-13)
+    await expect(page.getByText(/실제 결제·주문은 일어나지 않습니다/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "다른 메뉴 보기" })).toHaveCount(0);
+    await expect(page.getByText(/아래 강조된 항목은/)).toHaveCount(0);
   });
 
   /* ───────── S14 수정 (Figma 114:2008) ───────── */
