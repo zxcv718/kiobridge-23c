@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   filterCandidatesCore, scoreCandidates, buildRecommendation, explainCore,
   alternativesFromRecommendation, computeConfidence, RECONFIRM_THRESHOLD,
+  unmetConditionsFor, metConditionsFor,
   type EngineContext,
 } from "../src/core/engine";
 import { loadChickenFixture } from "./helpers";
@@ -149,9 +150,11 @@ describe("주의 필요 — 예산 초과", () => {
     hardConstraints: { allergenIds: [] },
   });
 
-  it("예산 5,000원에 5,500원 메뉴 → 초과를 주의 필요로 말한다", () => {
+  /* 문구는 QA(TC-CM-04)가 요구한 «예산 {금액}원을 초과합니다» 형식이다. 초과 사실만
+     알리고 실제 가격을 안 말하면 확인할 수 없으므로(unmetConditionsFor 주석) 뒤에 잇는다. */
+  it("예산 5,000원에 5,500원 메뉴 → «예산 5,000원을 초과합니다» 형식으로 말한다", () => {
     const rec = buildRecommendation(fx.candidates, { ...예산5천, budgetKrw: 5000 });
-    expect(rec.unmetConditions).toContain("원하신 예산은 5,000원인데, 이 메뉴는 5,500원입니다");
+    expect(rec.unmetConditions).toContain("예산 5,000원을 초과합니다 — 이 메뉴는 5,500원입니다");
   });
 
   it("예산 안이면 가격 문장이 없다 — 예산보다 싼 것은 주의가 아니다", () => {
@@ -162,6 +165,100 @@ describe("주의 필요 — 예산 초과", () => {
   it("예산을 말하지 않으면 가격 문장이 없다", () => {
     const rec = buildRecommendation(fx.candidates, 예산5천);
     expect((rec.unmetConditions ?? []).filter((s) => s.includes("예산"))).toEqual([]);
+  });
+});
+
+/**
+ * 선호↔메뉴 불일치는 어느 경로에서 왔든 unmetConditionsFor 하나가 잰다 (QA TC-CM-04).
+ * 첫 추천(buildRecommendation)·조건 수정 후 재추천·직접 선택(withManualSelection)·
+ * 장바구니 인라인 수정(recommendKeeping)이 전부 이 함수를 지난다 — 여기서 축 하나가
+ * 빠지면 모든 경로에서 같이 빠지므로, 축 셋(맵기·형태·이용 방식)을 전부 못 박는다.
+ */
+describe("주의 필요 — 선호↔메뉴 불일치 (맵기·형태·이용 방식)", () => {
+  // 순한맛·뼈·매장 → 1순위는 매운 뼈 닭강정(CHICKEN-003). 맵기만 어긋난다.
+  const 순한맛뼈 = ctx({
+    preferences: { serviceType: "DINE_IN", spicyLevel: "MILD", boneType: "BONE", quantity: 1 },
+    hardConstraints: { allergenIds: [] },
+  });
+
+  it("첫 추천에서 맵기 불일치가 주의 필요에 남는다 — 순한맛 선호에 매운맛 1순위", () => {
+    const rec = buildRecommendation(fx.candidates, 순한맛뼈);
+    expect(rec.recommendedCandidateId).toBe("CHICKEN-003");
+    expect(rec.unmetConditions).toContain("원하신 맵기는 순한맛인데, 이 메뉴는 매운맛입니다");
+  });
+
+  it("형태 불일치 — 뼈를 원했는데 순살 메뉴면 주의 필요가 말한다", () => {
+    const 순살메뉴 = fx.candidates.find((c) => c.candidateId === "CHICKEN-002");
+    const out = unmetConditionsFor(순살메뉴, 순한맛뼈);
+    expect(out).toContain("원하신 형태는 뼈인데, 이 메뉴는 순살입니다");
+  });
+
+  it("이용 방식 불일치 — 매장 이용을 원했는데 포장 전용 메뉴면 주의 필요가 말한다", () => {
+    /* 엔진 1순위는 STEP 4 필터 덕에 이용 방식이 늘 맞지만, 이 함수는 직접 고른 메뉴도
+       재므로(withManualSelection) 축이 비어 있으면 그 경로에서 조용히 새는 자리다. */
+    const 포장전용 = fx.candidates.find((c) => c.candidateId === "CHICKEN-006");
+    const out = unmetConditionsFor(포장전용, ctx({
+      preferences: { serviceType: "DINE_IN", quantity: 1 },
+      hardConstraints: { allergenIds: [] },
+    }));
+    expect(out).toContain("원하신 이용 방식은 매장 이용인데, 이 메뉴는 포장만 가능합니다");
+  });
+
+  it("선호와 메뉴가 다 맞으면 불일치 문장이 하나도 없다", () => {
+    const rec = buildRecommendation(fx.candidates, ctx()); // 포장·매운맛·순살 → CHICKEN-001
+    expect(rec.recommendedCandidateId).toBe("CHICKEN-001");
+    expect((rec.unmetConditions ?? []).filter((s) => s.startsWith("원하신"))).toEqual([]);
+  });
+});
+
+/**
+ * «추천해요»에는 추천 메뉴가 **실제로 만족하는** 조건만 적는다 (QA TC-CM-03).
+ * 화면(MenuConfirm)의 문장 조립이 이 목록을 그대로 쓴다 — 사용자 선호만 보고 만들면
+ * 순한맛을 골랐는데 매운맛 메뉴가 왔을 때 «순한맛이고» 같은 거짓 문장이 생긴다.
+ */
+describe("metConditionsFor — 추천해요는 만족한 축만 말한다", () => {
+  const 순한맛뼈 = ctx({
+    preferences: { serviceType: "DINE_IN", spicyLevel: "MILD", boneType: "BONE", quantity: 1 },
+    hardConstraints: { allergenIds: [] },
+  });
+  const candOf = (id: string) => fx.candidates.find((c) => c.candidateId === id);
+
+  it("어긋난 맵기는 빠지고, 맞은 형태·이용 방식만 남는다", () => {
+    const rec = buildRecommendation(fx.candidates, 순한맛뼈);
+    const met = metConditionsFor(candOf(rec.recommendedCandidateId!), 순한맛뼈);
+    expect(met.map((m) => m.key)).toEqual(["boneType", "serviceType"]);
+    expect(met.find((m) => m.key === "boneType")?.value).toBe("BONE");
+  });
+
+  it("직접 고른 순살 메뉴에는 «뼈» 축이 남지 않는다 — 맵기는 맞아서 남는다", () => {
+    const met = metConditionsFor(candOf("CHICKEN-002"), 순한맛뼈); // 순한 순살
+    expect(met.map((m) => m.key)).toEqual(["spicyLevel", "serviceType"]);
+  });
+
+  it("전부 맞으면 세 축이 다 남고, 선호를 안 말한 축은 애초에 없다", () => {
+    expect(metConditionsFor(candOf("CHICKEN-001"), ctx()).map((m) => m.key))
+      .toEqual(["spicyLevel", "boneType", "serviceType"]); // 포장·매운맛·순살
+    expect(metConditionsFor(candOf("CHICKEN-001"), ctx({
+      preferences: { serviceType: "TAKE_OUT", spicyLevel: "NO_PREFERENCE", boneType: "BONELESS", quantity: 1 },
+    })).map((m) => m.key)).toEqual(["boneType", "serviceType"]);
+  });
+
+  it("후보가 없으면 빈 목록이다", () => {
+    expect(metConditionsFor(undefined, 순한맛뼈)).toEqual([]);
+  });
+});
+
+describe("explainCore — 어긋난 축의 긍정 문장을 만들지 않는다 (QA TC-CM-03)", () => {
+  it("순한맛 선호에 매운맛 1순위 → «순한맛» 사유가 사라지고 주의 필요가 대신 말한다", () => {
+    const c = ctx({
+      preferences: { serviceType: "DINE_IN", spicyLevel: "MILD", boneType: "BONE", quantity: 1 },
+      hardConstraints: { allergenIds: [] },
+    });
+    const rec = buildRecommendation(fx.candidates, c); // CHICKEN-003 (매운맛·뼈)
+    const joined = explainCore(rec, c).join(" ");
+    expect(joined).not.toContain("순한맛을 선호하셔서");
+    expect(joined).toContain("뼈");                    // 맞은 축은 그대로 말한다
+    expect(rec.unmetConditions).toContain("원하신 맵기는 순한맛인데, 이 메뉴는 매운맛입니다");
   });
 });
 

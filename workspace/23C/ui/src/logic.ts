@@ -5,7 +5,7 @@
 import type {
   AnySessionContext, Candidate, Evidence, ParticipantSubmission, PublicFixture, Recommendation, UserDecision,
 } from "@kiobridge/participant-sdk";
-import { nowIso8601Utc } from "@kiobridge/profile-contract";
+import { nowIso8601Utc, SENTINEL } from "@kiobridge/profile-contract";
 import { buildProfile, buildChickenContext, type RawUserInput } from "../../src/core/canonical";
 import { buildRecommendation, explainCore, alternativesFromRecommendation, unmetConditionsFor, type EngineContext } from "../../src/core/engine";
 import { buildExecutionPlanCore } from "../../src/core/plan";
@@ -91,12 +91,19 @@ export function withManualSelection(u: UiRecommendation, fixture: PublicFixture,
        문장이 남는다 — 예산 5,000원에 6,000원짜리를 골랐는데 화면이 «이 메뉴는
        5,500원입니다»라고 말한 것이 실제로 그 병이었다. 맵기·형태도 마찬가지다. */
     unmetConditions: unmetConditionsFor(candidate, u.engineCtx),
-    recommendationReasons: [
-      `직접 고르신 "${name}"(으)로 진행합니다.`,
-      ...u.rec.recommendationReasons.filter((r) => !r.startsWith("직접 고르신")),
-    ],
-    requiresReconfirmation: false, // 사용자가 직접 확인하고 골랐다
+    /* 직접 선택은 **메뉴를 확인한 것**이지 자기 알레르기를 확인한 것이 아니다.
+       「잘 모르겠어요」가 화면에 들어온 뒤로(TC-CM-01) 미확정 상태에서 «메뉴 수정»을
+       지나는 길이 실제로 생겼다 — 여기서 재확인을 무조건 풀면 알레르기를 모르는 채로
+       승인 차단이 사라진다. 미확인 알레르기가 남아 있는 한 재확인도 남긴다. */
+    requiresReconfirmation: (u.engineCtx.hardConstraints.allergenIds ?? []).includes(SENTINEL.UNKNOWN),
   };
+  /* 사유도 고른 메뉴 기준으로 다시 만든다(QA TC-CM-03). 옛 1순위의 문장을 물려주면
+     «뼈 메뉴를 골랐습니다»가 순살 메뉴 옆에 남는다 — explainCore 는 위에서 다시 잰
+     unmetConditions 를 보고 어긋난 축의 긍정 문장을 접는다. */
+  rec.recommendationReasons = [
+    `직접 고르신 "${name}"(으)로 진행합니다.`,
+    ...explainCore(rec, u.engineCtx),
+  ];
   rec.alternativeCandidateIds = alternativesFromRecommendation(fixture.candidates, rec);
   return { ...u, rec };
 }

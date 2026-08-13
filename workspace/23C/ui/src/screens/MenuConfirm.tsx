@@ -3,6 +3,7 @@ import { useFlow } from "../flow";
 import { Badge, Cta, Emphasize, Screen } from "../components";
 import { OPTION_KO } from "../model";
 import { candidateName, candidatePrice } from "../logic";
+import { metConditionsFor, type MetCondition } from "../../../src/core/engine";
 import { ALLERGEN_KO, josa } from "./CartReview";
 import "./cart.css";
 import "./recommend.css";
@@ -26,17 +27,19 @@ import "./recommend.css";
 /** 조건 절 하나 — «앞말 + 강조할 값 + 뒷말». 문장 조립은 화면이, 값은 코어가 준다. */
 interface Clause { pre?: string; em: string; post: string }
 
-/** 사용자가 고른 조건을 한 문장으로 — 값은 전부 정규화된 선호에서 읽는다. */
-function whyClauses(prefs: Record<string, unknown>): Clause[] {
-  const ko = (v: unknown) => OPTION_KO[String(v)] ?? String(v);
-  // NO_PREFERENCE·UNKNOWN 은 «말하지 않은 것»이라 문장에 넣지 않는다 (core/plan.ts definite 와 같은 기준)
-  const definite = (v: unknown) => typeof v === "string" && v !== "NO_PREFERENCE" && v !== "UNKNOWN";
-  const tail: Clause[] = [];
-  const add = (em: string, post: string, pre?: string) => tail.push({ pre, em, post });
-  if (definite(prefs.spicyLevel)) add(ko(prefs.spicyLevel), "이고", "맵기는 ");
-  if (definite(prefs.boneType)) add(ko(prefs.boneType), `${josa(ko(prefs.boneType), "이", "가")} 가능하며`);
-  if (definite(prefs.serviceType)) add(ko(prefs.serviceType), `${josa(ko(prefs.serviceType), "이", "가")} 가능한`);
-  return tail;
+/**
+ * «추천해요» 절 — 코어가 대조한 **메뉴가 실제로 만족하는 축**(metConditionsFor)만
+ * 문장이 된다(QA TC-CM-03). 한때 사용자 선호만 보고 만들었는데, 그러면 순살 메뉴
+ * 옆에 «뼈가 가능하며»가 붙는다 — 어긋난 축은 아래 «주의 필요»가 말한다.
+ */
+function whyClauses(met: MetCondition[]): Clause[] {
+  const ko = (v: string) => OPTION_KO[v] ?? v;
+  return met.map(({ key, value }) => {
+    const v = ko(value);
+    if (key === "spicyLevel") return { pre: "맵기는 ", em: v, post: "이고" };
+    if (key === "boneType") return { em: v, post: `${josa(v, "이", "가")} 가능하며` };
+    return { em: v, post: `${josa(v, "이", "가")} 가능한` };
+  });
 }
 
 export function MenuConfirm() {
@@ -72,7 +75,9 @@ export function MenuConfirm() {
   const declared = (uiRec.engineCtx.hardConstraints.allergenIds ?? []).filter((a) => a !== "UNKNOWN");
   const allergyNames = declared.map((a) => ALLERGEN_KO[a]).filter(Boolean).join(", ");
   const allergyExcluded = rec.excludedCandidates.filter((e) => e.reasonCode === "ALLERGEN_CONFLICT").length;
-  const tail = whyClauses(uiRec.engineCtx.preferences as unknown as Record<string, unknown>);
+  /* 직접 고른 메뉴도 이 화면으로 돌아오므로(MenuSelect), 선호가 아니라 **지금 화면에
+     선 그 메뉴**를 코어에 대조시킨다 — 엔진 1순위든 직접 선택이든 같은 잣대다. */
+  const tail = whyClauses(metConditionsFor(fixture.candidates.find((c) => c.candidateId === id), uiRec.engineCtx));
 
   return (
     <Screen

@@ -319,8 +319,8 @@ describe("메뉴 직접 선택 — 주의 필요를 다시 계산한다", () => 
 
   it("직접 고른 메뉴(6,000원)의 가격으로 예산 문장을 다시 쓴다", () => {
     const picked = withManualSelection(uiOf(), fx, "CHICKEN-002"); // 순한 순살 · 6,000원
-    expect(picked.rec.unmetConditions).toContain("원하신 예산은 5,000원인데, 이 메뉴는 6,000원입니다");
-    expect(picked.rec.unmetConditions).not.toContain("원하신 예산은 5,000원인데, 이 메뉴는 5,500원입니다");
+    expect(picked.rec.unmetConditions).toContain("예산 5,000원을 초과합니다 — 이 메뉴는 6,000원입니다");
+    expect(picked.rec.unmetConditions).not.toContain("예산 5,000원을 초과합니다 — 이 메뉴는 5,500원입니다");
   });
 
   it("고른 메뉴가 선호와 맞으면 그 문장은 사라진다 — 맵기가 그렇다", () => {
