@@ -98,7 +98,12 @@
   overflow-x: auto;
   margin-top: 18px; padding: 2px 2px 8px;
   -webkit-overflow-scrolling: touch;
+  /* 스크롤바는 그리지 않는다(사용자 확정 2026-08-13) — 모바일에서는 손가락으로 밀면
+     되고, 막대가 서면 카드 줄이 «조작해야 할 위젯»처럼 무거워진다. 넘침이 있다는
+     신호는 오른쪽 끝에 걸쳐 보이는 다음 카드가 맡는다. */
+  scrollbar-width: none;
 }
+.mc-alts::-webkit-scrollbar { display: none; }
 .mc-altcard {
   flex: 0 0 auto; min-width: 136px; min-height: 84px;
   display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
