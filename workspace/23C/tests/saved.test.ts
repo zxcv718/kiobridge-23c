@@ -5,7 +5,10 @@
  * guide.txt §5 의 기기 저장 요건("저장된 내용 확인·수정·삭제")은 저장본이 살아 있어야 성립한다.
  */
 import { describe, expect, it } from "vitest";
-import { migrateSaved, SAVED_VERSION } from "../src/core/saved";
+import {
+  migrateProfile, migrateSaved, migrateSession, splitSaved,
+  PROFILE_VERSION, SAVED_VERSION, SESSION_VERSION,
+} from "../src/core/saved";
 
 const v3 = {
   answers: { allergies: ["땅콩"], spicyLevel: "매운맛", boneType: "순살" },
@@ -61,6 +64,80 @@ describe("저장본 마이그레이션", () => {
     for (const bad of [null, undefined, 42, "문자열", [], {}, { answers: "객체가 아님" }]) {
       expect(() => migrateSaved(bad)).not.toThrow();
       expect(migrateSaved(bad)).toBeNull();
+    }
+  });
+});
+
+/* ───────── 프로필·세션 분리 (QA 1차 — 2026-08-13) ─────────
+ *
+ * 프로필(화면 설정)과 세션(답변·확정 메뉴)은 저장·삭제가 따로 논다.
+ * 한 덩어리였던 옛 저장본(v3/v4)은 읽는 순간 둘로 쪼개 옮긴다 — 어느 쪽도 잃지 않는다. */
+
+const combined = {
+  v: 4,
+  answers: { allergies: ["땅콩"], spicyLevel: "매운맛", boneType: "순살" },
+  a11y: { largeText: true, highContrast: false },
+  savedAt: "2026-08-08T10:00:00.000Z",
+  lastCandidateId: "CHICKEN-001",
+};
+
+describe("옛 통합 저장본을 둘로 쪼갠다", () => {
+  it("화면 설정은 프로필로, 답변·확정 메뉴는 세션으로 간다", () => {
+    const { profile, session } = splitSaved(migrateSaved(combined)!);
+    expect(profile).not.toBeNull();
+    expect(profile.a11y).toEqual(combined.a11y);
+    expect(profile.savedAt).toBe(combined.savedAt);
+    expect(session).not.toBeNull();
+    expect(session!.answers).toEqual(combined.answers);
+    expect(session!.lastCandidateId).toBe("CHICKEN-001");
+    expect(session!.savedAt).toBe(combined.savedAt);
+  });
+
+  it("답변이 비어 있으면 세션은 만들지 않는다 — 없는 기록을 지어내지 않는다", () => {
+    const { profile, session } = splitSaved(migrateSaved({ ...combined, answers: {}, lastCandidateId: undefined })!);
+    expect(profile.a11y).toEqual(combined.a11y);
+    expect(session).toBeNull();
+  });
+});
+
+describe("프로필 저장본 해석", () => {
+  it("정상 저장본은 그대로 살아난다", () => {
+    const m = migrateProfile({ v: PROFILE_VERSION, a11y: { largeText: true }, savedAt: "2026-08-13T00:00:00.000Z" });
+    expect(m).not.toBeNull();
+    expect(m!.a11y).toEqual({ largeText: true });
+    expect(m!.v).toBe(PROFILE_VERSION);
+  });
+
+  it("저장본이 아닌 값에는 throw 하지 않고 null 을 돌려준다", () => {
+    for (const bad of [null, undefined, 42, "문자열", [], {}, { a11y: "객체가 아님" }]) {
+      expect(() => migrateProfile(bad)).not.toThrow();
+      expect(migrateProfile(bad)).toBeNull();
+    }
+  });
+});
+
+describe("세션 저장본 해석", () => {
+  it("정상 저장본은 답변과 확정 메뉴가 그대로 살아난다", () => {
+    const m = migrateSession({
+      v: SESSION_VERSION, answers: combined.answers,
+      savedAt: "2026-08-13T00:00:00.000Z", lastCandidateId: "CHICKEN-003",
+    });
+    expect(m).not.toBeNull();
+    expect(m!.answers).toEqual(combined.answers);
+    expect(m!.lastCandidateId).toBe("CHICKEN-003");
+    expect(m!.v).toBe(SESSION_VERSION);
+  });
+
+  it("메뉴 ID 가 문자열이 아니면 버리되 답변은 살린다", () => {
+    const m = migrateSession({ v: SESSION_VERSION, answers: combined.answers, savedAt: "", lastCandidateId: 123 });
+    expect(m!.lastCandidateId).toBeUndefined();
+    expect(m!.answers).toEqual(combined.answers);
+  });
+
+  it("저장본이 아닌 값에는 throw 하지 않고 null 을 돌려준다", () => {
+    for (const bad of [null, undefined, 42, "문자열", [], {}, { answers: "객체가 아님" }]) {
+      expect(() => migrateSession(bad)).not.toThrow();
+      expect(migrateSession(bad)).toBeNull();
     }
   });
 });

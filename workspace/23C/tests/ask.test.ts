@@ -38,6 +38,21 @@ describe("알레르기 답변 판정", () => {
     expect(allergensAnswered(ctx)).toBe(true);
     expect(rec.requiresReconfirmation).toBe(true);
   });
+
+  /* 「잘 모르겠어요」가 알레르기 목록 걸음에 들어오면서(QA TC-CM-01) 아는 항목과
+     «모름»을 함께 고를 수 있게 됐다. 정의: **아는 것은 그대로 빼고, 모름은 재확인으로
+     남는다.** 모름이 있다고 방금 말한 땅콩 제외까지 미루면, 재확인을 기다리는 동안
+     알고 있는 위험을 못 본 척하는 셈이다. */
+  it("아는 알레르기와 「모름」을 함께 답하면 — 아는 것은 빼고, 모름은 재확인", () => {
+    const { rec, ctx } = recFor({ allergies: ["땅콩", "모름"] });
+    expect(ctx.hardConstraints.allergenIds).toEqual(expect.arrayContaining(["PEANUT", "UNKNOWN"]));
+    // 땅콩이 든 후보는 재확인과 무관하게 지금 제외된다
+    expect(rec.excludedCandidates.find((e) => e.candidateId === "CHICKEN-005")?.reasonCode).toBe("ALLERGEN_CONFLICT");
+    expect(Object.keys(rec.scoreBreakdown ?? {})).not.toContain("CHICKEN-005");
+    // 모름이 남아 있으므로 미확정이다 — 2회째면 안전 중단(S12)까지 그대로 이어진다
+    expect(rec.requiresReconfirmation).toBe(true);
+    expect(isUnresolved(rec)).toBe(true);
+  });
 });
 
 describe("조용한 실패 — 알레르기를 묻지 않으면 벌어지는 일", () => {

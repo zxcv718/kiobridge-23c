@@ -236,6 +236,16 @@ export function buildRecommendation(candidates: Candidate[], ctx: EngineContext)
 /** 값을 한국어로 — 표에 없으면 원값을 그대로 둔다(모르는 값을 지어내지 않는다). */
 const ko = (table: Record<string, string>, v: string | undefined): string => (v === undefined ? "" : table[v] ?? v);
 
+/** «주의 필요» 문장의 머리. explainCore 가 어긋난 축의 긍정 문장을 접을 때 이 머리로
+    찾는다 — 문장을 만드는 곳과 알아보는 곳이 이 상수 하나를 같이 본다(QA TC-CM-03). */
+const UNMET_HEAD = {
+  spicy: "원하신 맵기는",
+  bone: "원하신 형태는",
+  service: "원하신 이용 방식은",
+} as const;
+const hasUnmet = (rec: Recommendation, head: string): boolean =>
+  (rec.unmetConditions ?? []).some((s) => s.startsWith(head));
+
 /** 후보 하나를 조건과 대본다 — 1순위 추천뿐 아니라 **직접 고른 메뉴**도 이 검사를 받는다
     (ui/src/logic.ts withManualSelection). 화면의 «주의 필요»가 이 문장들을 그대로 단다. */
 export function unmetConditionsFor(candidate: Candidate | undefined, ctx: EngineContext): string[] {
@@ -252,17 +262,53 @@ export function unmetConditionsFor(candidate: Candidate | undefined, ctx: Engine
      조사가 값에 붙지 않는 꼴로 쓰면서, **이 메뉴가 실제로 무엇인지**까지 말한다.
      못 맞췄다는 사실만 알리고 무엇으로 대신했는지 안 말하면 확인할 수가 없다. */
   if (definite(ctx.preferences.spicyLevel) && attrs.spicyLevel !== ctx.preferences.spicyLevel)
-    out.push(`원하신 맵기는 ${ko(SPICY_KO, ctx.preferences.spicyLevel)}인데, 이 메뉴는 ${ko(SPICY_KO, attrs.spicyLevel)}입니다`);
+    out.push(`${UNMET_HEAD.spicy} ${ko(SPICY_KO, ctx.preferences.spicyLevel)}인데, 이 메뉴는 ${ko(SPICY_KO, attrs.spicyLevel)}입니다`);
   if (definite(ctx.preferences.boneType) && attrs.boneType !== ctx.preferences.boneType)
-    out.push(`원하신 형태는 ${ko(BONE_KO, ctx.preferences.boneType)}인데, 이 메뉴는 ${ko(BONE_KO, attrs.boneType)}입니다`);
+    out.push(`${UNMET_HEAD.bone} ${ko(BONE_KO, ctx.preferences.boneType)}인데, 이 메뉴는 ${ko(BONE_KO, attrs.boneType)}입니다`);
+  /* 이용 방식도 잰다(QA TC-CM-04). 엔진 1순위는 STEP 4 필터 덕에 늘 맞지만, 이 함수는
+     직접 고른 메뉴(withManualSelection)도 재므로 축이 비면 그 경로에서 조용히 샌다. */
+  const svc = ctx.preferences.serviceType;
+  if (definite(svc) && !(candidate.supportedOptions?.SERVICE_TYPE ?? []).includes(svc)) {
+    const 가능 = (candidate.supportedOptions?.SERVICE_TYPE ?? []).map((s) => ko(SERVICE_KO, s)).join("·");
+    out.push(`${UNMET_HEAD.service} ${ko(SERVICE_KO, svc)}인데, 이 메뉴는 ${가능}만 가능합니다`);
+  }
   if (definite(ctx.preferences.cupOption) && !(candidate.supportedOptions?.CUP ?? []).includes(ctx.preferences.cupOption!))
     out.push(`선호하신 컵 옵션을 이 메뉴에서는 선택할 수 없습니다`);
   /* 예산은 희망 금액이라 넘는 메뉴도 추천된다(budgetKrw 주석). 그러니 넘었다는 사실은
      여기서 말해야 한다 — 값을 고르기 전에 알 길이 이 목록뿐이다. 예산보다 싼 것은
-     주의가 아니므로 초과일 때만 말한다. */
+     주의가 아니므로 초과일 때만 말한다. 문장 머리는 QA(TC-CM-04)가 요구한
+     «예산 {금액}원을 초과합니다» 형식이고, 실제 가격을 뒤에 잇는다 — 초과 사실만
+     알리고 얼마인지 안 말하면 확인할 수 없다는 원칙은 그대로다. */
   const price = (candidate as { price?: number }).price;
   if (ctx.budgetKrw !== undefined && price !== undefined && price > ctx.budgetKrw)
-    out.push(`원하신 예산은 ${ctx.budgetKrw.toLocaleString()}원인데, 이 메뉴는 ${price.toLocaleString()}원입니다`);
+    out.push(`예산 ${ctx.budgetKrw.toLocaleString()}원을 초과합니다 — 이 메뉴는 ${price.toLocaleString()}원입니다`);
+  return out;
+}
+
+export interface MetCondition {
+  key: "spicyLevel" | "boneType" | "serviceType";
+  /** 공식 enum 값 그대로 — 화면(MenuConfirm)이 OPTION_KO 로 옮겨 그린다. */
+  value: string;
+}
+
+/**
+ * 후보가 **실제로 만족하는** 선호 축 — «추천해요»는 이 목록만 문장으로 만든다(QA TC-CM-03).
+ *
+ * unmetConditionsFor 와 거울이다: 선호를 말한 축(맵기·형태·이용 방식)은 두 목록 중
+ * 정확히 한쪽에만 나타난다. 사용자 «선호»만 보고 추천 사유를 만들면, 순한맛을 골랐는데
+ * 매운맛 메뉴가 온 경우에도 「순한맛이고」 같은 거짓 문장이 생긴다 — 그 병의 방어선이다.
+ */
+export function metConditionsFor(candidate: Candidate | undefined, ctx: EngineContext): MetCondition[] {
+  if (!candidate) return [];
+  const attrs = (candidate as { attributes?: { spicyLevel?: string; boneType?: string } }).attributes ?? {};
+  const p = ctx.preferences;
+  const out: MetCondition[] = [];
+  if (definite(p.spicyLevel) && attrs.spicyLevel === p.spicyLevel)
+    out.push({ key: "spicyLevel", value: p.spicyLevel });
+  if (definite(p.boneType) && attrs.boneType === p.boneType)
+    out.push({ key: "boneType", value: p.boneType });
+  if (definite(p.serviceType) && (candidate.supportedOptions?.SERVICE_TYPE ?? []).includes(p.serviceType))
+    out.push({ key: "serviceType", value: p.serviceType });
   return out;
 }
 
@@ -271,6 +317,8 @@ export function unmetConditionsFor(candidate: Candidate | undefined, ctx: Engine
 
 const SPICY_KO: Record<string, string> = { MILD: "순한맛", MEDIUM: "보통맛", HOT: "매운맛" };
 const BONE_KO: Record<string, string> = { BONE: "뼈", BONELESS: "순살" };
+/* 표기는 STEP 4 제외 사유와 같다 — 한 화면에서 같은 값이 두 이름으로 불리면 안 된다. */
+const SERVICE_KO: Record<string, string> = { DINE_IN: "매장 이용", TAKE_OUT: "포장" };
 
 /** 사용자가 선호를 하나도 말하지 않았는가 (전부 "상관없어요"/미입력) */
 function noStatedPreference(p: ChickenPrefs): boolean {
@@ -285,11 +333,16 @@ export function explainCore(rec: Recommendation, ctx: EngineContext): string[] {
   if (rec.recommendedCandidateId === null) {
     reasons.push("입력하신 조건을 모두 만족하는 메뉴가 없어 추천을 만들지 않았습니다. 조건을 수정하시거나 직원 도움을 요청해 주세요.");
   } else {
-    if (definite(p.serviceType))
+    /* 추천 사유는 추천된 메뉴가 **실제로 만족하는** 축만 말한다(QA TC-CM-03). 선호만 보고
+       말하면 순한맛을 골랐는데 매운맛 메뉴가 온 경우에도 「순한맛 메뉴를 보여드립니다」가
+       나간다 — 어긋난 축은 unmetConditions(주의 필요)가 이미 말하고 있으므로, 그 목록에
+       머리(UNMET_HEAD)가 있는 축의 긍정 문장을 접는다. rec.unmetConditions 는
+       buildRecommendation 이 같은 메뉴로 채워 둔 값이라 후보 목록 없이도 대조가 된다. */
+    if (definite(p.serviceType) && !hasUnmet(rec, UNMET_HEAD.service))
       reasons.push(`${p.serviceType === "TAKE_OUT" ? "포장" : "매장 이용"}을 원하셔서 ${p.serviceType === "TAKE_OUT" ? "포장" : "매장 이용"}이 가능한 메뉴 중에서 골랐습니다.`);
-    if (definite(p.spicyLevel))
+    if (definite(p.spicyLevel) && !hasUnmet(rec, UNMET_HEAD.spicy))
       reasons.push(`${SPICY_KO[p.spicyLevel] ?? p.spicyLevel}을 선호하셔서 ${SPICY_KO[p.spicyLevel] ?? p.spicyLevel} 메뉴를 먼저 보여드립니다.`);
-    if (definite(p.boneType))
+    if (definite(p.boneType) && !hasUnmet(rec, UNMET_HEAD.bone))
       reasons.push(`${BONE_KO[p.boneType] ?? p.boneType}을 선호하셔서 ${BONE_KO[p.boneType] ?? p.boneType} 메뉴를 골랐습니다.`);
     if (h.maxPriceKrw !== undefined)
       reasons.push(`예산 ${h.maxPriceKrw.toLocaleString()}원 이내의 메뉴만 추천 대상에 두었습니다.`);

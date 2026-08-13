@@ -9,16 +9,16 @@
  * 손봐야 하는지 바로 보인다.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { 아무거나답하고다음, 저장된내용펼치기, HOME, approveToCartReview, enterWizard, finishOrder, openHome } from "./nav";
+import { 아무거나답하고다음, 저장된내용펼치기, 홈으로돌아가기, approveToCartReview, enterWizard, finishOrder, openHome } from "./nav";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
 /**
  * 저장본을 만들고 홈으로 돌아온다.
  *
- * **주문을 끝까지 마쳐야 한다.** S03 에서 «저장하기»를 고른 시점에 한 번 남기지만
- * 그때는 아직 답변이 없다 — 답변과 확정된 메뉴는 주문이 끝날 때 남는다. 질문만 답하고
- * 멈추면 «화면 설정»만 든 저장본이 되어, 저장 내용을 재는 검사가 헛돌게 된다.
+ * **주문을 끝까지 마쳐야 한다.** 저장소가 둘로 나뉘어(QA 1차 2026-08-13) 프로필(화면
+ * 설정)은 S03 «저장하기»가, 답변·확정 메뉴(세션)는 주문 뒤 S15 «저장하기»가 남긴다.
+ * 질문만 답하고 멈추면 «화면 설정»만 든 저장본이 되어, 저장 내용을 재는 검사가 헛돌게 된다.
  */
 async function 저장하고재방문(page: Page): Promise<void> {
   await openHome(page);
@@ -28,9 +28,8 @@ async function 저장하고재방문(page: Page): Promise<void> {
     await 아무거나답하고다음(page);
   }
   await approveToCartReview(page);
-  await finishOrder(page);
-  await page.goto(HOME);
-  await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
+  await finishOrder(page, true); // S15 에서도 «저장하기» — 세션까지 남긴다
+  await 홈으로돌아가기(page); // 저장하기를 고른 기기라 관문 없이 재방문 홈이 바로 선다(TC-XC-04)
   await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
 }
 
@@ -59,6 +58,10 @@ test("4번 — 저장된 것을 홈에서 조회할 수 있다", async ({ page }
      다만 그 한 걸음이 홈에서 바로 닿는지는 여기서 잰다 — 흐름 깊숙이 묻히면 안 된다.
      카드 이름은 aria-label 이라 눈에 보이는 글자가 아니다. 그래서 영역으로 찾는다. */
   await 저장된내용펼치기(page);
+  /* 「무로그인 · 이 기기에만 임시 저장됨」 배지가 카드 위에 선다(QA 1차 TC-CP-13) —
+     이 기록의 성격(계정이 아니라 이 기기, 영구가 아니라 임시)을 내용보다 먼저 말한다. */
+  await expect(page.getByText("무로그인 · 이 기기에만 임시 저장됨"),
+    "무로그인 배지가 없습니다").toBeVisible();
   // 무엇이 들어 있는지 항목으로 보여준다 — «설정이 있습니다» 한 줄로 때우지 않는다
   const 줄수 = await page.locator(".kb-row").count();
   expect(줄수, "저장된 내용을 항목으로 보여주지 않습니다").toBeGreaterThan(1);
@@ -70,8 +73,9 @@ test("5번 — «이번 한 번만»이 기본값이다", async ({ page }) => {
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
 
   await expect(page.getByRole("button", { name: "이번만 사용" })).toBeVisible();
-  // 아무것도 고르지 않은 채로는 아무것도 저장되지 않는다
-  const 저장됨 = await page.evaluate(() => localStorage.getItem("kb23c-saved-settings-v4") !== null);
+  // 아무것도 고르지 않은 채로는 아무것도 저장되지 않는다 — 프로필도 세션도
+  const 저장됨 = await page.evaluate(() =>
+    localStorage.getItem("kb23c-profile-v1") !== null || localStorage.getItem("kb23c-session-v1") !== null);
   expect(저장됨, "고르기도 전에 저장돼 있습니다").toBe(false);
 });
 
@@ -87,7 +91,8 @@ test("6번 — 한 번의 조작으로 지워지고, 지웠다고 알린다", as
      되돌릴 수 없는 일을 확인받는 것이 아니다 — 삭제는 여전히 첫 화면에서 바로 닿는다. */
   await page.getByRole("button", { name: /네, 지우고 새로 시작할게요/ }).click();
 
-  const 남았나 = await page.evaluate(() => localStorage.getItem("kb23c-saved-settings-v4"));
+  const 남았나 = await page.evaluate(() =>
+    localStorage.getItem("kb23c-profile-v1") ?? localStorage.getItem("kb23c-session-v1"));
   expect(남았나, "지웠다고 했는데 기기에 남아 있습니다").toBeNull();
 });
 

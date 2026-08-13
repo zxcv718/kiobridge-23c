@@ -65,7 +65,10 @@ describe("검사망 자체를 먼저 확인한다", () => {
 
 describe("접근성 — 선언한 보증이 실제로 코드에 있는가", () => {
   it("모든 조작 요소가 최소 터치 타깃(48px) 이상이다", () => {
-    for (const sel of [".toggle", ".choice", ".btn", ".a11yrow", ".edithead", ".presetrow"]) {
+    /* .edithead 는 목록에서 빠졌다 — 수정 화면의 아코디언이 없어지면서(2차 QA 2026-08-13)
+       그 선택자 자체가 CSS 에서 사라졌다. 남은 조작 요소는 아래 «cursor: pointer 전수
+       검사»가 목록 없이도 전부 잡는다. */
+    for (const sel of [".toggle", ".choice", ".btn", ".a11yrow", ".presetrow"]) {
       const hs = minHeights(sel);
       expect(hs.length, `${sel} 에 min-height 선언이 없습니다`).toBeGreaterThan(0);
       for (const h of hs) {

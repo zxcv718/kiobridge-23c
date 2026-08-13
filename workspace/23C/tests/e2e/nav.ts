@@ -79,9 +79,26 @@ export async function 저장된내용펼치기(page: Page): Promise<void> {
   await expect(page.getByRole("region", { name: "이 기기에 저장된 기록" })).toBeVisible();
 }
 
+/**
+ * 주문을 마친 뒤(저장본을 비우지 않고) 홈으로 돌아온다.
+ *
+ * S04 에서 «저장하기»를 골랐다면 매장 연동도 남아(TC-XC-04 후속) 관문 없이 홈이 바로
+ * 서고, «이번만 사용»이었다면 관문이 먼저 선다 — 어느 쪽이 왔는지 보고 지난다.
+ */
+export async function 홈으로돌아가기(page: Page): Promise<void> {
+  await page.goto(HOME);
+  const 관문 = page.getByRole("button", { name: "QR 없이 계속하기" });
+  const 홈제목 = page.getByRole("heading", { name: /다시 오셨네요|KioBridge에 오신 걸 환영해요/ });
+  await expect(관문.or(홈제목).first()).toBeVisible();
+  if (await 관문.isVisible().catch(() => false)) await 관문.click();
+  await expect(홈제목).toBeVisible();
+}
+
 /** 홈을 연다. 저장본을 비우므로 늘 «최초 방문» 상태에서 시작한다.
  *  매장 QR 링크 없이 열면 연동 관문이 홈보다 먼저 나온다(기획 2026-08-12) —
- *  관문 자체는 lane-b.spec.ts 가 검사하므로 여기서는 «QR 없이» 지나 홈에 선다. */
+ *  관문 자체는 lane-b.spec.ts 가 검사하므로 여기서는 «QR 없이» 지나 홈에 선다.
+ *  연동을 마친 기기는 관문을 건너뛰지만(kb23c-store-v1, QA 1차 TC-XC-04), 그 기록도
+ *  localStorage 라 아래 clear() 가 함께 지운다 — «클리어 후 관문» 전제는 그대로다. */
 export async function openHome(page: Page): Promise<void> {
   await page.goto(HOME);
   await page.evaluate(() => localStorage.clear());
@@ -195,11 +212,23 @@ export async function approveToCartReview(page: Page): Promise<void> {
   await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 }
 
-/** 주문을 확정해 결과 화면까지 (라이브·체험 모드 모두 시안 라벨 «주문하기» 하나다). */
-export async function finishOrder(page: Page): Promise<void> {
+/**
+ * 주문을 확정해 결과 화면까지 (라이브·체험 모드 모두 시안 라벨 «주문하기» 하나다).
+ *
+ * 주문이 성공하면 결과 앞에 **S15 «안내·저장 유도»**가 선다(QA 1차 2026-08-13) —
+ * 세션(오늘의 답변·메뉴)을 남길지 여기서 정한다. 실행이 실패하면 결과로 바로 간다.
+ *
+ * @param save S15 에서 «저장하기»를 고를지. 기본은 «이번만 사용».
+ */
+export async function finishOrder(page: Page, save = false): Promise<void> {
   await page.getByRole("button", { name: "주문하기", exact: true }).click();
   /* level 2 를 지정한다 — 결과 화면 본문에 «주문 계획» 소제목(h3)이 생겨
      이름만으로 찾으면 둘이 걸린다. 화면 제목은 언제나 h2 하나뿐이다. */
-  await expect(page.getByRole("heading", { level: 2, name: /실행 결과|주문이 완성되었습니다|실행하지 못했습니다/ }))
-    .toBeVisible({ timeout: 20_000 });
+  const 저장질문 = page.getByRole("heading", { level: 2, name: /오늘 입력한 내용을 저장할까요/ });
+  const 결과 = page.getByRole("heading", { level: 2, name: /실행 결과|주문이 완성되었습니다|실행하지 못했습니다/ });
+  await expect(저장질문.or(결과)).toBeVisible({ timeout: 20_000 });
+  if (await 저장질문.count()) {
+    await page.getByRole("button", { name: save ? "저장하기" : "이번만 사용", exact: true }).click();
+  }
+  await expect(결과).toBeVisible({ timeout: 20_000 });
 }

@@ -101,6 +101,8 @@
 }
 .home-saved[open] > summary > [aria-hidden] { transform: rotate(180deg); }
 .home-savedbody { padding-bottom: 4px; }
+/* 무로그인 배지 한 줄 (QA 1차 TC-CP-13) — 알약 자체는 components.css 의 .kb-badge 다 */
+.home-badge { margin: 0 0 8px; }
 
 /* 저장된 내용을 고치는 자리 — 고칠 대상(카드) 바로 아래 */
 .home-edit {

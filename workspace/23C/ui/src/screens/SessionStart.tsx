@@ -1,6 +1,6 @@
 import React from "react";
 import { useFlow } from "../flow";
-import { FLOW_STEPS, QUESTIONS, answerLabel } from "../model";
+import { FLOW_STEPS, answerLabel } from "../model";
 import { candidateName } from "../logic";
 import { Card, Cta, Emphasize, Screen } from "../components";
 import "./profile.css";
@@ -22,20 +22,19 @@ import "./profile.css";
  */
 export function SessionStart() {
   const {
-    saved, fixture, a11y, storeToggle, setStoreToggle, startWizard, startFromSaved, setStep, } = useFlow();
+    savedSession, fixture, a11y, storeToggle, setStoreToggle, startWizard, startFromSaved, setStep, } = useFlow();
 
-  /* 저장 «의사»만 있고 답변이 없는 저장본이 있을 수 있다 — S03 에서 저장하기를 고르면
-     그 자리에서 화면 설정만 먼저 남기기 때문이다. 그건 «지난 주문»이 아니다. */
-  const prev = saved && QUESTIONS.some((q) => saved.answers[q.key] !== undefined) ? saved : null;
+  /* 세션 저장본은 답변이 있어야만 만들어진다(core/saved.ts splitSaved·S15) —
+     있으면 그것이 곧 «지난 주문»이다. 프로필(화면 설정)만 저장한 사람에게는 없다. */
+  const prev = savedSession;
   const storeName = fixture?.manifest.displayName ?? fixture?.manifest.name ?? "";
 
   /**
    * 처음부터 새로 고르기.
    *
-   * startWizard 는 새 흐름을 여는 함수라 저장 의사(storeToggle)까지 초기값으로 되돌린다.
-   * 이 흐름에서는 그 결정을 **바로 앞 화면(S03)에서 방금 받았으므로** 되돌려 놓으면
-   * 주문 확정 때 finishOrder 가 저장을 건너뛴다. 그래서 다시 세워 준다.
-   * (flow.tsx 를 고쳐 startWizard 가 저장 의사를 보존하게 하는 편이 옳다 — 통합 때 볼 것)
+   * startWizard 는 저장 의사(storeToggle)를 건드리지 않지만(그 결정은 바로 앞
+   * 화면 S03 에서 방금 받았다), 한때 되돌렸던 적이 있어 여기서 한 번 더 지켜 준다 —
+   * 값을 되돌리는 회귀가 나면 이 줄이 막는다.
    */
   const beginFresh = () => {
     const keep = storeToggle;

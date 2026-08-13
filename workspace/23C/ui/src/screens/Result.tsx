@@ -8,7 +8,11 @@ import "./cart.css";
 import "./finish.css";
 
 /**
- * 결과 화면 (+ 화면목록 S15 «안내·저장» · Figma 99:1830).
+ * 결과 화면.
+ *
+ * S15 «안내·저장 유도»는 이제 **제 화면이 따로 있다**(SavePrompt.tsx, QA 1차 2026-08-13).
+ * 주문이 확정되면 S15 가 먼저 «오늘 입력한 내용을 저장할까요?»를 묻고, 여기는 그 결정의
+ * 결과를 사실로 알리기만 한다 — 같은 결정을 두 번 시키지 않는다.
  *
  * **이 화면은 카드를 쌓지 않는다.**
  *
@@ -29,8 +33,8 @@ import "./finish.css";
  */
 export function Result() {
   const {
-    ev, outcome, runError, submitted, uiRec, fixture, setStep, answers, saved,
-    storeToggle, toggleStore, t, errResults, setErrResults, } = useFlow();
+    ev, outcome, runError, submitted, uiRec, fixture, setStep, answers, savedSession,
+    saveSession, discardSession, t, errResults, setErrResults, } = useFlow();
 
   /** 계획에서 읽어낸 사실 — 서버가 있든 없든 같은 함수가 같은 것을 읽는다. */
   const plan = submitted && fixture ? summarizeOrderPlan(submitted, fixture) : null;
@@ -52,7 +56,7 @@ export function Result() {
   /* 저장된(또는 저장되지 않은) 내용 — 디자인의 RecentOrderCard(185:227) 다섯 줄.
      값은 이번 세션의 답변에서 그대로 읽는다. */
   const savedRows: CardRow[] = [
-    { label: "메뉴명", value: fixture ? candidateName(fixture, menuId ?? saved?.lastCandidateId ?? null) : "(없음)" },
+    { label: "메뉴명", value: fixture ? candidateName(fixture, menuId ?? savedSession?.lastCandidateId ?? null) : "(없음)" },
     { label: "알레르기", value: answerLabel("allergies", answers.allergies) },
     { label: "맵기 선호", value: answerLabel("spicyLevel", answers.spicyLevel) },
     { label: "뼈/순살 선택", value: answerLabel("boneType", answers.boneType) },
@@ -83,8 +87,10 @@ export function Result() {
       actions={(
         <>
           <Cta tone="primary" label="처음으로" onClick={() => setStep("start")} />
-          {/* 저장은 이미 끝났다(finishOrder). 여기 버튼은 «마음이 바뀌었을 때» 하나뿐이다. */}
-          <Cta label={storeToggle ? "저장 지우기" : "이 기기에 저장하기"} onClick={toggleStore} />
+          {/* 저장 여부는 바로 앞 화면(S15)에서 물었다. 여기 버튼은 «마음이 바뀌었을 때»
+              하나뿐이고, 뒤집는 것은 **세션뿐**이다 — 프로필은 S04 의 결정이다. */}
+          <Cta label={savedSession ? "저장 지우기" : "이 기기에 저장하기"}
+            onClick={savedSession ? discardSession : saveSession} />
           {/* 화면이 길어도 도움은 늘 화면 아래에 붙어 있다 — 끝까지 내려가지 않아도 닿는다. */}
         </>
       )}
@@ -114,17 +120,17 @@ export function Result() {
         </div>
       )}
 
-      {/* 화면목록 S15 «안내·저장» — **묻는 곳이 아니라 알리는 곳이다.**
+      {/* 저장 안내 — **묻는 곳이 아니라 알리는 곳이다.**
        *
-       * 저장 여부는 프로필 단계에서 이미 여쭤봤고, 저장 자체는 주문이 확정되는 순간
-       * finishOrder() 가 끝냈다. 여기서 또 물으면 같은 결정을 두 번 시키는 것이고,
-       * 이미 저장된 사람에게는 «아직 저장되지 않았다»는 오해까지 준다.
+       * 세션을 남길지는 바로 앞 화면(S15 «안내·저장 유도»)에서 여쭤봤다. 여기서 또
+       * 물으면 같은 결정을 두 번 시키는 것이고, 이미 저장된 사람에게는 «아직 저장되지
+       * 않았다»는 오해까지 준다.
        *
        * 그래서 여기서는 셋만 한다 — 어떻게 됐는지 사실로 알리고, 무엇이 남았는지
        * 보여주고, 마음이 바뀌었을 때 뒤집을 길(화면 아래 버튼)을 하나 남긴다. */}
-      <h3 className="resfact">{storeToggle ? "이 기기에 저장했습니다" : "저장하지 않았습니다"}</h3>
+      <h3 className="resfact">{savedSession ? "이 기기에 저장했습니다" : "저장하지 않았습니다"}</h3>
       <p className="hint">
-        {storeToggle
+        {savedSession
           ? t(
             "다음에 오시면 한 번만 누르면 됩니다.",
             "아래 내용을 이 기기에 남겼습니다. 다음에 오시면 «지난번과 똑같이 주문하기» 한 번으로 끝납니다.",
@@ -138,7 +144,7 @@ export function Result() {
           «저장 지우기»라고 말하고 있어 같은 말을 두 번 하는 것이었고, 서버 저장 여부는
           시작 화면과 저장 방식(S03)에서 이미 밝힌다. 끝난 화면에서 규칙을 다시 읽히지 않는다. */}
       {storeName && <p className="res-store">{storeName}</p>}
-      <Card label={storeToggle ? "이 기기에 남은 내용" : "저장하지 않은 내용"} rows={savedRows} />
+      <Card label={savedSession ? "이 기기에 남은 내용" : "저장하지 않은 내용"} rows={savedRows} />
 
       {/* 실행 증거는 접어 둔다 — 심사·시연용이라 주문한 사람에게는 부차적이다.
           반면 **주문 계획 내려받기는 접지 않는다.** 시뮬레이터가 없는 환경에서는 그 파일이

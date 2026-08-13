@@ -10,7 +10,7 @@
  * 자기 자리를 차지하므로 아무것도 가리지 않는다.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { 아무거나답하고다음, 저장된내용펼치기, HOME, enterWizard, openHome } from "./nav";
+import { 아무거나답하고다음, 저장된내용펼치기, 홈으로돌아가기, approveToCartReview, enterWizard, finishOrder, openHome } from "./nav";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -18,7 +18,7 @@ const 아래버튼 = (page: Page) =>
   page.locator(".kb-actions button").evaluateAll((els) =>
     els.map((e) => (e.textContent ?? "").trim().replace(/\s+/g, " ")));
 
-/** 저장본을 만들고 홈으로 돌아온다 */
+/** 저장본(프로필+세션)을 만들고 홈으로 돌아온다 — 세션은 주문을 마쳐야 생긴다(S15) */
 async function 재방문홈(page: Page): Promise<void> {
   await openHome(page);
   await enterWizard(page, true);
@@ -26,8 +26,9 @@ async function 재방문홈(page: Page): Promise<void> {
     if (!(await page.locator("#qtitle").isVisible().catch(() => false))) break;
     await 아무거나답하고다음(page);
   }
-  await page.goto(HOME);
-  await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
+  await approveToCartReview(page);
+  await finishOrder(page, true);
+  await 홈으로돌아가기(page); // 저장하기를 고른 기기라 관문 없이 재방문 홈이 바로 선다(TC-XC-04)
   await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
 }
 
@@ -64,6 +65,7 @@ test("삭제와 수정 둘 다 닿는다 — 아래 버튼 자리를 쓰지 않�
   await page.getByRole("button", { name: "새로 설정하기" }).click();
   await expect(page.getByRole("alert")).toContainText("되돌릴 수 없습니다");
   await page.getByRole("button", { name: /네, 지우고 새로 시작할게요/ }).click();
-  const 남았나 = await page.evaluate(() => localStorage.getItem("kb23c-saved-settings-v4"));
+  const 남았나 = await page.evaluate(() =>
+    localStorage.getItem("kb23c-profile-v1") ?? localStorage.getItem("kb23c-session-v1"));
   expect(남았나, "«새로 설정»인데 기록이 남아 있습니다").toBeNull();
 });

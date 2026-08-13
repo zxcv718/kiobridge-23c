@@ -1,20 +1,16 @@
 import React from "react";
 import { useFlow } from "../flow";
-import { FLOW_STEPS } from "../model";
+import { FLOW_STEPS, prefersReducedMotion } from "../model";
 import { Card, Cta, Emphasize, Screen } from "../components";
 import "./profile.css";
 
 /**
- * 화면목록 S03 — 저장 방식. Figma 150:275.
+ * 화면목록 S03/S04 — 저장 방식 (프로필 저장 완료). Figma 150:275.
  *
- * **저장 여부를 묻는 자리는 여기 하나뿐이다.** 결과 화면(S15)에서 다시 묻지 않는다 —
- * 주문을 마친 사람에게 "다음 방문에도 쓸까요"를 묻는 것은 결정을 가장 피곤한 순간으로
- * 미루는 일이고, 공용 기기에서는 그 순간이 이미 자리를 뜬 뒤이기 때문이다.
- *
- * 다만 **실제 저장은 두 번 일어난다.** 여기서는 «의사»만 받아 그때 남길 수 있는 것
- * (화면 설정)을 남기고, 주문이 확정되는 순간 finishOrder 가 고른 메뉴까지 함께 다시
- * 남긴다. 프로필 단계에는 아직 고른 메뉴가 없어서 여기서만 저장하면
- * «지난번과 똑같이 주문하기»가 성립하지 않는다(flow.tsx 의 setStoreIntent 참고).
+ * **여기서 정하는 것은 프로필(화면 설정)의 저장뿐이다**(QA 1차 2026-08-13).
+ * 오늘의 답변·확정 메뉴(세션)는 주문을 마친 뒤 S15 «안내·저장 유도»가 따로 묻는다 —
+ * 프로필 단계에는 아직 남길 답변이 없고, 반대로 여기의 «이번만 사용»이 지난 주문
+ * 기록까지 지워 버리면 두 결정이 하나로 뭉개진다(실제로 그랬던 결함이다).
  *
  * 디자인대로 **결정이 곧 버튼이다** — «저장하기»·«이번만 사용» 두 개가 저장 방식을 정하고
  * 그대로 다음 화면으로 보낸다. 한때 이것을 라디오 두 장 + «다음»으로 바꿔 두었는데, 그건
@@ -24,6 +20,17 @@ import "./profile.css";
  */
 export function SaveChoice() {
   const { a11y, setStoreIntent, setProfileStep, setStep } = useFlow();
+
+  /* «저장하면 무엇이 남나요?» 는 화면 맨 아래라, 펼쳐도 설명이 접힌 화면 밖에 남는
+     일이 있었다(QA 1차). 펼치는 순간 설명이 보이는 자리까지 올린다. */
+  const willSaveRef = React.useRef<HTMLDetailsElement>(null);
+  const revealWillSave = () => {
+    const el = willSaveRef.current;
+    if (!el?.open) return; // 닫을 때는 화면을 움직이지 않는다
+    window.requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "nearest" });
+    });
+  };
 
   /** 요약 한 줄 — 값과 «수정»(진짜 버튼)을 함께 준다 (Figma SummaryCard 185:209). */
   const row = (label: string, value: string, to: 1 | 2 | 3) => ({
@@ -69,19 +76,18 @@ export function SaveChoice() {
       <p className="p-choose">저장 방식을 선택해주세요</p>
 
       {/* guide.txt 5번은 «저장 여부 선택 · 저장된 내용 확인 · 수정 · 삭제» 를 요구한다.
-          «내용 확인»이 저장한 뒤에만 되면 늦다 — 고르기 전에 무엇이 남는지 알아야 하고,
-          알레르기는 건강에 가까운 정보라 공용 기기에서 가장 민감한 항목이다.
+          «내용 확인»이 저장한 뒤에만 되면 늦다 — 고르기 전에 무엇이 남는지 알아야 한다.
           시안에는 이 설명이 없으므로 **접어 둔다** — 펴기 전 화면은 시안과 같고,
           알고 싶은 사람은 한 번 눌러 읽는다(홈의 «저장된 내용 보기»와 같은 방식이다). */}
-      <details className="home-saved">
+      <details className="home-saved" ref={willSaveRef} onToggle={revealWillSave}>
         <summary>저장하면 무엇이 남나요?<span aria-hidden="true">▾</span></summary>
         <div className="p-willsave">
           <ul>
-            <li>지금 고르신 <span>화면 설정</span> (글씨 크기·고대비·화면 안내 등)</li>
-            <li>주문을 마치면 <span>답해 주신 내용</span> — <b>알레르기</b>·맵기·형태·이용 방식·수량·예산</li>
-            <li>주문을 마치면 <span>고르신 메뉴</span> 하나</li>
+            <li>지금 고르신 <span>화면 설정</span> (글씨 크기·고대비·화면 안내 등) — 남는 것은 이것뿐입니다</li>
           </ul>
           <p>
+            오늘 답해 주실 내용(알레르기·맵기 등)과 고르실 메뉴는 여기서 저장되지 않습니다 —
+            주문을 마친 뒤에 저장할지 따로 여쭤봅니다.
             서버나 계정에는 아무것도 보내지 않습니다. 이 기기 안에만 남고, 홈 화면에서 언제든
             지우실 수 있습니다. 여러 사람이 쓰는 기기라면 <b>이번만 사용</b>을 권합니다.
           </p>

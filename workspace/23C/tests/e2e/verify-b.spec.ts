@@ -51,7 +51,7 @@ test.describe("B계열 — 신규 동작", () => {
   /* 「상관없어요」가 남은 질문은 맵기 하나다 — 형태·이용 방식에서는 뺐다(시안의 «둘 중
      하나»를 흐리지 않으려고). 그래서 «전부 상관없어요»라는 상태는 화면에서 만들 수 없고,
      여기서 재는 것은 **상관없다고 답한 항목을 메뉴 값으로 정하고 그 사실을 밝히는가**다. */
-  test("B2 '상관없어요'로 답한 항목은 메뉴 값으로 정하고 그 사실을 밝힌다", async ({ page }) => {
+  test("B2 '상관없어요'로 답한 항목은 메뉴 값으로 정해지고, 카드는 그 값만 보여준다", async ({ page }) => {
     await start(page);
     await enterWizard(page);
     await page.getByRole("button", { name: "없어요", exact: true }).click(); // 알레르기 없음
@@ -71,7 +71,10 @@ test.describe("B계열 — 신규 동작", () => {
     // 전부 답했으므로 생략 고지가 없어야 한다
     await expect(page.getByText(/여쭤보지 않았습니다/)).toHaveCount(0);
     await page.getByRole("button", { name: "선택하기", exact: true }).click();
-    await expect(page.getByText(/상관없다고 하셔서 이 메뉴의 값으로 정했습니다/).first()).toBeVisible();
+    /* 카드에는 선택된 옵션 값만 남는다(3차 QA 2026-08-13) — «상관없다고 하셔서 …» 출처
+       문장은 걷어냈다. 실제로 정해진 값 자체는 «옵션:» 줄이 그대로 보여준다. */
+    await expect(page.locator(".cart-box .cart-sub", { hasText: "옵션:" })).toBeVisible();
+    await expect(page.locator(".cart-box").getByText(/상관없다고 하셔서/)).toHaveCount(0);
   });
 
   test("B4 확정되지 않은 추천을 두 번 만나면 안전 중단 전용 화면", async ({ page }) => {
@@ -108,20 +111,12 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: "다시 추천받기" }).click();
     await page.getByRole("button", { name: "수정 완료" }).click();
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();
-    /* «아무 준비도 시작되지 않았다»는 안심은 그대로 있다 — 승인 전이므로 실행 계획도,
-       장바구니도 없다. 시안(99:1337)에 없는 문단이라 접혀 있을 뿐 없어지지 않았고,
-       한 번 눌러 닿는다 — 접었다는 이유로 세지 않으면 정말 사라진 날에도 통과한다. */
-    const 왜멈췄나 = page.locator("details.home-saved", {
-      has: page.locator("summary", { hasText: "왜 멈췄나요?" }),
-    });
-    await expect(왜멈췄나).toHaveCount(1);
-    await 왜멈췄나.locator("summary").click();
-    await expect(왜멈췄나).toContainText("정상적으로 끝난 것이 아닙니다");
-    await expect(왜멈췄나)
-      .toContainText("실행 계획이 만들어지지 않았고, 장바구니에도 아무것도 담기지 않았습니다");
+    /* «왜 멈췄나요?» 접힘은 1차 QA 후 사용자 결정으로 걷어냈다(2026-08-13) —
+       화면은 시안(99:1337) 조각과 출구 두 개뿐이다. 다시 생기면 여기서 걸린다. */
+    await expect(page.getByText("왜 멈췄나요?")).toHaveCount(0);
   });
 
-  test("B6 v3 저장본이 살아남고 v4 키로 옮겨진다", async ({ page }) => {
+  test("B6 v3 저장본이 살아남고 프로필·세션 키로 쪼개져 옮겨진다", async ({ page }) => {
     await page.goto("http://localhost:5173/");
     await page.evaluate(() => {
       localStorage.clear();
@@ -137,10 +132,16 @@ test.describe("B계열 — 신규 동작", () => {
     await 저장된내용펼치기(page);
     await expect(page.getByText(/땅콩/)).toBeVisible();
 
+    /* 저장소가 프로필·세션 둘로 나뉘었다(QA 1차 2026-08-13) — 옛 통합 저장본은
+       화면 설정이 프로필 키로, 답변이 세션 키로 가고, 옛 키는 지워진다. */
     const moved = await page.evaluate(() => ({
-      v4: localStorage.getItem("kb23c-saved-settings-v4") !== null,
+      profile: localStorage.getItem("kb23c-profile-v1") !== null,
+      session: localStorage.getItem("kb23c-session-v1") !== null,
+      v4: localStorage.getItem("kb23c-saved-settings-v4") === null,
       v3: localStorage.getItem("kb23c-saved-settings-v3") === null,
     }));
+    expect(moved.profile).toBe(true);
+    expect(moved.session).toBe(true);
     expect(moved.v4).toBe(true);
     expect(moved.v3).toBe(true);
   });
@@ -179,15 +180,17 @@ test.describe("B계열 — 신규 동작", () => {
     // CTA 는 시안 라벨 «주문하기» 하나다 — 라이브(실행)든 체험 모드(계획 보관)든 같다
     await page.getByRole("button", { name: "주문하기", exact: true }).click();
 
-    /* 결과 화면(S15)은 저장을 **다시 묻지 않는다.** 저장 여부는 프로필 단계(S03)에서
-       이미 한 번 물었고, 같은 결정을 두 번 묻는 것은 통제권이 아니라 부담만 늘린다.
-       여기서는 어떻게 됐는지 사실로 알리고, 마음을 바꿀 길만 남긴다. */
-    await expect(page.getByRole("heading", { name: /^(이 기기에 저장했습니다|저장하지 않았습니다)$/ })).toBeVisible();
-    await expect(page.getByText(/다음에도 쓰시게 저장할까요/)).toHaveCount(0);
+    /* 주문이 끝나면 S15 «안내·저장 유도»가 **세션(오늘의 답변·메뉴)** 저장을 묻는다
+       (QA 1차 2026-08-13). 프로필(화면 설정)은 S03 에서 이미 정했으므로 같은 결정을
+       두 번 묻는 것이 아니다 — 두 저장은 대상이 다르다. 범위를 쪼개 묻지 않는 것은
+       그대로다. */
+    await expect(page.getByRole("heading", { name: /오늘 입력한 내용을 저장할까요/ })).toBeVisible();
     await expect(page.getByRole("group", { name: "저장 범위" })).toHaveCount(0); // 범위는 묻지 않는다
+    await page.getByRole("button", { name: "이번만 사용", exact: true }).click();
 
-    // 이 흐름은 S03 에서 기본값(이번만 사용)으로 지나왔으므로 «저장 안 함»이어야 한다
+    // 결과 화면은 그 결정을 사실로 알린다 — 다시 묻지 않는다
     await expect(page.getByRole("heading", { name: "저장하지 않았습니다" })).toBeVisible();
+    await expect(page.getByText(/저장할까요/)).toHaveCount(0);
     // 마음을 바꿀 길은 남아 있다 — 뒤집으면 그 자리에서 저장된다
     await page.getByRole("button", { name: "이 기기에 저장하기" }).click();
     await expect(page.getByRole("heading", { name: "이 기기에 저장했습니다" })).toBeVisible();

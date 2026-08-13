@@ -2,7 +2,7 @@ import React from "react";
 import { useFlow } from "../flow";
 import { A11Y_ITEMS, EDIT_LABELS, FLOW_STEPS, QUESTIONS, answerLabel } from "../model";
 import { candidateName, readUrlStoreCode } from "../logic";
-import { Card, Cta, Screen } from "../components";
+import { Badge, Card, Cta, Screen } from "../components";
 import "./profile.css";
 import "./qr.css";
 
@@ -26,7 +26,11 @@ import "./qr.css";
  * 안에서 무엇이 저장됐는지 보고 고칠 수 있다.
  */
 export function Home() {
-  const { saved, fixture, savedCoversAll, startFromSaved, deleteSaved, editSaved, setStep } = useFlow();
+  const { savedProfile, savedSession, fixture, savedCoversAll, startFromSaved, deleteSaved, editSaved, setStep } = useFlow();
+
+  /* 저장본이 둘로 나뉘었다(QA 1차 2026-08-13) — 프로필(화면 설정)과 세션(답변·지난 메뉴).
+     이 화면은 «무엇이 남아 있는가»에 따라 세 상태다: 세션 있음 / 프로필만 / 없음. */
+  const hasSaved = !!savedProfile || !!savedSession;
 
   /* ── 매장 QR 링크 확인 ──
    * QR 걸음이 흐름에서 빠지면서(기획 2026-08-12) 매장 QR 링크(?env=)로 열린 방문은
@@ -57,33 +61,39 @@ export function Home() {
    * «저장된 정보를 조회·수정·삭제할 수 있어야 합니다»라고 적혀 있고, 조회는 «일부를
    * 조회»가 아니다. 비어 있는 항목은 여전히 줄을 만들지 않는다 — 없는 것을 «아직 선택
    * 안 함»으로 채우면 저장된 것보다 저장 안 된 것이 더 눈에 띈다. */
-  const savedRows = saved
+  const savedRows = hasSaved
     ? [
-      ...(saved.lastCandidateId && fixture
-        ? [{ label: "지난 메뉴", value: candidateName(fixture, saved.lastCandidateId) }]
+      ...(savedSession?.lastCandidateId && fixture
+        ? [{ label: "지난 메뉴", value: candidateName(fixture, savedSession.lastCandidateId) }]
         : []),
       ...QUESTIONS
-        .filter((q) => saved.answers[q.key] !== undefined)
-        .map((q) => ({ label: EDIT_LABELS[q.key] ?? q.key, value: answerLabel(q.key, saved.answers[q.key]) })),
-      { label: "화면 설정", value: A11Y_ITEMS.filter((i) => saved.a11y[i.key] === true).map((i) => i.label).join("·") || "기본" },
+        .filter((q) => savedSession?.answers[q.key] !== undefined)
+        .map((q) => ({ label: EDIT_LABELS[q.key] ?? q.key, value: answerLabel(q.key, savedSession!.answers[q.key]) })),
+      /* 화면 설정 줄은 프로필이 실제로 저장돼 있을 때만 — 세션만 남은 기기에서
+         «화면 설정: 기본»을 그리면 저장 안 된 것을 저장됐다고 말하는 셈이다. */
+      ...(savedProfile
+        ? [{ label: "화면 설정", value: A11Y_ITEMS.filter((i) => savedProfile.a11y[i.key] === true).map((i) => i.label).join("·") || "기본" }]
+        : []),
     ]
     : [];
 
   return (
     <Screen
       steps={{ labels: FLOW_STEPS, current: 2 }}
-      label={saved ? "다시 오신 것을 확인하는 시작 화면" : "시작 화면"}
+      label={hasSaved ? "다시 오신 것을 확인하는 시작 화면" : "시작 화면"}
       /* 시안 150:184 · 150:212 — 한 문장이 통째로 22px Bold 다. 강조어를 키우는 것은
          질문 화면(99:1276)의 문법이지 여기 것이 아니다. */
-      title={saved ? "다시 오셨네요" : "KioBridge에 오신 걸 환영해요"}
-      subtitle={saved
-        /* 시안 150:213 은 «화면 설정»만 말한다. 저장본에 답변 여섯 개가 다 들어 있을
-           때는 그 문장이 실제보다 적게 말하므로, 그 경우에만 우리 문장을 쓴다. */
-        ? (savedCoversAll
-          ? "이 기기에 지난번 주문과 화면 설정이 남아 있어요"
+      title={hasSaved ? "다시 오셨네요" : "KioBridge에 오신 걸 환영해요"}
+      subtitle={hasSaved
+        /* 시안 150:213 은 «화면 설정»만 말한다. 실제로 남아 있는 것만 말한다 —
+           세션(지난 주문)이 있으면 그것을, 프로필만 있으면 화면 설정만. */
+        ? (savedSession
+          ? (savedProfile
+            ? "이 기기에 지난번 주문과 화면 설정이 남아 있어요"
+            : "이 기기에 지난번 주문 내역이 남아 있어요")
           : "이 기기에 저장된 화면 설정이 있어요")
         : "몇 가지만 물어보고 화면을 맞춤 설정해드릴게요"}
-      actions={saved
+      actions={hasSaved
         ? asking
           /* 되묻는 중 — 아래 버튼 자리를 그대로 쓴다. 새 창을 띄우거나 버튼을 늘리는 대신
              같은 자리에서 «무엇을 물어보는지»만 바뀐다. 되돌릴 수 없는 쪽을 주 버튼으로
@@ -98,7 +108,8 @@ export function Home() {
                 시안 라벨을 붙이면 이름과 하는 일이 어긋난다. 시안이 그린 경우(설정만
                 저장)에는 시안 문구를 그대로 쓰고, 그 밖의 경우에만 우리가 적는다. */}
             <Cta tone="primary" disabled={!fixture} onClick={startFromSaved}
-              label={savedCoversAll ? "지난번과 똑같이 주문하기" : "이전 화면 설정 사용"} />
+              label={savedCoversAll ? "지난번과 똑같이 주문하기"
+                : savedSession ? "저장된 내용으로 시작하기" : "이전 화면 설정 사용"} />
             {/* 시안 라벨 「새로 설정하기」 — 이름 그대로 **지난 기록을 버리고** 다시 정한다.
                 한때 이 버튼은 지우지 않고 화면만 옮겼고, 지우기는 따로 한 장 더 있었다.
                 두 버튼이 같은 뜻으로 읽힌다는 지적이 맞았다 — 이름이 하는 말과 코드가 하는
@@ -124,7 +135,7 @@ export function Home() {
           </p>
         ))}
 
-      {saved && (
+      {hasSaved && (
         <>
           {/* 무로그인 가이드 4번의 «조회·수정». 시안에는 없으므로 **접어 둔다** —
               펴기 전 화면은 시안(150:190)과 같고, 무엇이 저장됐는지 확인하려는 사람은
@@ -137,16 +148,25 @@ export function Home() {
               <span aria-hidden="true">▾</span>
             </summary>
             <div className="home-savedbody">
+              {/* 무로그인 배지 (QA 1차 TC-CP-13) — 이 기록의 «성격»을 내용보다 먼저 말한다:
+                  계정에 올라간 것이 아니라 이 기기에만 임시로 남은 것이다. 자리는 PO 확정
+                  그대로 카드 위 한 줄이고, 부품은 메뉴 확인의 상태 알약(Badge)을 그대로 쓴다 —
+                  가라앉은 회색 바탕에 본문색이라 대비(15.3:1)도 그 부품의 것이다. */}
+              <p className="home-badge"><Badge>무로그인 · 이 기기에만 임시 저장됨</Badge></p>
               <Card label="이 기기에 저장된 기록" rows={savedRows} />
               <p className="p-note">
                 {savedCoversAll ? "저장된 항목은 다시 여쭤보지 않습니다." : "저장돼 있지 않은 것만 다시 여쭤봅니다."}
               </p>
               {/* 고칠 길을 **고칠 대상 바로 아래** 둔다. 조회와 삭제는 있었는데 수정만
-                  없어서, 한 항목을 바꾸려면 주문을 처음부터 다시 해야 했다. 그건 수정이 아니다. */}
-              <button type="button" className="btn ghost home-edit" onClick={editSaved}>
-                저장된 내용 수정
-                <small>지우지 않고 항목만 고칩니다.</small>
-              </button>
+                  없어서, 한 항목을 바꾸려면 주문을 처음부터 다시 해야 했다. 그건 수정이 아니다.
+                  고칠 수 있는 것은 세션(답변)이다 — 프로필만 남은 기기에는 이 버튼이 없고,
+                  화면 설정은 «새로 설정하기»로 다시 정한다. */}
+              {savedSession && (
+                <button type="button" className="btn ghost home-edit" onClick={editSaved}>
+                  저장된 내용 수정
+                  <small>지우지 않고 항목만 고칩니다.</small>
+                </button>
+              )}
             </div>
           </details>
 

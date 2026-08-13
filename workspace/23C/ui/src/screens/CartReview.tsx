@@ -6,14 +6,19 @@ import { ChoiceGrid } from "../components/ChoiceGrid";
 import { Stepper } from "../components/Stepper";
 import { GROUP_KO, OPTION_KO, QUANTITY_MAX, QUESTIONS } from "../model";
 import { buildExecutionPlanCore, explainSelections, type PlanSelection } from "../../../src/core/plan";
-import { candidateName, candidatePrice } from "../logic";
+import { candidateMaxQty, candidateName, candidatePrice } from "../logic";
 import "./cart.css";
 
 /**
  * 화면목록 S13 — 장바구니(최종) 확인 (Figma 99:1798 · 2026-08-12 시안 대조로 재정렬).
  *
  * 레이아웃 — 매장 이름(캡션이자 화면 제목) → 메뉴 카드(수량 스테퍼·가격·성분·옵션) →
- * 구분선 → 주문 방식(선택 버튼) → 구분선 → 총 가격 → 수정하기 → 주문하기.
+ * 구분선 → 주문 방식(선택 버튼) → 구분선 → 총 가격 → 주문하기.
+ *
+ * 시안의 [수정하기] 버튼은 없어졌다(QA 1차 TC-CM-08) — 수량·주문 방식이 그 자리에서
+ * 고쳐지는 지금, 조건 수정 화면(S14)으로 가는 이 진입은 인라인 수정과 겹치는 중복
+ * 입구였다. 메뉴·다른 조건을 다시 고치는 길은 뒤로가기 → 메뉴 확인의 «다시 추천받기»다
+ * (S14 자체는 남는다 — 그 길과 홈 «저장된 내용 수정»의 유일한 입구다).
  * 큰 제목 문장은 시안에 없다 — 매장 이름 줄이 이 화면의 제목을 겸한다(h2 는 유지 —
  * 화면 제목이 h2 하나라는 전제를 낭독기와 e2e 가 쓴다. 크기는 CSS 가 시안의 15px 로 내린다).
  *
@@ -87,6 +92,36 @@ const CUP_SENTENCE: Record<string, string> = {
 /** 주문 방식 질문 — 마법사(S08)와 같은 질문·같은 부품으로 그 자리에서 고친다. */
 const SERVICE_Q = QUESTIONS.find((x) => x.key === "serviceType")!;
 
+/** 답변 값(매장/포장) ↔ 계약 enum — 담긴 메뉴의 supportedOptions 와 대조할 때 쓴다. */
+const SVC_ENUM: Record<string, string> = { 매장: "DINE_IN", 포장: "TAKE_OUT" };
+
+/** 한쪽만 가능한 메뉴의 이유 문장 — 열쇠는 «유일하게 가능한» 쪽이다. */
+const SVC_ONLY_NOTE: Record<string, string> = {
+  TAKE_OUT: "이 메뉴는 포장만 가능해요. 먹고 가시려면 뒤로 가서 메뉴를 다시 골라 주세요.",
+  DINE_IN: "이 메뉴는 먹고 가기만 가능해요. 포장하시려면 뒤로 가서 메뉴를 다시 골라 주세요.",
+};
+
+/**
+ * 수량 행의 출처를 바로잡는다 (QA 1차 TC-CM-06).
+ *
+ * core/plan.ts 의 preferenceByGroup 에는 QUANTITY 가 없어서, 사용자가 «5개»를 직접
+ * 골랐어도 explainSelections 가 그 행을 AUTO(=상관없다고 하셔서)로 표시한다.
+ * 한때는 계획이 고른 수량 옵션의 값과 대조해 다르면 «대체»로 표시했는데, 그러면
+ * 눈금(1·2·3) 밖의 수량 5에 «원하신 5개는 이 메뉴에 없어 바꿨습니다»가 떴다 —
+ * 계약의 수량은 자유 정수(integer ≥ 1)이고 화면의 수량·가격·제출이 전부 사용자의
+ * 수를 그대로 쓰므로, 옵션 눈금은 키오스크 조작의 사정이지 주문의 사실이 아니다.
+ * 그래서 수량을 말한 사람의 행은 언제나 USER 다. 말한 적 없으면 AUTO 그대로 둔다 —
+ * 우리가 1로 정했다는 사실은 숨기지 않는다.
+ * (근본 수정은 plan.ts 의 preferenceByGroup 에 QUANTITY 를 더하는 것이다.)
+ */
+export function fixQuantityOrigin(sels: PlanSelection[], wantedQty: number | undefined): PlanSelection[] {
+  return sels.map((x) =>
+    x.groupId === "QUANTITY" && x.origin === "AUTO" && wantedQty !== undefined
+      ? { ...x, origin: "USER" as const }
+      : x,
+  );
+}
+
 /** 우리가 정했거나 바꾼 값의 사유 한 문장 — 주문 방식 줄과 카드 보조줄이 같이 쓴다. */
 function originNote(x: PlanSelection): string | null {
   if (x.origin === "AUTO") return "상관없다고 하셔서 이 메뉴의 값으로 정했습니다";
@@ -99,56 +134,54 @@ function originNote(x: PlanSelection): string | null {
 
 export function CartReview() {
   const {
-    uiRec, fixture, live, sessionInput, setSessionInput, runSimulation,
-    setStep, openEdit, confirmOffline, answers, applyCartAnswers,
+    uiRec, fixture, live, runSimulation,
+    setStep, confirmOffline, answers, applyCartAnswers,
   } = useFlow();
   if (!uiRec || !fixture) return null;
 
   const id = uiRec.rec.recommendedCandidateId;
   const qty = Number(uiRec.engineCtx.preferences.quantity ?? 1);
   const unit = candidatePrice(fixture, id) ?? 0;
+  /* 수량 상한은 담긴 메뉴의 자료(candidates.json QUANTITY)다 — 사용자 확정 2026-08-13.
+     자료가 없을 때만 QUANTITY_MAX 가 마지막 안전판이다. */
+  const qtyMax = candidateMaxQty(fixture, id) ?? QUANTITY_MAX;
 
   const preview = buildExecutionPlanCore(
     { approved: true, decision: "APPROVE" }, uiRec.rec, fixture, uiRec.engineCtx,
   );
 
-  /* 수량의 출처를 바로잡는다.
-   *
-   * core/plan.ts 의 preferenceByGroup 에는 QUANTITY 가 없어서, 사용자가 «2개»를 직접
-   * 골랐어도 explainSelections 가 그 행을 AUTO(=상관없다고 하셔서)로 표시한다.
-   * 값 자체는 맞지만 **사유가 사실이 아니다** — 고른 사람에게 "안 골랐다"고 말하는 꼴이다.
-   * 계약 로직은 이 레인에서 고치지 않으므로, 화면에서 계획과 대조해 바로잡는다:
-   * 계획이 고른 수량 옵션의 값이 사용자가 말한 수량과 같으면 USER, 다르면 대체다.
-   * (근본 수정은 plan.ts 의 preferenceByGroup 에 QUANTITY 를 더하는 것이다.) */
-  const wantedQty = uiRec.engineCtx.preferences.quantity;
-  const qtyGroup = fixture.optionGroups.find((g) => g.groupId === "QUANTITY");
-  const qtyValueOf = (optionId: string): number | undefined =>
-    (qtyGroup?.options.find((o) => o.id === optionId) as { value?: number } | undefined)?.value;
+  // 수량 행의 출처 보정 — 왜 이렇게 하는지는 fixQuantityOrigin 머리주석에 있다 (TC-CM-06)
+  const sels: PlanSelection[] = fixQuantityOrigin(
+    explainSelections(fixture, preview, uiRec.engineCtx),
+    uiRec.engineCtx.preferences.quantity,
+  );
 
-  const sels: PlanSelection[] = explainSelections(fixture, preview, uiRec.engineCtx).map((x): PlanSelection => {
-    if (x.groupId !== "QUANTITY" || x.origin !== "AUTO" || wantedQty === undefined) return x;
-    return qtyValueOf(x.id) === wantedQty
-      ? { ...x, origin: "USER" }
-      : { ...x, origin: "SUBSTITUTED", wanted: `${wantedQty}개` };
-  });
-
-  const need = sels.filter((x) => x.origin !== "USER");
   /* 주문 방식 절 — SERVICE_TYPE 은 그 자리에서 고치는 버튼이 됐고, CUP 은 화면이 묻지
      않는 값이라(질문 6개) 계획에 실려 있을 때만 문장으로 보여준다. */
   const waySel = sels.find((x) => x.groupId === "SERVICE_TYPE");
   const cupSel = sels.find((x) => x.groupId === "CUP");
   /* 카드의 «옵션:» 줄 (시안) — 주문 방식·수량을 뺀 메뉴 옵션 값들. 수량은 메뉴 줄의
-     «x N개»가 이미 말하므로 두 번 적지 않는다. */
+     «x N개»가 이미 말하므로 두 번 적지 않는다.
+     «원하신 …은 없어 바꿨습니다» 보조줄은 없어졌다(3차 QA 2026-08-13 — 카드에는 선택된
+     옵션만 남긴다). 어긋남을 숨기는 것은 아니다 — 메뉴 확인의 «주의 필요»가 같은
+     사실을 담기 전에 말하고, 뒤로 한 칸이면 다시 볼 수 있다. */
   const opt = sels.filter((x) => !WAY_GROUPS.has(x.groupId) && x.groupId !== "QUANTITY");
-  /* 옵션 값 중 우리가 정했거나 바꾼 것 — 시안에는 없는 정보지만, 카드 보조줄로 이유를
-     밝힌다. 화면이 «고르신 대로»가 아닌 것을 고른 것처럼 말하면 안 된다. */
-  const optNeed = need.filter((x) => !WAY_GROUPS.has(x.groupId));
 
   // 성분 — 등록하신 알레르기가 이 메뉴에 들어 있지 않다는 사실 (fixture 의 후보 속성에서 읽는다)
   const declared = uiRec.engineCtx.hardConstraints.allergenIds ?? [];
   const unsure = declared.includes("UNKNOWN");
   const candidate = fixture.candidates.find((c) => c.candidateId === id) as
     (Candidate & { attributes?: { allergenIds?: string[] } }) | undefined;
+
+  /* 이 메뉴가 지원하는 주문 방식만 누를 수 있다(사용자 확정 2026-08-13). 불가능한 쪽을
+     열어 두면 메뉴 유지 고정(recommendKeeping)이 실패해 결제 직전에 메뉴가 소리 없이
+     바뀐다 — 장바구니의 «메뉴는 안 바뀐다» 계약이 정확히 그 사고를 막으려는 것이다.
+     방식 때문에 메뉴를 바꾸는 결정은 메뉴 확인 화면(대안 카드·다시 추천받기)의 관할이라,
+     여기서는 잠그고 아래 한 줄이 어디로 가야 하는지 말한다. */
+  const svcSupported = candidate?.supportedOptions?.SERVICE_TYPE ?? [];
+  const svcDisabled = svcSupported.length > 0
+    ? SERVICE_Q.options.map((o) => o.value).filter((v) => !svcSupported.includes(SVC_ENUM[String(v)]))
+    : [];
   const inMenu = candidate?.attributes?.allergenIds ?? [];
   const free = declared.filter((a) => ALLERGEN_KO[a] && !inMenu.includes(a)).map((a) => ALLERGEN_KO[a]);
 
@@ -171,17 +204,14 @@ export function CartReview() {
          h2 는 유지하고 크기만 CSS(.cart-store 스코프)가 시안의 15px 로 내린다. */
       title={<span className="cart-store">{store}</span>}
       actions={(
-        <>
-          {/* 시안 버튼 순서 그대로 — 수정하기(흰) 위, 주문하기(주황) 아래 */}
-          <Cta label="수정하기" onClick={openEdit} />
-          <Cta tone="primary" disabled={blocked} label="주문하기"
-            onClick={live ? runSimulation : confirmOffline} />
-        </>
+        /* [수정하기]는 없어졌다(파일머리 주석 · QA 1차 TC-CM-08) — 주 버튼 하나만 남는다 */
+        <Cta tone="primary" disabled={blocked} label="주문하기"
+          onClick={live ? runSimulation : confirmOffline} />
       )}
     >
       {blocked && (
         <p className="banner warn" role="alert">
-          확실하지 않은 정보가 있어요. 임의로 판단하지 않습니다 — «수정하기»에서 조건을 확인해 주시거나, 직원 도움을 이용해 주세요.
+          확실하지 않은 정보가 있어요. 임의로 판단하지 않습니다 — 뒤로 가서 조건을 다시 확인해 주시거나, 직원 도움을 이용해 주세요.
         </p>
       )}
 
@@ -194,9 +224,9 @@ export function CartReview() {
         {/* «x 1개» 글자였던 자리 — 질문 화면(S10)과 같은 스테퍼로 그 자리에서 고친다 */}
         <div className="cart-qtyrow">
           <span className="cart-cap">수량</span>
-          <Stepper label="수량" value={qty} max={QUANTITY_MAX}
+          <Stepper label="수량" value={qty} max={qtyMax}
             onChange={(n) => { if (n !== qty) applyCartAnswers({ ...answers, quantity: n }); }}
-            atMaxNote={<>한 번에 {QUANTITY_MAX}개까지 고르실 수 있어요.</>} />
+            atMaxNote={<>이 메뉴는 한 번에 {qtyMax}개까지 주문할 수 있어요. 더 필요하시면 매장 직원에게 말씀해 주세요.</>} />
         </div>
         {free.length > 0 && <p className="cart-sub">성분: <b>{free.join(", ")}</b> 없음</p>}
         {unsure && (
@@ -208,19 +238,16 @@ export function CartReview() {
         {opt.length > 0 && (
           <p className="cart-sub">옵션: {opt.map((x) => OPTION_KO[x.id] ?? x.id).join(", ")}</p>
         )}
-        {/* 옵션 값 중 우리가 정했거나 바꾼 것은 이유를 함께 밝힌다 (시안에 없는 상태 — 정직이 우선) */}
-        {optNeed.map((x) => (
-          <p className="cart-sub" key={x.groupId}>
-            {GROUP_KO[x.groupId] ?? x.groupId}: {originNote(x)}
-          </p>
-        ))}
       </div>
 
       <hr className="cart-div" />
       <h3 className="cart-cap">주문 방식</h3>
-      {/* 눌린 값은 사용자의 답이다. 메뉴가 그 방식을 지원하지 않으면 아래 보조줄이
-          실제로 어떻게 되는지 밝힌다 — 고른 것처럼 꾸미지 않는 선이 이 화면의 계약이다. */}
-      <ChoiceGrid q={SERVICE_Q} answers={answers} setAnswers={pickAnswers} />
+      {/* 눌린 값은 사용자의 답이다. 이 메뉴가 지원하지 않는 쪽은 잠겨 있고,
+          왜 잠겼는지는 바로 아래 한 줄이 말한다 — 고른 것처럼 꾸미지 않는 선이 이 화면의 계약이다. */}
+      <ChoiceGrid q={SERVICE_Q} answers={answers} setAnswers={pickAnswers} disabledValues={svcDisabled} />
+      {svcSupported.length === 1 && SVC_ONLY_NOTE[svcSupported[0]] && (
+        <p className="cart-sub">{SVC_ONLY_NOTE[svcSupported[0]]}</p>
+      )}
       {waySel && waySel.origin !== "USER" && (
         <p className="cart-sub">{GROUP_KO[waySel.groupId] ?? waySel.groupId}: {originNote(waySel)}</p>
       )}
@@ -237,11 +264,9 @@ export function CartReview() {
         <b>{(unit * qty).toLocaleString()}원</b>
       </div>
 
-      {live && (
-        <label className="field">공식 시뮬레이터 세션에 제출하기 (선택 — 시뮬레이터 화면의 세션 ID 입력)
-          <input value={sessionInput} onChange={(e) => setSessionInput(e.target.value)} placeholder="예: SIM-20260806-003 (비우면 새 세션)" />
-        </label>
-      )}
+      {/* «공식 시뮬레이터 세션 ID 입력»칸이 여기 있었다 — 심사 시연용 재생 기능이었는데
+          주문하는 사람의 화면에 낄 물건이 아니라 걷어냈다(1차 QA 후 사용자 결정 2026-08-13).
+          라이브 실행은 그대로 된다: 비우면 새 세션이던 동작이 이제 항상 새 세션일 뿐이다. */}
     </Screen>
   );
 }

@@ -10,7 +10,7 @@
  * 고르는 순간 지난번 답변이 빈 값으로 덮이고 있었다. **저장을 고른 사람이 잃는다.**
  */
 import { expect, test, type Page } from "@playwright/test";
-import { 아무거나답하고다음, 저장된내용펼치기, HOME, approveToCartReview, enterWizard, finishOrder, openHome } from "./nav";
+import { 아무거나답하고다음, 저장된내용펼치기, 홈으로돌아가기, approveToCartReview, enterWizard, finishOrder, openHome } from "./nav";
 
 test.use({ viewport: { width: 390, height: 844 } });
 
@@ -20,13 +20,20 @@ async function 새로시작(page: Page): Promise<void> {
   await page.getByRole("button", { name: /네, 지우고 새로 시작할게요/ }).click();
 }
 
-const 저장본 = (page: Page) =>
+/* 저장소는 둘이다(QA 1차 2026-08-13) — 세션(답변·확정 메뉴)과 프로필(화면 설정).
+   각자 저장·삭제가 따로 노는 것이 이 분리의 요지라, 검사도 두 키를 따로 읽는다. */
+const 세션저장본 = (page: Page) =>
   page.evaluate(() => {
-    const raw = localStorage.getItem("kb23c-saved-settings-v4");
+    const raw = localStorage.getItem("kb23c-session-v1");
     return raw ? (JSON.parse(raw) as { answers?: Record<string, unknown> }) : null;
   });
+const 프로필저장본 = (page: Page) =>
+  page.evaluate(() => {
+    const raw = localStorage.getItem("kb23c-profile-v1");
+    return raw ? (JSON.parse(raw) as { a11y?: Record<string, unknown> }) : null;
+  });
 
-/** 저장하기를 고르고 주문을 끝까지 마쳐 저장본을 만든 뒤 홈으로 돌아온다 */
+/** 프로필(S04)과 세션(S15) 모두 «저장하기»로 주문을 마쳐 저장본을 만든 뒤 홈으로 돌아온다 */
 async function 저장본만들기(page: Page): Promise<void> {
   await openHome(page);
   await enterWizard(page, true);
@@ -35,26 +42,28 @@ async function 저장본만들기(page: Page): Promise<void> {
     await 아무거나답하고다음(page);
   }
   await approveToCartReview(page);
-  await finishOrder(page);
-  await page.goto(HOME);
-  await page.getByRole("button", { name: "QR 없이 계속하기" }).click(); // 연동 관문을 지나 재방문 홈으로
+  await finishOrder(page, true); // S15 «오늘 입력한 내용을 저장할까요?» → 저장하기
+  await 홈으로돌아가기(page); // 저장하기를 고른 기기라 관문 없이 재방문 홈이 바로 선다(TC-XC-04)
   await expect(page.getByRole("heading", { name: /다시 오셨네요/ })).toBeVisible();
-  expect((await 저장본(page))?.answers?.allergies, "저장본이 만들어지지 않았습니다").toBeDefined();
+  expect((await 세션저장본(page))?.answers?.allergies, "세션 저장본이 만들어지지 않았습니다").toBeDefined();
+  expect(await 프로필저장본(page), "프로필 저장본이 만들어지지 않았습니다").not.toBeNull();
 }
 
-test("«새로 설정하기»는 이름 그대로 지운다 — 그리고 지웠다고 알린다", async ({ page }) => {
+test("«새로 설정하기»는 이름 그대로 지운다 — 세션과 프로필 모두", async ({ page }) => {
   await 저장본만들기(page);
   /* 한때 이 버튼은 지우지 않고 화면만 옮겼고, 지우기는 따로 한 장 더 있었다. 두 버튼이
      같은 뜻으로 읽힌다는 지적이 맞았다 — 이름이 하는 말과 코드가 하는 일이 달랐다. */
   await 새로시작(page);
 
-  expect(await 저장본(page), "«새로 설정»인데 지난 기록이 남아 있습니다").toBeNull();
-  // 무로그인 가이드 6번 — 지웠다고 알려줘야 한다. 화면이 바뀐 것으로 추측하게 두지 않는다.
+  // «처음부터 새로 시작»은 완전 초기화다(QA 확정 2026-08-13) — 반쪽만 지우지 않는다
+  expect(await 세션저장본(page), "«새로 설정»인데 지난 주문이 남아 있습니다").toBeNull();
+  expect(await 프로필저장본(page), "«새로 설정»인데 화면 설정이 남아 있습니다").toBeNull();
 });
 
 test("되돌릴 수 없는 일이므로 한 번 되묻고, 아니라고 하면 그대로 둔다", async ({ page }) => {
   await 저장본만들기(page);
-  const 원래 = await 저장본(page);
+  const 원래세션 = await 세션저장본(page);
+  const 원래프로필 = await 프로필저장본(page);
 
   await page.getByRole("button", { name: "새로 설정하기" }).click();
   /* 되묻는 자리에서만 이유를 말한다. 평소에 경고를 깔아 두면 지울 생각이 없는 사람까지
@@ -66,32 +75,29 @@ test("되돌릴 수 없는 일이므로 한 번 되묻고, 아니라고 하면 �
   expect(아래[0], "삭제가 첫 버튼입니다").toMatch(/아니요/);
 
   await page.getByRole("button", { name: /아니요/ }).click();
-  expect(await 저장본(page), "«아니요»라고 했는데 지워졌습니다").toEqual(원래);
+  expect(await 세션저장본(page), "«아니요»라고 했는데 세션이 지워졌습니다").toEqual(원래세션);
+  expect(await 프로필저장본(page), "«아니요»라고 했는데 프로필이 지워졌습니다").toEqual(원래프로필);
   await expect(page.getByRole("button", { name: "새로 설정하기" })).toBeVisible();
 });
 
 test("저장된 내용을 지우지 않고 고칠 수 있다 — 가이드 4번의 «수정»", async ({ page }) => {
   await 저장본만들기(page);
-  const 원래 = (await 저장본(page))!.answers!;
+  const 원래 = (await 세션저장본(page))!.answers!;
 
   await 저장된내용펼치기(page);
   await page.getByRole("button", { name: /저장된 내용 수정/ }).click();
   await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
 
-  /* 고치러 왔는데 절반이 숨어 있으면 안 된다 — 여섯 항목이 전부 있어야 한다.
-     기획 4행(카드)과 «다른 항목 수정»(접힘 — 이 경로에서는 저절로 펴진다)에 나뉘어 있다.
+  /* 고치러 왔는데 절반이 숨어 있으면 안 된다 — 여섯 항목이 전부 한 카드에 있어야 한다
+     (2차 QA 2026-08-13 — 접힘 없이 한 번에 보이게).
      (컵은 질문이 빠지면서 수정 항목에서도 빠졌다 — 물은 적 없는 값을 고치게 하지 않는다) */
-  for (const 라벨 of ["뼈/순살 선택", "수량", "먹고가기/포장 선택"]) {
+  for (const 라벨 of ["알레르기", "맵기", "뼈/순살 선택", "먹고가기/포장 선택", "수량", "예산"]) {
     await expect(page.locator(".kb-row .kb-rowlabel", { hasText: 라벨 }).first(),
-      `수정 화면에 «${라벨}» 이 없습니다`).toBeVisible();
-  }
-  for (const 라벨 of ["알레르기", "맵기", "예산"]) {
-    await expect(page.locator(".editrow .editlabel", { hasText: 라벨 }).first(),
       `수정 화면에 «${라벨}» 이 없습니다`).toBeVisible();
   }
 
   // 여는 것만으로는 아무것도 지워지지 않는다
-  expect((await 저장본(page))!.answers).toEqual(원래);
+  expect((await 세션저장본(page))!.answers).toEqual(원래);
 
   // 뒤로는 홈으로 — 추천을 받은 적이 없으므로 빈 추천 화면에 떨어지면 안 된다
   await page.getByRole("button", { name: /뒤로/ }).click();
@@ -100,7 +106,7 @@ test("저장된 내용을 지우지 않고 고칠 수 있다 — 가이드 4번�
 
 test("저장된 내용은 일부가 아니라 전부 보인다 — 가이드 4번의 «조회»", async ({ page }) => {
   await 저장본만들기(page);
-  const 저장된답변 = Object.keys((await 저장본(page))!.answers!);
+  const 저장된답변 = Object.keys((await 세션저장본(page))!.answers!);
   await 저장된내용펼치기(page);
   const 보이는줄 = await page.locator(".kb-row .kb-rowlabel").allInnerTexts();
   /* 한때 알레르기와 맵기 둘만 보여줬다. 나머지 다섯은 저장되는데 확인할 방법이 없었고,
@@ -109,10 +115,22 @@ test("저장된 내용은 일부가 아니라 전부 보인다 — 가이드 4�
     .toBeGreaterThanOrEqual(저장된답변.length);
 });
 
-test("«이번만 사용»는 지운다 — 그것이 사용자가 고른 뜻이다", async ({ page }) => {
+test("S04 «이번만 사용»은 프로필을 남기지 않는다 — 그것이 사용자가 고른 뜻이다", async ({ page }) => {
   await 저장본만들기(page);
   await 새로시작(page);
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음", exact: true }).click();
   await page.getByRole("button", { name: "이번만 사용" }).click();
-  expect(await 저장본(page), "«이번만 사용»인데 기기에 남아 있습니다").toBeNull();
+  expect(await 프로필저장본(page), "«이번만 사용»인데 프로필이 기기에 남아 있습니다").toBeNull();
+});
+
+test("S15 «이번만 사용»은 세션만 지운다 — 프로필(화면 설정)은 남는다", async ({ page }) => {
+  /* QA 1차가 짚은 결함이 정확히 이 자리다: 세션을 지우면 프로필까지 같이 사라졌다.
+     지난 주문을 남기지 않겠다는 결정이 화면 설정을 지우겠다는 뜻일 수는 없다. */
+  await 저장본만들기(page);
+  await page.getByRole("button", { name: "지난번과 똑같이 주문하기" }).click();
+  await approveToCartReview(page);
+  await finishOrder(page, false); // S15 에서 «이번만 사용»
+
+  expect(await 세션저장본(page), "«이번만 사용»인데 세션이 남아 있습니다").toBeNull();
+  expect(await 프로필저장본(page), "세션을 지웠는데 프로필까지 사라졌습니다").not.toBeNull();
 });

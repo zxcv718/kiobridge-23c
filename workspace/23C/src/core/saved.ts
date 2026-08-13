@@ -47,6 +47,9 @@ function pickCandidateId(raw: Record<string, unknown>): string | undefined {
  * 옛 저장본의 scope 는 읽지 않고 버린다. 다만 그때 부분 저장(LASTING)이었다면 answers 에
  * 일부 항목만 들어 있는데, 그것은 그대로 둔다 — 없는 답을 지어내지 않는다.
  * 화면은 answers 에 실제로 무엇이 들어 있는지를 보고 되살리기 문구를 정한다.
+ *
+ * v4 까지는 이것이 저장본의 최종 형식이었다. 지금은 **옛 통합 저장본을 읽는 입구**로만
+ * 남아 있다 — 읽는 즉시 splitSaved 가 프로필·세션으로 쪼갠다(QA 1차, 2026-08-13).
  */
 export function migrateSaved(raw: unknown): SavedSettings | null {
   if (!isObj(raw)) return null;
@@ -58,5 +61,73 @@ export function migrateSaved(raw: unknown): SavedSettings | null {
     a11y: isObj(raw.a11y) ? raw.a11y : {},
     savedAt: typeof raw.savedAt === "string" ? raw.savedAt : "",
     ...(pickCandidateId(raw) ? { lastCandidateId: pickCandidateId(raw) } : {}),
+  };
+}
+
+/* ───────── 프로필·세션 분리 (QA 1차 — 2026-08-13) ─────────
+ *
+ * «프로필 저장 완료(S04)»는 프로필을, «안내·저장 유도(S15)»는 세션을 저장한다.
+ * 한 덩어리로 두면 세션을 지울 때 프로필까지 같이 사라진다 — 실제로 그랬다.
+ * 그래서 저장본을 둘로 나눈다:
+ *   프로필 = 화면 설정(a11y). S04 에서 저장/삭제된다.
+ *   세션   = 답변 6문항 + 확정 메뉴. S15 에서 저장/삭제된다.
+ */
+
+export const PROFILE_VERSION = 1;
+export const SESSION_VERSION = 1;
+
+export interface SavedProfile {
+  v: number;
+  /** 화면 설정. UI 의 A11y 타입과 합치는 것은 화면 쪽 책임이다(기본값 병합). */
+  a11y: Record<string, unknown>;
+  savedAt: string;
+}
+
+export interface SavedSession {
+  v: number;
+  /** 저장된 답변. 저장을 켜면 그 시점의 답변을 전부 담는다(부분 저장 없음). */
+  answers: Record<string, unknown>;
+  savedAt: string;
+  /** 지난번에 확정된 메뉴 — 되살릴지 여부는 화면이 판단한다(생존 후보인지 확인). */
+  lastCandidateId?: string;
+}
+
+export function migrateProfile(raw: unknown): SavedProfile | null {
+  if (!isObj(raw)) return null;
+  if (!isObj(raw.a11y)) return null;
+  return {
+    v: PROFILE_VERSION,
+    a11y: raw.a11y,
+    savedAt: typeof raw.savedAt === "string" ? raw.savedAt : "",
+  };
+}
+
+export function migrateSession(raw: unknown): SavedSession | null {
+  if (!isObj(raw)) return null;
+  if (!isObj(raw.answers)) return null;
+  return {
+    v: SESSION_VERSION,
+    answers: raw.answers,
+    savedAt: typeof raw.savedAt === "string" ? raw.savedAt : "",
+    ...(pickCandidateId(raw) ? { lastCandidateId: pickCandidateId(raw) } : {}),
+  };
+}
+
+/**
+ * 옛 통합 저장본(v3/v4)을 프로필·세션 둘로 쪼갠다.
+ *
+ * 프로필은 항상 만든다 — 옛 저장본에는 a11y 가 늘 있었다(없으면 migrateSaved 가 {} 로 채운다).
+ * 세션은 답변이 실제로 들어 있을 때만 만든다 — S03 에서 «저장하기»만 고르고 주문을 안 마친
+ * 저장본은 답변이 비어 있는데, 그것으로 «지난번 주문» 기록을 지어내면 안 된다.
+ */
+export function splitSaved(m: SavedSettings): { profile: SavedProfile; session: SavedSession | null } {
+  return {
+    profile: { v: PROFILE_VERSION, a11y: m.a11y, savedAt: m.savedAt },
+    session: Object.keys(m.answers).length > 0
+      ? {
+        v: SESSION_VERSION, answers: m.answers, savedAt: m.savedAt,
+        ...(m.lastCandidateId ? { lastCandidateId: m.lastCandidateId } : {}),
+      }
+      : null,
   };
 }

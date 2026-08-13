@@ -1,7 +1,8 @@
 import React from "react";
 import { useFlow } from "../flow";
 import { ChoiceGrid, Cta, Emphasize, Screen, Stepper } from "../components";
-import { ALLERGY_GATE, ALLERGY_ITEMS, EDIT_LABELS, QUANTITY_MAX, QUESTIONS, answerLabel } from "../model";
+import { ALLERGY_GATE, EDIT_LABELS, QUANTITY_MAX, QUESTIONS, allergyListOptions, answerLabel } from "../model";
+import { fixtureMaxQty } from "../logic";
 import hotIcon from "../assets/icons/hot.svg";
 import "./question.css";
 
@@ -103,11 +104,16 @@ const LAYOUT: Record<string, "tiles" | "rows"> = {
  */
 export function QuestionScreen() {
   const {
-    q, qIndex, setQIndex, answers, setAnswers, askPos, askTotal, carried,
+    q, qIndex, setQIndex, answers, setAnswers, askPos, askTotal, carried, fixture,
     simple, answered, advance, setStep, setEditOpen, nextToAsk, allergyOpen, setAllergyOpen,
   } = useFlow();
 
   if (!q) return null;
+
+  /* 수량 상한 — 화면이 정한 수가 아니라 매장 자료(candidates.json QUANTITY)다(사용자
+     확정 2026-08-13). 메뉴가 정해지기 전이므로 판매 중 후보들의 최대값까지 열어 준다.
+     자료가 없을 때만 QUANTITY_MAX 가 마지막 안전판이다. */
+  const qtyMax = (fixture && fixtureMaxQty(fixture)) ?? QUANTITY_MAX;
 
   const isLast = nextToAsk(qIndex + 1) >= QUESTIONS.length;
   const shape = LAYOUT[q.key] ?? "rows";
@@ -122,9 +128,10 @@ export function QuestionScreen() {
   /* 알레르기는 «있으신가요?» → «모두 골라 주세요» 두 걸음이다(디자인 S06 기본/확장).
      지금 어느 걸음인지는 상태 하나로 정하지 않는다 — 질문을 되돌아왔을 때 이미 항목을
      골라 둔 사람에게 «있으신가요?»를 다시 묻는 것은, 방금 한 답을 못 본 척하는 일이다.
-     고른 항목이 남아 있으면 목록을 편 채로 맞는다. */
+     고른 항목이 남아 있으면 목록을 편 채로 맞는다. 「모름」도 목록의 답이다(TC-CM-01) —
+     첫 걸음의 답은 「없음」뿐이므로 그것만 뺀다. */
   const 고른항목 = Array.isArray(answers.allergies)
-    ? (answers.allergies as unknown[]).filter((v) => v !== "없음" && v !== "모름")
+    ? (answers.allergies as unknown[]).filter((v) => v !== "없음")
     : [];
   const 알레르기목록 = q.key === "allergies" && (allergyOpen || 고른항목.length > 0);
   const 알레르기첫걸음 = q.key === "allergies" && !알레르기목록;
@@ -209,17 +216,17 @@ export function QuestionScreen() {
           label="수량"
           value={typeof answers.quantity === "number" ? answers.quantity : undefined}
           onChange={(n) => setAnswers((p) => ({ ...p, quantity: n }))}
-          max={QUANTITY_MAX}
-          atMaxNote={<>한 번에 {QUANTITY_MAX}개까지 고르실 수 있어요. 더 필요하시면 매장 직원에게 말씀해 주세요.</>}
+          max={qtyMax}
+          atMaxNote={<>한 번에 {qtyMax}개까지 고르실 수 있어요. 더 필요하시면 매장 직원에게 말씀해 주세요.</>}
         />
       ) : (
         <div className={`q-choices q-${알레르기목록 ? "rows" : shape}`}>
-          {/* 목록 걸음에서는 「없어요」·「잘 모르겠어요」를 뺀 6종만 남긴다. 라벨과 이모지는
-              원래 선택지의 것을 그대로 쓴다 — 같은 것을 두 곳에 적어 두면 언젠가 갈라진다. */}
+          {/* 목록 걸음은 6종 + 「잘 모르겠어요」다(QA 1차 TC-CM-01) — 안전 중단(S12)의
+              입구가 화면에 없으면 알레르기를 정말 모르는 사람이 «있음/없음»을 지어내야
+              한다. 「없어요」는 첫 걸음의 답이라 여기 없다. 라벨과 이모지는 원래 선택지의
+              것을 그대로 쓴다 — 같은 것을 두 곳에 적어 두면 언젠가 갈라진다. */}
           <ChoiceGrid
-            q={알레르기목록
-              ? { ...q, options: q.options.filter((o) => (ALLERGY_ITEMS as readonly string[]).includes(String(o.value))) }
-              : q}
+            q={알레르기목록 ? { ...q, options: allergyListOptions() } : q}
             answers={answers} setAnswers={setAnswers}
             icons={DESIGN_ICON[q.key]} marks={DESIGN_MARK[q.key]} />
         </div>

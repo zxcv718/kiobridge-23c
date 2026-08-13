@@ -52,13 +52,23 @@
   .stop-figma-illus { width: 136px; height: 120px; }
 }
 
-/* 시안에 없지만 요건상 남기는 설명은 접어 둔다(FIGMA_RULES §2.1) — 접힌 줄 자체는
-   home-saved(profile.css)를 그대로 쓰고, 여기서는 자리만 잡는다. 가운데 정렬은 제목까지고
-   문단은 왼쪽에서 시작해야 읽힌다. */
-.stop-figma { margin: 24px 0 0; text-align: left; }
+/* 이제 내용 없는 표식이다 — «왜 멈췄나요?» 접힘은 1차 QA 후 사용자 결정으로 걷어냈다
+   (2026-08-13). 위의 :has(.stop-figma) 갈고리와 가운데 정렬 앵커 노릇만 남는다. */
+.stop-figma { margin: 0; }
 
 /* ───────── S15 매장명 캡션 (Figma 114:2559) ─────────
  * 14px Medium · secondary · 아래 카드와 25px. 시안은 «ChickenStore» 라는 자리표시자를
  * 쓰지만 우리는 fixture 의 매장 이름을 쓴다 — 없으면 줄 자체를 그리지 않는다.
  * 크기는 px 이 아니라 em 이다(14 ÷ 18) — «큰 글씨»를 켜면 함께 커져야 한다. */
 .res-store { margin: 0 0 25px; font-size: 0.78em; font-weight: 500; color: var(--muted); }
+
+/* ───────── S15 저장 유도 (Figma 99:1830) — 세로 구도 ─────────
+ * 시안은 제목이 화면 위에서 한 뼘 내려와 시작하고, 제목·부제·매장명 사이가 성글다.
+ * 진행 표시도 뒤로가기도 없는 화면이라 이 여백이 곧 구도다. 값은 시안 실측(390pt 기준)이고,
+ * 위 여백만 vh 로 함께 줄어든다 — 짧은 화면에서 여백이 카드·버튼을 밀어내면 안 된다.
+ * save-prompt 는 SavePrompt.tsx 본문의 CSS 갈고리다(S14 의 edit-extra 와 같은 방식). */
+.kb-screen-body:has(.save-prompt) { padding-top: clamp(32px, 14vh, 128px); }
+.kb-screen-body:has(.save-prompt) .kb-title { margin-bottom: 32px; }
+.kb-screen-body:has(.save-prompt) .kb-subtitle { margin-bottom: 48px; }
+/* 매장명과 카드는 붙어 다닌다 — 시안의 25px 는 결과 화면 것이고 여기서는 더 좁다. */
+.save-prompt .res-store { margin-bottom: 12px; }

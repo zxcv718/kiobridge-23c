@@ -5,7 +5,7 @@
 import type {
   AnySessionContext, Candidate, Evidence, ParticipantSubmission, PublicFixture, Recommendation, UserDecision,
 } from "@kiobridge/participant-sdk";
-import { nowIso8601Utc } from "@kiobridge/profile-contract";
+import { nowIso8601Utc, SENTINEL } from "@kiobridge/profile-contract";
 import { buildProfile, buildChickenContext, type RawUserInput } from "../../src/core/canonical";
 import { buildRecommendation, explainCore, alternativesFromRecommendation, unmetConditionsFor, type EngineContext } from "../../src/core/engine";
 import { buildExecutionPlanCore } from "../../src/core/plan";
@@ -55,6 +55,34 @@ export function readUrlStoreCode(): string {
   return "";
 }
 
+/* ───────── 연동한 매장 코드의 기기 저장 (QA 1차 TC-XC-04) ─────────
+ * 강제 종료 후 다시 열면 관문(QR 스캔)이 아니라 홈부터 시작해야 한다. QR 연동에
+ * 성공한 매장 코드를 기기에 남기고, flow 의 첫 화면 판정이 주소(?env=)와 함께 본다.
+ *
+ * 이 키의 **생명주기는 프로필 저장 결정(S04)을 따른다**(TC-XC-04 후속, 사용자 확정
+ * 2026-08-13). 연동 성공 시 일단 남기지만, «이번만 사용»을 고르거나 프로필을 지우면
+ * (홈 «새로 설정하기») 함께 지워진다 — 저장 안 하기로 한 기기가 «연동된 기기»로
+ * 남으면 재실행 복구 지점이 저장 방식과 어긋난다. 세션(S15)의 결정과는 무관하다.
+ * 한때는 «기기의 매장 설정이니 지우지 않는다»였다 — 그 결정을 뒤집은 것이다. */
+export const STORE_KEY = "kb23c-store-v1";
+
+/** 연동에 성공한 매장 코드를 남긴다 — 실패·모르는 매장·건너뛰기는 부르지 않는다. */
+export function rememberStoreCode(code: string): void {
+  const c = code.trim();
+  if (c === "") return; // 성공이 아닌 것을 성공처럼 남기지 않는다
+  try { localStorage.setItem(STORE_KEY, c); } catch { /* 저장 불가 환경이면 그 방문만 관문부터 */ }
+}
+
+/** 기기에 남은 매장 코드를 지운다 — «이번만 사용»과 프로필 삭제가 부른다. */
+export function forgetStoreCode(): void {
+  try { localStorage.removeItem(STORE_KEY); } catch { /* 무시 */ }
+}
+
+/** 기기에 남은 매장 코드 — 없으면 빈 문자열(관문부터 시작한다). */
+export function readStoredStoreCode(): string {
+  try { return localStorage.getItem(STORE_KEY)?.trim() ?? ""; } catch { return ""; }
+}
+
 export type { RawUserInput, ContextSignal };
 
 export interface UiRecommendation {
@@ -91,12 +119,19 @@ export function withManualSelection(u: UiRecommendation, fixture: PublicFixture,
        문장이 남는다 — 예산 5,000원에 6,000원짜리를 골랐는데 화면이 «이 메뉴는
        5,500원입니다»라고 말한 것이 실제로 그 병이었다. 맵기·형태도 마찬가지다. */
     unmetConditions: unmetConditionsFor(candidate, u.engineCtx),
-    recommendationReasons: [
-      `직접 고르신 "${name}"(으)로 진행합니다.`,
-      ...u.rec.recommendationReasons.filter((r) => !r.startsWith("직접 고르신")),
-    ],
-    requiresReconfirmation: false, // 사용자가 직접 확인하고 골랐다
+    /* 직접 선택은 **메뉴를 확인한 것**이지 자기 알레르기를 확인한 것이 아니다.
+       「잘 모르겠어요」가 화면에 들어온 뒤로(TC-CM-01) 미확정 상태에서 «메뉴 수정»을
+       지나는 길이 실제로 생겼다 — 여기서 재확인을 무조건 풀면 알레르기를 모르는 채로
+       승인 차단이 사라진다. 미확인 알레르기가 남아 있는 한 재확인도 남긴다. */
+    requiresReconfirmation: (u.engineCtx.hardConstraints.allergenIds ?? []).includes(SENTINEL.UNKNOWN),
   };
+  /* 사유도 고른 메뉴 기준으로 다시 만든다(QA TC-CM-03). 옛 1순위의 문장을 물려주면
+     «뼈 메뉴를 골랐습니다»가 순살 메뉴 옆에 남는다 — explainCore 는 위에서 다시 잰
+     unmetConditions 를 보고 어긋난 축의 긍정 문장을 접는다. */
+  rec.recommendationReasons = [
+    `직접 고르신 "${name}"(으)로 진행합니다.`,
+    ...explainCore(rec, u.engineCtx),
+  ];
   rec.alternativeCandidateIds = alternativesFromRecommendation(fixture.candidates, rec);
   return { ...u, rec };
 }
@@ -150,6 +185,36 @@ export const candidateName = (fixture: PublicFixture, id: string | null): string
 
 export const candidatePrice = (fixture: PublicFixture, id: string | null): number | undefined =>
   id === null ? undefined : (fixture.candidates.find((c) => c.candidateId === id) as Candidate & { price?: number })?.price;
+
+/* ───────── 메뉴별 주문 가능 수량 상한 (사용자 확정 2026-08-13) ─────────
+ * 근거는 candidates.json 의 supportedOptions.QUANTITY(«Q1·Q2·Q3»)다. 화면이 임의로
+ * 정한 수(QUANTITY_MAX)는 자료가 없을 때의 마지막 안전판으로만 남는다.
+ * 상한을 화면에서 막으면 «키오스크가 누를 수 없는 수량» 자체가 생기지 않는다 —
+ * 눈금 밖 수량이 만들던 대체 표시 문제(QA 1차 TC-CM-06)의 뿌리가 이것이었다. */
+
+/** «Qn» 표기의 n — 표기 밖 값은 없는 것으로 둔다(모르는 자료로 상한을 지어내지 않는다). */
+const qtyOf = (id: string): number | undefined => {
+  const m = /^Q(\d+)$/.exec(id);
+  return m ? Number(m[1]) : undefined;
+};
+
+/** 이 메뉴가 한 번에 주문받을 수 있는 최대 수량. 자료가 없으면 undefined. */
+export function candidateMaxQty(fixture: PublicFixture, id: string | null): number | undefined {
+  if (id === null) return undefined;
+  const c = fixture.candidates.find((x) => x.candidateId === id) as
+    (Candidate & { supportedOptions?: { QUANTITY?: string[] } }) | undefined;
+  const ns = (c?.supportedOptions?.QUANTITY ?? []).map(qtyOf).filter((n): n is number => n !== undefined);
+  return ns.length ? Math.max(...ns) : undefined;
+}
+
+/** 메뉴가 정해지기 전(질문 S10)의 상한 — 판매 중 후보들의 최대값. 자료가 없으면 undefined. */
+export function fixtureMaxQty(fixture: PublicFixture): number | undefined {
+  const ns = fixture.candidates
+    .filter((c) => (c as Candidate & { available?: boolean }).available !== false)
+    .map((c) => candidateMaxQty(fixture, c.candidateId))
+    .filter((n): n is number => n !== undefined);
+  return ns.length ? Math.max(...ns) : undefined;
+}
 
 /* ───────────── Simulation API 왕복 (Vite 프록시 /api → :4000) ───────────── */
 

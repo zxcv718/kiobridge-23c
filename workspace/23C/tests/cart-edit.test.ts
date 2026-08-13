@@ -38,8 +38,8 @@ describe("장바구니에서 조건 수정 — 메뉴는 유지하고 조건만 
     expect(u.rec.recommendedCandidateId).toBe("CHICKEN-002");
     expect(u.engineCtx.preferences.serviceType).toBe("TAKE_OUT");
     // 예산 문장은 고른 메뉴(6,000원)로 다시 재야 한다 — 1위(5,500원)의 문장이 남으면 안 된다
-    expect(u.rec.unmetConditions).toContain("원하신 예산은 5,000원인데, 이 메뉴는 6,000원입니다");
-    expect(u.rec.unmetConditions).not.toContain("원하신 예산은 5,000원인데, 이 메뉴는 5,500원입니다");
+    expect(u.rec.unmetConditions).toContain("예산 5,000원을 초과합니다 — 이 메뉴는 6,000원입니다");
+    expect(u.rec.unmetConditions).not.toContain("예산 5,000원을 초과합니다 — 이 메뉴는 5,500원입니다");
   });
 
   it("유지할 메뉴가 생존 후보에 없으면 고정하지 않고 엔진의 1위를 쓴다", () => {

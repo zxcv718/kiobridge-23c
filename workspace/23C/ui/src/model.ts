@@ -8,7 +8,10 @@
  * 여기에 있는 것은 전부 React 를 모른다 — 렌더링은 screens/ 와 components/ 가 한다.
  */
 import type { RawUserInput } from "./logic";
-import { migrateSaved, type SavedSettings as CoreSaved } from "../../src/core/saved";
+import {
+  migrateProfile, migrateSaved, migrateSession, splitSaved,
+  type SavedProfile as CoreProfile, type SavedSession,
+} from "../../src/core/saved";
 
 /**
  * 흐름의 화면 하나하나. App.tsx 의 라우팅 표가 이 유니온을 그대로 덮는다
@@ -18,7 +21,7 @@ export type Step =
   | "connect"                                          // QR 연동 — 흐름의 1걸음 (매장 QR 링크로 열리면 건너뛴다)
   | "start" | "profile" | "saveChoice" | "sessionStart"
   | "wizard" | "calculating" | "menuConfirm" | "menuSelect"
-  | "confirm" | "run" | "result" | "staff" | "edit" | "stopped";
+  | "confirm" | "run" | "savePrompt" | "result" | "staff" | "edit" | "stopped";
 
 /**
  * 흐름 다섯 걸음의 이름 (Figma StepIndicator 181:177 의 문법).
@@ -196,19 +199,21 @@ export const QUESTIONS: Question[] = [
  * 「알레르기가 없다」는 사람도 여덟 개를 훑어 그중 «없어요»를 찾아야 했다. 대부분의
  * 사람이 그쪽인데, 가장 흔한 답에 가장 많은 읽을거리를 물린 셈이다.
  *
- * **「잘 모르겠어요」는 목록이 아니라 첫 걸음에 둔다.** 시안에는 없는 우리 선택지다.
- * 있는지 없는지 모르는 사람이 «있어요/없어요» 둘 중 하나를 억지로 고르게 되면, 그
- * 순간부터 우리는 사실이 아닌 것을 사실로 다루게 된다. 안전 판정(UNKNOWN → 재확인 →
- * 안전 중단)의 입구가 여기다. 다만 타일 두 장과 나란히 두지는 않는다 — 시안의 «둘 중
- * 하나»를 흐리지 않으면서, 해당하는 사람은 반드시 닿게 아래 한 줄로 둔다.
+ * **「잘 모르겠어요」는 둘째 걸음(항목 목록)의 끝에 둔다**(QA 1차 TC-CM-01 · PO 확정
+ * 2026-08-13). 시안 99:1246 에는 없는 우리 선택지지만, 있는지 없는지 모르는 사람이
+ * «있어요/없어요» 중 하나를 지어내게 두면 사실이 아닌 것을 사실로 다루게 된다 —
+ * 안전 판정(UNKNOWN → 재확인 → 안전 중단 S12)의 입구가 이 선택지다. 첫 걸음의 타일
+ * 두 장 구도는 시안 99:1228 그대로 지키고, 목록에만 더한다(allergyListOptions).
  */
 /**
- * 한 번에 고를 수 있는 최대 수량.
+ * 수량 상한의 **마지막 안전판** — fixture 자료가 없을 때만 쓴다.
  *
- * 계약에는 상한이 없다(`integer, minimum 1`). 그래도 «+»를 끝없이 누르게 두지 않는 이유는,
- * 실수로 눌린 40개를 사용자가 다시 40번 눌러 되돌려야 하기 때문이다. 대신 여기서 막고
- * 끝내지는 않는다 — 왜 더 못 누르는지 말하고 직원 도움으로 잇는다. 우리가 정한 수라는
- * 사실을 화면에서 숨기지 않는다.
+ * 진짜 상한은 매장 자료다(사용자 확정 2026-08-13): candidates.json 의
+ * supportedOptions.QUANTITY(«Qn»)를 logic.candidateMaxQty(담긴 메뉴)·fixtureMaxQty
+ * (메뉴 확정 전)가 읽고, 스테퍼 세 곳(S10·S13·S14)이 그 값으로 «+»를 잠근다.
+ * 계약의 수량에는 상한이 없지만(`integer ≥ 1`), 키오스크가 누를 수 없는 수량을
+ * 화면이 만들면 계획이 대체를 하게 된다 — 그 뿌리를 여기서 자른다.
+ * 어느 쪽이든 위끝에서는 왜 더 못 누르는지 말하고 직원 도움으로 잇는다.
  */
 export const QUANTITY_MAX = 10;
 
@@ -217,36 +222,56 @@ export const ALLERGY_GATE = [
   { value: "있음", label: "있어요" },
 ] as const;
 
-/** 첫 걸음 아래 한 줄 — 시안에 없는, 안전을 위한 우리 선택지 */
 /**
- * 「모름」은 **화면에서 고를 수 없다.** 시안(99:1228)의 첫 걸음은 타일 두 장뿐이고,
- * 「잘 모르겠어요」는 우리가 그 아래에 덧붙였던 선택지였다.
+ * 「모름」은 **둘째 걸음(항목 목록)에서 고른다**(QA 1차 TC-CM-01 · PO 확정 2026-08-13).
+ * 한때 화면에서 고를 수 없었다 — 그 사이 안전 중단(S12)에 닿는 길 자체가 없었다.
+ * 시안(99:1228)의 첫 걸음은 타일 두 장 그대로 두고, 목록에만 「잘 모르겠어요」로 붙는다.
  *
- * 값 자체는 남긴다 — 엔진은 여전히 SENTINEL.UNKNOWN 을 하드 제약 미확인으로 다루고
+ * 값은 그대로 "모름"이다 — 엔진은 SENTINEL.UNKNOWN 을 하드 제약 미확인으로 다루고
  * (engine.ts `hardConstraintUnknown`), 조합 검증 12,960 에도 「모름」이 들어 있다.
- * 옛 저장본이나 대리 입력으로 들어온 값이 화면에서 사라졌다는 이유로 조용히
- * «알레르기 없음»이 되면 안 되기 때문이다. 화면에 입구가 없을 뿐 계약은 그대로다.
+ * 다른 항목과 **함께 고를 수 있다** — 아는 알레르기는 그대로 제외하고, 모름이 남아
+ * 있는 한 재확인·안전 중단 경로가 그대로 걸린다(tests/ask.test.ts 동시 선택 절).
  */
 export const ALLERGY_UNKNOWN_VALUE = "모름";
 
-/** 둘째 걸음 — 시안 99:1246 의 6종 그대로. 「없음」·「모름」은 여기 없다(첫 걸음의 답이다). */
+/** 둘째 걸음의 성분 6종 — 시안 99:1246 그대로. 「없음」은 여기 없다(첫 걸음의 답이다). */
 export const ALLERGY_ITEMS = ["땅콩", "콩", "우유", "계란", "밀", "새우"] as const;
+
+/**
+ * 둘째 걸음(목록)에 실제로 그리는 선택지 — 6종 + 「잘 모르겠어요」(TC-CM-01).
+ * 라벨·이모지는 QUESTIONS 의 것을 그대로 쓴다 — 같은 것을 두 곳에 적으면 언젠가 갈라진다.
+ */
+export const allergyListOptions = (): Question["options"] => {
+  const listValues: readonly string[] = [...ALLERGY_ITEMS, ALLERGY_UNKNOWN_VALUE];
+  return QUESTIONS.find((q) => q.key === "allergies")!
+    .options.filter((o) => listValues.includes(String(o.value)));
+};
 
 export const EDIT_LABELS: Record<string, string> = {
   serviceType: "이용 방식", spicyLevel: "맵기", boneType: "형태",
   quantity: "수량", allergies: "알레르기", budgetKrw: "예산",
 };
 
-/** 요약 행에 보여줄 현재 값 (답변은 이미 한국어 라벨/숫자로 저장돼 있다) */
+/** 질문 선택지에서 값에 해당하는 화면 라벨을 찾는다 — 없으면 값 그대로. */
+const optionLabel = (key: string, v: unknown): string =>
+  QUESTIONS.find((q) => q.key === key)?.options.find((o) => o.value === v)?.label ?? String(v);
+
+/** 요약 행에 보여줄 현재 값 — 사용자가 고른 **선택지의 라벨**과 같은 말로 보여준다. */
 export function answerLabel(key: string, v: unknown): string {
   if (v === undefined) return "아직 선택 안 함";
   if (key === "allergies") {
     const a = (v as string[]) ?? [];
-    return a.length === 0 || a[0] === "없음" ? "없음" : a.join("·");
+    /* 항목도 화면 라벨로 옮긴다 — 저장값은 «콩»이지만 화면 글자는 「대두」다(위 options
+       주석 참조). 구분자는 시안 99:1830 그대로 쉼표다(«대두, 새우»). */
+    return a.length === 0 || a[0] === "없음" ? "없음" : a.map((x) => optionLabel(key, x)).join(", ");
   }
   if (key === "quantity") return `${v}개`;
   // 고른 선택지의 라벨과 같은 말로 보여준다 — 요약이 «없음»이면 고른 적 없는 말이 뜬다
   if (key === "budgetKrw") return v === "없음" ? "상관없어요" : `${Number(v).toLocaleString()}원`;
+  // 시안 99:1830 은 «보통맛»이라 쓴다 — 값(보통)이 아니라 사용자가 누른 라벨이다
+  if (key === "spicyLevel") return optionLabel(key, v);
+  /* 이용 방식은 시안이 «먹고 가기»·«포장»이라 쓴다 — «포장하기»(버튼 라벨)가 아니라
+     여기만 값 그대로가 시안과 같다. */
   if (v === "매장") return "먹고 가기";
   return String(v);
 }
@@ -296,50 +321,56 @@ export const PRESETS: Preset[] = [
  *   저장 여부를 사용자가 선택 · 저장된 내용 확인 · 수정 · 삭제 ·
  *   공용기기 자동저장 방지 · 자동으로 불러온 정보의 재확인
  *
- * 그래서 묻는 것은 **켤지 말지 하나뿐**이다. 저장 범위를 나누지 않는 이유는
- * core/saved.ts 에 적었다 — 공용기기의 답은 부분 저장이 아니라 저장 끄기다. */
-export const STORAGE_KEY = "kb23c-saved-settings-v4";
-/** v3 저장본을 버리지 않는다 — 형식이 바뀌었다고 사용자 설정이 사라지면 안 된다. */
-export const LEGACY_KEY = "kb23c-saved-settings-v3";
+ * 저장소는 **둘**이다(QA 1차 2026-08-13). 프로필(화면 설정)은 S04 «프로필 저장 완료»가,
+ * 세션(답변·확정 메뉴)은 S15 «안내·저장 유도»가 각각 주인이다 — 한 덩어리로 두면
+ * 세션을 지울 때 프로필까지 같이 사라진다(실제로 그랬고, 그것이 이 분리의 이유다).
+ * 저장 범위를 더 잘게 나누지 않는 이유는 core/saved.ts 에 적었다 —
+ * 공용기기의 답은 부분 저장이 아니라 저장 끄기다. */
+export const PROFILE_KEY = "kb23c-profile-v1";
+export const SESSION_KEY = "kb23c-session-v1";
+/** 옛 통합 저장본 — 새 키가 비어 있으면 한 번 읽어 둘로 쪼개 옮기고 지운다. */
+const COMBINED_V4_KEY = "kb23c-saved-settings-v4";
+const COMBINED_V3_KEY = "kb23c-saved-settings-v3";
 
-/** 화면에서 쓰는 저장본 — core 형식에 UI 의 A11y 타입을 입힌 것 */
-export interface SavedSettings extends Omit<CoreSaved, "a11y"> {
+/** 화면에서 쓰는 프로필 저장본 — core 형식에 UI 의 A11y 타입을 입힌 것 */
+export interface SavedProfile extends Omit<CoreProfile, "a11y"> {
   a11y: A11y;
 }
+/** 세션 저장본은 core 형식 그대로다 — UI 타입을 입힐 것이 없다. */
+export type { SavedSession };
 
-/** 해석은 core/saved.ts 가 한다 — localStorage 는 무엇이든 들어올 수 있는 입구다. */
-export const readSaved = (key: string): SavedSettings | null => {
+const readRaw = (key: string): unknown => {
   try {
     const s = localStorage.getItem(key);
-    if (!s) return null;
-    const m = migrateSaved(JSON.parse(s));
-    return m ? { ...m, a11y: { ...A11Y_DEFAULT, ...(m.a11y as Partial<A11y>) } } : null;
+    return s ? JSON.parse(s) : null;
   } catch { return null; }
 };
 
-export const loadSaved = (): SavedSettings | null => {
-  const cur = readSaved(STORAGE_KEY);
-  if (cur) return cur;
-  const old = readSaved(LEGACY_KEY); // 구버전 저장본을 새 키로 옮기고 계속 쓴다
-  if (!old) return null;
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(old));
-    localStorage.removeItem(LEGACY_KEY);
-  } catch { /* 저장 불가 환경이면 이번 세션만 메모리로 쓴다 */ }
-  return old;
-};
-
-export function savedSummary(s: SavedSettings): string {
-  const a = s.answers;
-  const parts: string[] = [];
-  for (const q of QUESTIONS) {
-    if (a[q.key] === undefined) continue;
-    parts.push(`${EDIT_LABELS[q.key] ?? q.key} ${answerLabel(q.key, a[q.key])}`);
+/** 해석은 core/saved.ts 가 한다 — localStorage 는 무엇이든 들어올 수 있는 입구다. */
+export const loadStores = (): { profile: SavedProfile | null; session: SavedSession | null } => {
+  let p = migrateProfile(readRaw(PROFILE_KEY));
+  let s = migrateSession(readRaw(SESSION_KEY));
+  if (!p && !s) {
+    // 새 키가 둘 다 비었으면 옛 통합 저장본(v4 → v3 순)을 찾아 쪼개 옮긴다 —
+    // 형식이 바뀌었다고 사용자 설정이 사라지면 안 된다.
+    const legacy = migrateSaved(readRaw(COMBINED_V4_KEY)) ?? migrateSaved(readRaw(COMBINED_V3_KEY));
+    if (legacy) {
+      const split = splitSaved(legacy);
+      p = split.profile;
+      s = split.session;
+      try {
+        localStorage.setItem(PROFILE_KEY, JSON.stringify(split.profile));
+        if (split.session) localStorage.setItem(SESSION_KEY, JSON.stringify(split.session));
+        localStorage.removeItem(COMBINED_V4_KEY);
+        localStorage.removeItem(COMBINED_V3_KEY);
+      } catch { /* 저장 불가 환경이면 이번 세션만 메모리로 쓴다 */ }
+    }
   }
-  const on = A11Y_ITEMS.filter((i) => s.a11y[i.key] === true).map((i) => i.label);
-  if (on.length) parts.push(on.join("·"));
-  return parts.join(" · ");
-}
+  return {
+    profile: p ? { ...p, a11y: { ...A11Y_DEFAULT, ...(p.a11y as Partial<A11y>) } } : null,
+    session: s,
+  };
+};
 
 /** 마법사 답변 + 접근성 설정 → RawUserInput (코어 계약 입력). */
 export function buildRawInput(
