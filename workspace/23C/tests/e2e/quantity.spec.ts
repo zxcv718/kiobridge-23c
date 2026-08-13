@@ -73,7 +73,9 @@ test("위끝에서 막다른 길을 만들지 않는다 — 왜 못 누르는지
     if (await 늘리기.isDisabled()) break;
     await 늘리기.click();
   }
-  expect(await 지금값(page)).toContain("10");
+  /* 상한은 화면이 정한 수가 아니라 매장 자료다 — candidates.json 의 QUANTITY(Q1~Q3).
+     메뉴가 정해지기 전이므로 판매 중 후보들의 최대값(3)까지 열린다(사용자 확정 2026-08-13). */
+  expect(await 지금값(page)).toContain("3");
   await expect(page.locator(".stepnote")).toContainText("매장 직원에게 말씀해 주세요");
 });
 
@@ -91,31 +93,35 @@ test("누르는 자리가 48px 이상이고, 낭독기에는 수 입력 하나�
   await expect(spin).not.toHaveAttribute("aria-valuetext", /.*/);
 });
 
-test("수량 5는 값·가격에 5로 반영되고, «메뉴에 없어 바꿨다»고 말하지 않는다", async ({ page }) => {
-  /* QA 1차 TC-CM-06 재현 — 수량 옵션 눈금(1·2·3) 밖의 5를 고르면 수량·가격은 맞게
-     나오면서 «원하신 5개는 이 메뉴에 없어 바꿨습니다»가 함께 떴다. 계약의 수량은
-     자유 정수라 눈금은 키오스크 조작의 사정이지 주문의 사실이 아니다 — 존중된 수량에
-     대체 안내를 붙이지 않는다(CartReview.fixQuantityOrigin). */
+test("수량은 메뉴 자료의 상한까지다 — 장바구니에서도 + 가 잠기고 이유를 말한다", async ({ page }) => {
+  /* 상한의 근거는 candidates.json supportedOptions.QUANTITY(Q1~Q3)다(사용자 확정
+     2026-08-13). 화면이 눈금 밖 수량을 만들지 않으므로, 키오스크가 누를 수 없는
+     수량이 만들던 대체 표시 문제(QA 1차 TC-CM-06)는 뿌리부터 없어졌다. */
   await 수량질문까지(page);
   const 늘리기 = page.getByRole("button", { name: "하나 늘리기" });
-  for (let i = 0; i < 4; i++) await 늘리기.click();
-  expect(await 지금값(page)).toContain("5");
+  await 늘리기.click();
+  await 늘리기.click();
+  expect(await 지금값(page)).toContain("3");
+  await expect(늘리기, "메뉴 자료의 상한(3)을 넘겨 누를 수 있습니다").toBeDisabled();
+
   await page.getByRole("button", { name: "다음", exact: true }).click();
   // 마지막 질문(예산)을 첫 선택지로 지나 추천 → 장바구니 확인
   await page.locator(".choices .choice").first().click();
   await page.getByRole("button", { name: /다음|추천 보기/ }).click();
   await approveToCartReview(page);
 
-  // 수량과 총 가격이 5 그대로다 — 여기가 맞는데 안내만 틀렸던 것이 QA 현상이다
-  await expect(page.getByRole("spinbutton", { name: "수량" })).toHaveAttribute("aria-valuenow", "5");
+  // 장바구니 스테퍼도 담긴 메뉴의 상한에서 잠기고, 왜 잠겼는지 말한다
+  await expect(page.getByRole("spinbutton", { name: "수량" })).toHaveAttribute("aria-valuenow", "3");
+  await expect(page.getByRole("button", { name: "하나 늘리기" })).toBeDisabled();
+  await expect(page.locator(".stepnote")).toContainText("이 메뉴는 한 번에 3개까지");
+
   const won = (s: string) => Number(s.replace(/[^\d]/g, ""));
   const unit = won(await page.locator(".cart-price").innerText());
   const total = won(await page.locator(".cart-total b").innerText());
   expect(unit).toBeGreaterThan(0);
-  expect(total).toBe(unit * 5);
+  expect(total).toBe(unit * 3);
 
   // 존중된 수량에는 보조줄이 붙지 않는다 (D3 과 같은 문법 — «수량:» 행 자체가 없어야 한다)
-  await expect(page.locator(".cart-box")).not.toContainText("원하신 5개");
   await expect(page.locator(".cart-box")).not.toContainText("수량:");
 });
 

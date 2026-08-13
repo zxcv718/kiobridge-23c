@@ -6,7 +6,7 @@ import { ChoiceGrid } from "../components/ChoiceGrid";
 import { Stepper } from "../components/Stepper";
 import { GROUP_KO, OPTION_KO, QUANTITY_MAX, QUESTIONS } from "../model";
 import { buildExecutionPlanCore, explainSelections, type PlanSelection } from "../../../src/core/plan";
-import { candidateName, candidatePrice } from "../logic";
+import { candidateMaxQty, candidateName, candidatePrice } from "../logic";
 import "./cart.css";
 
 /**
@@ -142,6 +142,9 @@ export function CartReview() {
   const id = uiRec.rec.recommendedCandidateId;
   const qty = Number(uiRec.engineCtx.preferences.quantity ?? 1);
   const unit = candidatePrice(fixture, id) ?? 0;
+  /* 수량 상한은 담긴 메뉴의 자료(candidates.json QUANTITY)다 — 사용자 확정 2026-08-13.
+     자료가 없을 때만 QUANTITY_MAX 가 마지막 안전판이다. */
+  const qtyMax = candidateMaxQty(fixture, id) ?? QUANTITY_MAX;
 
   const preview = buildExecutionPlanCore(
     { approved: true, decision: "APPROVE" }, uiRec.rec, fixture, uiRec.engineCtx,
@@ -221,9 +224,9 @@ export function CartReview() {
         {/* «x 1개» 글자였던 자리 — 질문 화면(S10)과 같은 스테퍼로 그 자리에서 고친다 */}
         <div className="cart-qtyrow">
           <span className="cart-cap">수량</span>
-          <Stepper label="수량" value={qty} max={QUANTITY_MAX}
+          <Stepper label="수량" value={qty} max={qtyMax}
             onChange={(n) => { if (n !== qty) applyCartAnswers({ ...answers, quantity: n }); }}
-            atMaxNote={<>한 번에 {QUANTITY_MAX}개까지 고르실 수 있어요.</>} />
+            atMaxNote={<>이 메뉴는 한 번에 {qtyMax}개까지 주문할 수 있어요. 더 필요하시면 매장 직원에게 말씀해 주세요.</>} />
         </div>
         {free.length > 0 && <p className="cart-sub">성분: <b>{free.join(", ")}</b> 없음</p>}
         {unsure && (

@@ -2,6 +2,7 @@ import React from "react";
 import { useFlow } from "../flow";
 import { ChoiceGrid, Cta, Emphasize, Screen, Stepper } from "../components";
 import { ALLERGY_GATE, EDIT_LABELS, QUANTITY_MAX, QUESTIONS, allergyListOptions, answerLabel } from "../model";
+import { fixtureMaxQty } from "../logic";
 import hotIcon from "../assets/icons/hot.svg";
 import "./question.css";
 
@@ -103,11 +104,16 @@ const LAYOUT: Record<string, "tiles" | "rows"> = {
  */
 export function QuestionScreen() {
   const {
-    q, qIndex, setQIndex, answers, setAnswers, askPos, askTotal, carried,
+    q, qIndex, setQIndex, answers, setAnswers, askPos, askTotal, carried, fixture,
     simple, answered, advance, setStep, setEditOpen, nextToAsk, allergyOpen, setAllergyOpen,
   } = useFlow();
 
   if (!q) return null;
+
+  /* 수량 상한 — 화면이 정한 수가 아니라 매장 자료(candidates.json QUANTITY)다(사용자
+     확정 2026-08-13). 메뉴가 정해지기 전이므로 판매 중 후보들의 최대값까지 열어 준다.
+     자료가 없을 때만 QUANTITY_MAX 가 마지막 안전판이다. */
+  const qtyMax = (fixture && fixtureMaxQty(fixture)) ?? QUANTITY_MAX;
 
   const isLast = nextToAsk(qIndex + 1) >= QUESTIONS.length;
   const shape = LAYOUT[q.key] ?? "rows";
@@ -210,8 +216,8 @@ export function QuestionScreen() {
           label="수량"
           value={typeof answers.quantity === "number" ? answers.quantity : undefined}
           onChange={(n) => setAnswers((p) => ({ ...p, quantity: n }))}
-          max={QUANTITY_MAX}
-          atMaxNote={<>한 번에 {QUANTITY_MAX}개까지 고르실 수 있어요. 더 필요하시면 매장 직원에게 말씀해 주세요.</>}
+          max={qtyMax}
+          atMaxNote={<>한 번에 {qtyMax}개까지 고르실 수 있어요. 더 필요하시면 매장 직원에게 말씀해 주세요.</>}
         />
       ) : (
         <div className={`q-choices q-${알레르기목록 ? "rows" : shape}`}>

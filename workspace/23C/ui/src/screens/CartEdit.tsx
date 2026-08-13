@@ -4,7 +4,7 @@ import { Card, Cta, Screen } from "../components";
 import { ChoiceGrid } from "../components/ChoiceGrid";
 import { Stepper } from "../components/Stepper";
 import { QUANTITY_MAX, QUESTIONS, answerLabel } from "../model";
-import { candidateName } from "../logic";
+import { candidateMaxQty, candidateName, fixtureMaxQty } from "../logic";
 import "./cart.css";
 import "./profile.css"; // .p-edit — 요약 행의 주황 «수정» 링크 (시안 185:214, S03 과 같은 문법)
 
@@ -48,6 +48,13 @@ export function CartEdit() {
 
   const questionOf = (key: string) => QUESTIONS.find((x) => x.key === key)!;
   const openRow = ROWS.find(({ key }) => editOpen === key);
+
+  /* 수량 상한은 매장 자료(candidates.json QUANTITY)다 — 사용자 확정 2026-08-13.
+     담긴 메뉴가 있으면 그 메뉴의 상한, 저장본 수정처럼 메뉴가 없으면 판매 중 후보들의
+     최대값. 자료가 없을 때만 QUANTITY_MAX 가 마지막 안전판이다. */
+  const qtyMax = (fixture
+    ? candidateMaxQty(fixture, uiRec?.rec.recommendedCandidateId ?? null) ?? fixtureMaxQty(fixture)
+    : undefined) ?? QUANTITY_MAX;
 
   /* 이 화면에는 두 갈래로 들어온다 — 추천을 받은 뒤 «다시 추천받기», 그리고 홈에서
      «저장된 내용 수정». 뒤로가 늘 추천으로 가면 추천을 받은 적 없는 사람이 빈 화면에
@@ -105,8 +112,8 @@ export function CartEdit() {
               label="수량"
               value={typeof answers.quantity === "number" ? answers.quantity : undefined}
               onChange={(n) => setAnswers((p) => ({ ...p, quantity: n }))}
-              max={QUANTITY_MAX}
-              atMaxNote={<>한 번에 {QUANTITY_MAX}개까지 고르실 수 있어요.</>}
+              max={qtyMax}
+              atMaxNote={<>한 번에 {qtyMax}개까지 고르실 수 있어요. 더 필요하시면 매장 직원에게 말씀해 주세요.</>}
             />
           ) : (
             <>
