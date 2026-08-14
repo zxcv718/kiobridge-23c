@@ -331,7 +331,8 @@ export function useFlowState() {
    * 장바구니(S13)에서 수량·주문 방식을 **그 자리에서** 고친다 — 화면을 떠나지 않는다.
    *
    * 조건 수정 화면(applyEditAndRecommend)과 달리 계산 화면을 지나지 않고, **확정한
-   * 메뉴를 유지한다**(logic.recommendKeeping). 주문 방식은 엔진 점수에 들어가는 값이라
+   * 메뉴를 언제나 유지한다**(logic.recommendKeeping — 조건 수정 화면은 직접 고른
+   * 메뉴일 때만 유지한다, QA 5차 후속). 주문 방식은 엔진 점수에 들어가는 값이라
    * 그냥 다시 계산하면 최종 확인 화면에서 메뉴가 갑자기 바뀔 수 있다. 고정이 실제로
    * 일어났으면(엔진 1위 ≠ 유지한 메뉴) 이후 제출은 직접 선택(MODIFY)이다.
    */
@@ -352,7 +353,15 @@ export function useFlowState() {
        반영된다 — 그것이 «수정»이다. 저장본이 없는 주문 도중의 조건 수정은 아무것도
        남기지 않는다 — 세션을 남길지는 주문을 마친 뒤 S15 가 묻는다. */
     if (savedSession) persistSession(answers);
-    const u = computeRecommendation(buildRawInput(answers, a11y, fromSaved, storeToggle, touchedA11y), fixture, now);
+    /* 직접 고른 메뉴는 «수정 완료»를 지나도 유지한다(QA 5차 후속 2026-08-14) — 장바구니
+       인라인 수정과 같은 계약(recommendKeeping)이다. 한때 무조건 엔진 1위로 되돌렸는데
+       («직접 선택 표식을 물려받지 않는다»), 그러면 수정 화면을 왕복만 해도 직접 고른
+       메뉴가 소리 없이 버려졌다. 새 조건이 그 메뉴를 제외하면(생존 후보에 없으면)
+       유지하지 않는다 — 그때만 엔진 1위이고, 엔진 추천을 받은 사람도 엔진 1위다. */
+    const keepId = manual ? uiRec?.rec.recommendedCandidateId ?? null : null;
+    const { u, pinned } = recommendKeeping(
+      buildRawInput(answers, a11y, fromSaved, storeToggle, touchedA11y), fixture, keepId, now,
+    );
     /* 확정 추천이면 장바구니 확인으로 **직행**한다(2차 QA 2026-08-13) — 고친 조건의
        결과를 곧장 주문 내역으로 보여주고, 메뉴 확인을 한 번 더 지나게 하지 않는다.
        미확정(알레르기 모름 등)은 기존 길 그대로다 — 재확인 배너와 2회째 안전 중단은
@@ -360,12 +369,12 @@ export function useFlowState() {
     if (!isUnresolved(u.rec)) {
       setReconfirmCount(0);
       setUiRec(u);
-      setManual(false); // 엔진이 새로 뽑은 1위다 — 직접 선택 표식을 물려받지 않는다
+      setManual(pinned); // 유지가 실제로 일어났으면(엔진 1위 ≠ 유지한 메뉴) 직접 선택 그대로다
       setStep("confirm");
       return;
     }
     // 미확정 — 여기서도 시도 횟수가 올라가고, 2회째면 안전 중단이다
-    goRecommend(u);
+    goRecommend(u, reconfirmCount, pinned);
   };
 
   /**

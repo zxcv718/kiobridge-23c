@@ -291,6 +291,30 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByRole("button", { name: "포장하기" })).toBeEnabled();
   });
 
+  test("D16 직접 고른 메뉴는 «수정 완료»를 지나도 유지된다 (5차 QA 후속)", async ({ page }) => {
+    /* 한때 «수정 완료»가 무조건 엔진 1위로 되돌려서, 직접 고른 메뉴가 수정 화면을
+       왕복만 해도 소리 없이 버려졌다(아무것도 안 바꿔도 재현). 장바구니 인라인 수정과
+       같은 계약(recommendKeeping)이 여기도 적용된다 — 새 조건이 그 메뉴를 제외하면
+       유지하지 않는 것도 같다. */
+    await start(page);
+    await toRecommend(page, CASE.normal);
+
+    // 다른 메뉴 카드로 직접 선택 — «수정하기» 카운터를 쓰지 않는 직접 선택 경로
+    const 첫대안 = page.locator(".mc-altcard").first();
+    const 고른이름 = await 첫대안.locator(".menu-name").innerText();
+    await 첫대안.click();
+    await expect(page.locator(".cart-name")).toHaveText(고른이름);
+
+    // 수정 화면 왕복 — 아무것도 바꾸지 않고 «수정 완료» (버그의 최소 재현 경로)
+    await page.getByRole("button", { name: "수정하기" }).click();
+    await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
+    await page.getByRole("button", { name: "수정 완료", exact: true }).click();
+
+    // 장바구니의 메뉴가 엔진 1위로 되돌아가 있으면 안 된다
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
+    await expect(page.locator(".cart-name")).toHaveText(고른이름);
+  });
+
   /* ───────── S15 안내·저장 유도 (Figma 99:1830) ───────── */
 
   test("D8 주문을 마치면 S15 가 세션 저장을 묻고, 결과 화면은 알리기만 한다", async ({ page }) => {
