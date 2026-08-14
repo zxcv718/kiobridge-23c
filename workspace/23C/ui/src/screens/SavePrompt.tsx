@@ -2,6 +2,7 @@ import React from "react";
 import { useFlow } from "../flow";
 import { answerLabel } from "../model";
 import { Card, Cta, Screen } from "../components";
+import { candidateName } from "../logic";
 import "./finish.css";
 
 /**
@@ -20,7 +21,7 @@ import "./finish.css";
  * 두 화면에서 주 동작의 자리가 같아졌다.
  */
 export function SavePrompt() {
-  const { answers, fixture, saveSession, discardSession, setStep } = useFlow();
+  const { answers, fixture, uiRec, saveSession, discardSession, setStep } = useFlow();
 
   /* 카드 위 매장명 (시안의 «ChickenStore» 자리표시자). 실제 가게 이름을 쓰고,
      없으면 줄을 그리지 않는다 — 빈 자리표시자를 그리지 않는다(Result 와 같은 규칙). */
@@ -40,11 +41,13 @@ export function SavePrompt() {
           겸한다(finish.css) — S14 의 edit-extra 와 같은 방식이다. */}
       <div className="save-prompt">
         {storeName && <p className="res-store">{storeName}</p>}
-        {/* 시안 99:1830 의 여섯 행 그대로 — 메뉴명 줄은 없다. 카드가 말하는 것은 오늘
-            «입력한» 내용이고, 확정 메뉴는 저장하기를 누르면 데이터에만 함께 남는다. */}
+        {/* 시안 99:1830 의 여섯 행 + «메뉴명» 줄(QA 5차 2026-08-14). 원래는 «입력한»
+            내용만 보이고 확정 메뉴는 데이터에만 남았는데, 방금 주문한 메뉴가 안 보이면
+            무엇이 저장되는지 절반만 보인다 — 결과 화면 카드(메뉴명 첫 줄)와 같아졌다. */}
         <Card
           label="오늘 입력한 내용"
           rows={[
+            { label: "메뉴명", value: fixture ? candidateName(fixture, uiRec?.rec.recommendedCandidateId ?? null) : "(없음)" },
             { label: "알레르기", value: answerLabel("allergies", answers.allergies) },
             { label: "맵기 선호", value: answerLabel("spicyLevel", answers.spicyLevel) },
             { label: "뼈/순살 선택", value: answerLabel("boneType", answers.boneType) },

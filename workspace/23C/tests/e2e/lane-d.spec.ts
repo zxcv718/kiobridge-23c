@@ -302,8 +302,8 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByRole("heading", { level: 2, name: /오늘 입력한 내용을 저장할까요/ }))
       .toBeVisible({ timeout: 20_000 });
 
-    // 시안의 여섯 행 — 오늘 «입력한» 내용이 그대로 보인다
-    for (const 라벨 of ["알레르기", "맵기 선호", "뼈/순살 선택", "수량", "먹고가기/포장 선택", "예산"]) {
+    // 시안의 여섯 행 + «메뉴명»(QA 5차 2026-08-14) — 주문한 메뉴와 오늘 «입력한» 내용이 함께 보인다
+    for (const 라벨 of ["메뉴명", "알레르기", "맵기 선호", "뼈/순살 선택", "수량", "먹고가기/포장 선택", "예산"]) {
       await expect(page.locator(".kb-row .kb-rowlabel", { hasText: 라벨 }).first(),
         `S15 카드에 «${라벨}» 이 없습니다`).toBeVisible();
     }
