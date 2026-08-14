@@ -73,20 +73,7 @@
    --brand-strong(4.65:1, AA 통과)을 쓴다 (옛 .mc-why b 와 같은 결정). */
 .mc-flow .reasons b { color: var(--brand-strong); }
 
-/* ── 메뉴 선택 목록 (노션 기획 목업 2026-08-12) ──
- * 한 줄에 한 장 — 이름(Bold)·가격(회색)이 왼쪽에 나란히, «추천»은 주황 글씨로
- * 오른쪽 끝에 선다. 색만으로 말하지 않는다 — «추천»은 글자 그 자체가 뜻이다. */
-.menu-rank.choices { grid-template-columns: 1fr; gap: 12px; }
-.menu-rank .choice {
-  display: flex; align-items: baseline; gap: 10px;
-  min-height: 71px; padding: 16px 20px; text-align: left;
-}
-.menu-rank .menu-name { font-weight: 700; }
-.menu-rank .choice small { font-size: 0.92em; font-weight: 400; color: var(--muted); }
-.menu-rank .menu-rec {
-  margin-left: auto; flex: none;
-  color: var(--brand-strong); font-weight: 700; font-size: 0.88em;
-}
+/* 메뉴 선택 목록(.menu-rank)의 규칙은 화면과 함께 없어졌다(QA 5차 후속 2026-08-14) */
 
 /* ── 메뉴 확인 — 다른 메뉴 가로 카드 (2차 QA 2026-08-13) ──
  * 메뉴에 관한 선택이 이 화면에서 한 번에 보인다: 목록 화면으로 나가지 않고

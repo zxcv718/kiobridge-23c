@@ -144,11 +144,9 @@ test("직접 선택으로는 모름의 승인 차단이 풀리지 않는다", as
   for (let i = 0; i < 5; i++) await 아무거나답하고다음(page);
   await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeDisabled();
 
-  // 1위가 아닌 메뉴를 골라야 «직접 선택»(MANUAL_SELECTION) 경로가 실제로 탄다
-  await page.getByRole("button", { name: "수정하기" }).click();
-  await page.getByRole("button", { name: "메뉴 수정" }).click();
-  await page.locator(".menu-rank .choice").nth(1).click();
-  await page.getByRole("button", { name: "선택", exact: true }).click();
+  // 1위가 아닌 메뉴를 골라야 «직접 선택»(MANUAL_SELECTION) 경로가 실제로 탄다 —
+  // 다른 메뉴 카드가 그 길이다(메뉴 선택 화면은 QA 5차 후속으로 없어졌다)
+  await page.locator(".mc-altcard").first().click();
 
   await expect(page.getByRole("heading", { level: 2, name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
   await expect(page.getByRole("alert")).toContainText("확실하지 않은 정보");

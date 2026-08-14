@@ -50,12 +50,9 @@ test("예산 초과는 «예산 5,000원을 초과합니다» 형식으로 말�
 test("직접 고른 메뉴도 같은 잣대다 — 사유·주의 필요가 고른 메뉴 기준으로 바뀐다 (TC-CM-03②)", async ({ page }) => {
   await 순한맛뼈로추천받기(page);
 
-  // 수정하기 → 메뉴 수정 → 순한 순살 닭강정(순한맛·순살·6,000원)을 직접 고른다
-  await page.getByRole("button", { name: "수정하기" }).click();
-  await page.getByRole("button", { name: "메뉴 수정" }).click();
-  await expect(page.getByRole("heading", { level: 2, name: /어떤 메뉴를 원하시나요/ })).toBeVisible();
-  await page.getByRole("button", { name: /순한 순살 닭강정/ }).click();
-  await page.getByRole("button", { name: "선택", exact: true }).click();
+  // 다른 메뉴 카드에서 순한 순살 닭강정(순한맛·순살·6,000원)을 직접 고른다
+  // (메뉴 선택 화면은 QA 5차 후속으로 없어졌다 — 직접 선택은 이 카드의 몫이다)
+  await page.locator(".mc-altcard", { hasText: "순한 순살 닭강정" }).click();
 
   await expect(page.locator(".cart-name")).toHaveText("순한 순살 닭강정");
   // 이제 맵기는 맞아서 추천해요로 돌아오고, 형태(뼈)는 어긋나서 주의 필요로 간다

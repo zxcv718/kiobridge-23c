@@ -13,8 +13,8 @@ import "./recommend.css";
  *
  * 추천 화면(Recommend)과 합쳐졌다. 예전에는 «왜 이것인가»(추천)와 «이것이 맞는가»
  * (메뉴 확인)가 두 화면이었는데, 같은 메뉴를 두 번 확인시키는 중복이라 기획이 하나로
- * 정리했다. 이 화면이 제출 선언 셋을 진다 — 추천 이유(«추천해요» 절), 대안(조건 수정의
- * 메뉴 목록으로 닿는다), 거절 가능(뒤로·수정하기 — 승인하지 않고 나갈 길이 둘이다).
+ * 정리했다. 이 화면이 제출 선언 셋을 진다 — 추천 이유(«추천해요» 절), 대안(아래
+ * 다른 메뉴 가로 카드), 거절 가능(뒤로·수정하기 — 승인하지 않고 나갈 길이 둘이다).
  *
  * 기획 목업의 값(매운맛 닭강정·17,800원·«새우, 대두»)은 목업이라 쓰지 않는다.
  * 메뉴·가격은 fixture, 제외 개수·반영 못한 조건은 엔진 결과에서 그대로 읽는다 —
@@ -75,13 +75,14 @@ export function MenuConfirm() {
   const declared = (uiRec.engineCtx.hardConstraints.allergenIds ?? []).filter((a) => a !== "UNKNOWN");
   const allergyNames = declared.map((a) => ALLERGEN_KO[a]).filter(Boolean).join(", ");
   const allergyExcluded = rec.excludedCandidates.filter((e) => e.reasonCode === "ALLERGEN_CONFLICT").length;
-  /* 직접 고른 메뉴도 이 화면으로 돌아오므로(MenuSelect), 선호가 아니라 **지금 화면에
+  /* 직접 고른 메뉴(아래 다른 메뉴 카드)도 이 자리에 서므로, 선호가 아니라 **지금 화면에
      선 그 메뉴**를 코어에 대조시킨다 — 엔진 1순위든 직접 선택이든 같은 잣대다. */
   const tail = whyClauses(metConditionsFor(fixture.candidates.find((c) => c.candidateId === id), uiRec.engineCtx));
 
   /* 다른 메뉴 카드 — 지금 화면의 메뉴를 뺀 **생존 후보**를 점수순으로 가로에 편다
      (2차 QA 2026-08-13: 메뉴에 관한 선택이 이 화면에서 한 번에 보이게).
-     제외된 후보를 되살리지 않는 것은 메뉴 선택 화면과 같은 결정이다(verify-b B9). */
+     메뉴 선택 화면이 없어진 뒤(QA 5차 후속) 메뉴를 다시 고르는 길은 이 카드뿐이고,
+     제외된 후보를 되살리지 않는다는 결정도 이 카드가 진다(verify-b B9). */
   const alts = Object.entries(rec.scoreBreakdown ?? {})
     .sort((a, b) => b[1] - a[1])
     .map(([cid]) => cid)
