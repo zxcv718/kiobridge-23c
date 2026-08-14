@@ -123,7 +123,7 @@ test("모름 → 미확정 추천 → 다시 추천 → 2회째에 안전 중단
   await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeDisabled();
 
   // 고쳐볼 기회 한 번 — 조건을 그대로 두고 다시 받으면 2회째도 미확정이다
-  await page.getByRole("button", { name: "다시 추천받기" }).click();
+  await page.getByRole("button", { name: "수정하기" }).click();
   await expect(page.getByRole("heading", { level: 2, name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
   await page.getByRole("button", { name: "수정 완료", exact: true }).click();
 
@@ -145,7 +145,7 @@ test("직접 선택으로는 모름의 승인 차단이 풀리지 않는다", as
   await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeDisabled();
 
   // 1위가 아닌 메뉴를 골라야 «직접 선택»(MANUAL_SELECTION) 경로가 실제로 탄다
-  await page.getByRole("button", { name: "다시 추천받기" }).click();
+  await page.getByRole("button", { name: "수정하기" }).click();
   await page.getByRole("button", { name: "메뉴 수정" }).click();
   await page.locator(".menu-rank .choice").nth(1).click();
   await page.getByRole("button", { name: "선택", exact: true }).click();
