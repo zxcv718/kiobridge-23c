@@ -4,28 +4,32 @@ import { Card, Cta, Screen } from "../components";
 import { ChoiceGrid } from "../components/ChoiceGrid";
 import { Stepper } from "../components/Stepper";
 import { QUANTITY_MAX, QUESTIONS, answerLabel } from "../model";
-import { candidateMaxQty, candidateName, fixtureMaxQty } from "../logic";
+import { candidateMaxQty, fixtureMaxQty } from "../logic";
 import "./cart.css";
 import "./profile.css"; // .p-edit — 요약 행의 주황 «수정» 링크 (시안 185:214, S03 과 같은 문법)
 
 /**
- * 화면목록 S14 — 수정.
+ * 화면목록 S14 — 수정. **조건 전용 화면이다** (QA 5차 후속 2026-08-14).
  *
- * **한 카드다** (2차 QA 2026-08-13). 메뉴와 주문 조건 여섯(알레르기·맵기·뼈/순살·
- * 먹고가기/포장·수량·예산)이 접힘 없이 전부 한 카드에 선다 — 메뉴에 관한 선택이
- * 한 번에 보여야 한다는 결정이다. 한때 기획 4행 + «다른 항목 수정» 접힘의 두 층이었고,
- * 접힘 안에 화면 보기 방식(글씨 크기·고대비·화면 안내)도 있었는데, 그 절은 이 결정으로
- * 통째로 없어졌다 — 화면 설정에 닿는 길은 프로필 3단계가 맡는다(verify-b C1).
+ * **한 카드다** (2차 QA 2026-08-13). 주문 조건 여섯(알레르기·맵기·뼈/순살·
+ * 먹고가기/포장·수량·예산)이 접힘 없이 전부 한 카드에 선다. 한때 기획 4행 +
+ * «다른 항목 수정» 접힘의 두 층이었고, 접힘 안에 화면 보기 방식(글씨 크기·고대비·
+ * 화면 안내)도 있었는데, 그 절은 이 결정으로 통째로 없어졌다 — 화면 설정에 닿는
+ * 길은 프로필 3단계가 맡는다(verify-b C1).
+ *
+ * **'메뉴' 행은 없다** (QA 5차 후속). 한때 메뉴 행이 «메뉴 선택» 화면(점수순 목록)
+ * 으로 이어졌는데, 그 출구로 나가면 재계산이 없어 여기서 고친 조건이 증발했고,
+ * «수정 완료»로 나가면 직접 고른 메뉴가 버려졌다 — 출구 둘이 각각 반쪽을 버렸다.
+ * 조건은 이 화면이, 메뉴는 메뉴 확인의 다른 메뉴 카드가 맡는 것으로 갈랐다.
+ * 메뉴 선택 화면은 유일한 입구가 사라져 함께 없어졌다.
  *
  * «수정»을 누르면 카드 바로 아래에서 그 항목의 선택지가 펴진다 — 질문 화면과 같은
  * 부품(ChoiceGrid·Stepper)이라 같은 값을 두 방법으로 고르게 되지 않는다.
- * 메뉴만 별도의 «메뉴 선택» 화면으로 간다(점수순 목록).
  *
- * 다 고치면 «수정 완료»가 재계산한다 — 확정 추천이면 장바구니 확인으로 직행하고,
- * 미확정이면 재확인(메뉴 확인 배너)·2회째 안전 중단의 기존 길을 탄다(flow.tsx).
- * 직접 고른 메뉴는 재계산을 지나도 유지된다(QA 5차 후속 — 새 조건이 제외하면 예외).
- *
- * 고를 수 있는 메뉴는 STEP 4 를 통과한 **생존 후보뿐**이다(MenuSelect 참조).
+ * 다 고치면 «수정 완료»가 재계산해 **메뉴 확인으로** 돌아간다 — 재계산으로 메뉴가
+ * 바뀔 수 있으므로 승인을 다시 받는다(장바구니 직행이던 2차 QA 결정을 뒤집음).
+ * 직접 고른 메뉴는 재계산을 지나도 유지된다(새 조건이 제외하면 예외). 미확정이면
+ * 재확인(메뉴 확인 배너)·2회째 안전 중단의 기존 길 그대로다(flow.tsx).
  */
 
 /** 한 카드에 서는 주문 조건 여섯 행 — 순서는 2차 QA 목업 그대로. */
@@ -78,18 +82,8 @@ export function CartEdit() {
           edit-stack 은 이 화면의 본문(인사말·제목·카드)을 세로 가운데로 모으는 CSS
           갈고리다(cart.css, 2차 QA 목업의 구도). */}
       <div className="edit-stack">
+      {/* '메뉴' 행은 없다(파일머리 주석) — 이 카드가 말하는 것은 조건뿐이다 */}
       <Card rows={[
-        ...(uiRec && fixture && uiRec.rec.recommendedCandidateId ? [{
-          label: "메뉴",
-          value: candidateName(fixture, uiRec.rec.recommendedCandidateId),
-          action: (
-            /* 메뉴는 그 자리에서 펴지 않는다 — 점수순 목록을 가진 «메뉴 선택» 화면으로 간다 */
-            <button type="button" className="p-edit" aria-label="메뉴 수정"
-              onClick={() => setStep("menuSelect")}>
-              수정
-            </button>
-          ),
-        }] : []),
         ...ROWS.map(({ key, label }) => ({
           label,
           value: answerLabel(key, answers[key]),

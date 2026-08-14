@@ -89,7 +89,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
   });
 
-  test("D2 메뉴 확인에는 되돌아갈 길이 있다 — 메뉴를 다시 고르는 길까지 이어진다", async ({ page }) => {
+  test("D2 메뉴 확인에는 되돌아갈 길이 있다 — 조건 수정을 지나 메뉴 확인으로 되돌아온다", async ({ page }) => {
     await start(page);
     await toCartReview(page);
     await page.getByRole("button", { name: "뒤로" }).click();
@@ -98,11 +98,15 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await page.getByRole("button", { name: "수정하기" }).click();
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
 
-    /* 장바구니의 [수정하기]가 없어진 뒤(QA 1차 TC-CM-08) 메뉴를 다시 고르는 길은 이것
-       하나다: 뒤로 → 메뉴 확인 → 수정하기 → 메뉴 «수정» → 메뉴 선택(점수순 목록).
-       입구가 하나뿐이므로 그 길이 실제로 끝까지 이어지는지를 여기서 못 박는다. */
-    await page.getByRole("button", { name: "메뉴 수정" }).click();
-    await expect(page.getByRole("heading", { name: /어떤 메뉴를 원하시나요/ })).toBeVisible();
+    /* 조건 수정 화면에 '메뉴' 행은 없다(QA 5차 후속 2026-08-14) — 조건은 여기서,
+       메뉴는 메뉴 확인의 다른 메뉴 카드에서. 한 화면에 출구가 둘이면 각각 반쪽을
+       버렸다(직접 선택 폐기/조건 증발). «수정 완료»는 재계산 후 메뉴 확인으로
+       돌아온다 — 장바구니 직행(2차 QA)을 뒤집은 결정이다: 재계산으로 메뉴가 바뀔
+       수 있으므로 바뀐 메뉴를 보고 승인하는 자리를 지난다. */
+    await page.getByRole("button", { name: "수정 완료", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
+    // 메뉴를 다시 고르는 길 — 다른 메뉴 카드가 이 화면에 있다
+    await expect(page.locator(".mc-altcard").first()).toBeVisible();
   });
 
   /* ───────── S13 장바구니 확인 (Figma 99:1798) ───────── */
@@ -156,19 +160,19 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await page.getByRole("button", { name: "뼈", exact: true }).click();
     await page.getByRole("button", { name: /^맵기/ }).click();
     await page.getByRole("button", { name: "순한맛", exact: true }).click();
-    // «수정 완료»는 장바구니 확인으로 직행한다(2차 QA) — 메뉴 확인을 지나지 않는다
+    // «수정 완료»는 재계산 후 메뉴 확인으로 돌아온다(QA 5차 후속) — 어긋남은 그 화면의
+    // «주의 필요»가 바로 말한다
     await page.getByRole("button", { name: "수정 완료" }).click();
-    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
-
-    /* 카드에는 선택된 옵션만 남는다(3차 QA 2026-08-13) — «원하신 …은 없어 바꿨습니다»
-       보조줄이 장바구니에 서지 않는다. 대체 사실을 숨기는 것은 아니다: 뒤로 한 칸의
-       메뉴 확인 «주의 필요»가 같은 어긋남을 말한다(아래에서 그것까지 잰다). */
-    await expect(page.locator(".cart-box .cart-sub", { hasText: "바꿨습니다" })).toHaveCount(0);
-    await expect(page.locator(".cart-box .cart-sub", { hasText: "옵션:" })).toHaveCount(1);
-
-    await page.getByRole("button", { name: "뒤로" }).click();
     const 주의 = page.locator(".q-sec", { has: page.getByText("주의 필요") });
     await expect(주의).toContainText("원하신 형태는 뼈인데");
+
+    /* 카드에는 선택된 옵션만 남는다(3차 QA 2026-08-13) — «원하신 …은 없어 바꿨습니다»
+       보조줄이 장바구니에 서지 않는다. 대체 사실을 숨기는 것은 아니다: 방금 지나온
+       메뉴 확인 «주의 필요»가 같은 어긋남을 말했다(위에서 쟀다). */
+    await page.getByRole("button", { name: "선택하기", exact: true }).click();
+    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
+    await expect(page.locator(".cart-box .cart-sub", { hasText: "바꿨습니다" })).toHaveCount(0);
+    await expect(page.locator(".cart-box .cart-sub", { hasText: "옵션:" })).toHaveCount(1);
   });
 
   /* 옛 D5(«결제가 일어나지 않는다» 문구 노출)는 기획 2026-08-13 으로 문구와 함께 없어졌다 —
@@ -210,7 +214,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
   /* D6(수정 화면의 화면 보기 방식)은 없어졌다 — 2차 QA(2026-08-13)가 그 절을 통째로
      걷어냈다. 화면 설정에 닿는 길은 프로필 3단계(verify-b C1)가 그대로 지킨다. */
 
-  test("D6 수정 화면은 한 카드다 — 주문 조건 일곱 행이 접힘 없이 다 보인다", async ({ page }) => {
+  test("D6 수정 화면은 한 카드다 — 주문 조건 여섯 행이 접힘 없이 다 보인다", async ({ page }) => {
     await start(page);
     await toRecommend(page, CASE.normal);
     await page.getByRole("button", { name: "수정하기" }).click();
@@ -219,10 +223,12 @@ test.describe("D계열 — 확인·수정·결과", () => {
     // 2차 QA — «다른 항목 수정» 접힘도, 화면 보기 방식도 없다. 전부 한 카드 안이다.
     await expect(page.getByText("다른 항목 수정")).toHaveCount(0);
     await expect(page.getByText("화면 보기 방식")).toHaveCount(0);
-    for (const 라벨 of ["메뉴", "알레르기", "맵기", "뼈/순살 선택", "먹고가기/포장 선택", "수량", "예산"]) {
+    for (const 라벨 of ["알레르기", "맵기", "뼈/순살 선택", "먹고가기/포장 선택", "수량", "예산"]) {
       await expect(page.locator(".kb-row .kb-rowlabel", { hasText: 라벨 }).first(),
         `수정 카드에 «${라벨}» 이 없습니다`).toBeVisible();
     }
+    // '메뉴' 행은 없다(QA 5차 후속) — 메뉴는 메뉴 확인 화면(다른 메뉴 카드)의 관할이다
+    await expect(page.locator(".kb-row .kb-rowlabel", { hasText: "메뉴" })).toHaveCount(0);
   });
 
   test("D7 수정 화면에는 조건을 고쳐 다시 추천받는 길이 남아 있다", async ({ page }) => {
@@ -241,9 +247,10 @@ test.describe("D계열 — 확인·수정·결과", () => {
     }
     await 없어요.click();
     await page.getByRole("button", { name: "수정 완료" }).click();
-    /* 확정된 추천이면 «수정 완료»는 장바구니 확인으로 직행한다(2차 QA 2026-08-13) —
-       메뉴 확인을 한 번 더 지나지 않는다. */
-    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
+    /* «수정 완료»는 재계산 후 메뉴 확인으로 돌아온다(QA 5차 후속 — 장바구니 직행이던
+       2차 QA 결정을 뒤집음). 미확정이 풀렸으므로 재확인 배너 없이 승인이 살아 있어야 한다. */
+    await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeEnabled();
   });
 
   test("D14 메뉴 확인에서 다른 메뉴를 바로 골라잡을 수 있다 (2차 QA)", async ({ page }) => {
@@ -310,7 +317,12 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
     await page.getByRole("button", { name: "수정 완료", exact: true }).click();
 
-    // 장바구니의 메뉴가 엔진 1위로 되돌아가 있으면 안 된다
+    // 재계산 후 메뉴 확인으로 돌아와도(QA 5차 후속) 고른 메뉴가 엔진 1위로 되돌아가 있으면 안 된다
+    await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
+    await expect(page.locator(".cart-name")).toHaveText(고른이름);
+
+    // 승인해 장바구니까지 가도 그대로다
+    await page.getByRole("button", { name: "선택하기", exact: true }).click();
     await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
     await expect(page.locator(".cart-name")).toHaveText(고른이름);
   });
@@ -403,22 +415,20 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await toRecommend(page, CASE.normal);
     await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
 
-    // 1회째 — 조건을 고칠 기회를 준다. 수정 완료는 장바구니로 직행한다(2차 QA).
+    // 1회째 — 조건을 고칠 기회를 준다. 수정 완료는 재계산 후 메뉴 확인으로 돌아온다(QA 5차 후속).
     await page.getByRole("button", { name: "수정하기" }).click();
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
     await page.getByRole("button", { name: "수정 완료", exact: true }).click();
-    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
 
-    // 2회째 — 뒤로 물러나 다시 요청하면, 임의로 더 밀지 않고 직원에게 넘긴다
-    await page.getByRole("button", { name: "뒤로" }).click();
+    // 2회째 — 다시 요청하면, 임의로 더 밀지 않고 직원에게 넘긴다
     await page.getByRole("button", { name: "수정하기" }).click();
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();
 
     // «조건 다시 보기»로 나가면 기회가 다시 생긴다 — 이 화면이 덫이 되면 안 된다
     await page.getByRole("button", { name: "조건 다시 보기" }).click();
     await page.getByRole("button", { name: "수정 완료", exact: true }).click();
-    await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "뒤로" }).click();
+    await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
     await page.getByRole("button", { name: "수정하기" }).click();
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
   });

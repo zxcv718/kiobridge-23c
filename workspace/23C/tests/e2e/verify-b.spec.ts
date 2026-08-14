@@ -280,24 +280,24 @@ test.describe("B계열 — 신규 동작", () => {
     await expect(page.getByRole("textbox")).toBeVisible(); // 매장 코드 직접 입력 (자동으로 펴짐)
   });
 
-  test("B9 메뉴 선택 목록에 제외된 후보가 없다 — 점수순, 상위 3개 추천 표시", async ({ page }) => {
+  test("B9 다른 메뉴 카드에 제외된 후보가 없다 — 생존 후보만 점수순", async ({ page }) => {
+    /* 메뉴 선택 화면(점수순 전체 목록·상위 3개 «추천» 표시)은 없어졌다(QA 5차 후속
+       2026-08-14) — 조건 수정 화면에서 '메뉴' 행이 빠지며 유일한 입구가 사라졌다.
+       «제외된 후보를 되살리지 않는다»는 결정은 메뉴 확인의 다른 메뉴 카드가 그대로
+       진다 — 카드도 생존 후보(scoreBreakdown)만 점수순으로 선다. */
     await start(page);
     await answerAll(page); // 땅콩·콩 알레르기 → 해당 후보 제외됨
-    await page.getByRole("button", { name: "수정하기" }).click();   // 메뉴 확인 → 수정 화면
-    await page.getByRole("button", { name: "메뉴 수정", exact: true }).click(); // 수정 화면 → 메뉴 선택
-    await expect(page.getByRole("heading", { name: /어떤 메뉴를 원하시나요/ })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
 
-    const names = await page.locator(".choices .choice").allInnerTexts();
+    const names = await page.locator(".mc-altcard .menu-name").allInnerTexts();
     expect(names.length).toBeGreaterThan(0);
-    // 땅콩 토핑(PEANUT)·간장 순살(SOY)은 제외됐으므로 목록에 없어야 한다
+    // 땅콩 토핑(PEANUT)·간장 순살(SOY)은 제외됐으므로 카드에 없어야 한다
     expect(names.join(" ")).not.toContain("땅콩 토핑");
     expect(names.join(" ")).not.toContain("간장 순살");
-    // 기획(노션 2026-08-12): 추천 점수 상위 3개에 «추천» 표시
-    await expect(page.locator(".choices .choice .menu-rec", { hasText: "추천" })).toHaveCount(3);
 
-    // 고르면 메뉴 확인으로 돌아가 재확인한다
-    await page.locator(".choices .choice").nth(1).click();
-    await page.getByRole("button", { name: "선택", exact: true }).click();
-    await expect(page.getByRole("heading", { name: /이 메뉴를 선택하시겠어요/ })).toBeVisible();
+    // 고르면 그 자리에서 위 카드로 올라온다 — 직접 선택(MODIFY) 재확인
+    const 첫대안 = names[0];
+    await page.locator(".mc-altcard").first().click();
+    await expect(page.locator(".cart-name")).toHaveText(첫대안);
   });
 });

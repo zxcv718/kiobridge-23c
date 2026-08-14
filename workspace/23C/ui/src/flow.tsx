@@ -362,18 +362,11 @@ export function useFlowState() {
     const { u, pinned } = recommendKeeping(
       buildRawInput(answers, a11y, fromSaved, storeToggle, touchedA11y), fixture, keepId, now,
     );
-    /* 확정 추천이면 장바구니 확인으로 **직행**한다(2차 QA 2026-08-13) — 고친 조건의
-       결과를 곧장 주문 내역으로 보여주고, 메뉴 확인을 한 번 더 지나게 하지 않는다.
-       미확정(알레르기 모름 등)은 기존 길 그대로다 — 재확인 배너와 2회째 안전 중단은
-       goRecommend 가 잰다. 승인 차단을 쥔 화면을 건너뛰면 안 되기 때문이다. */
-    if (!isUnresolved(u.rec)) {
-      setReconfirmCount(0);
-      setUiRec(u);
-      setManual(pinned); // 유지가 실제로 일어났으면(엔진 1위 ≠ 유지한 메뉴) 직접 선택 그대로다
-      setStep("confirm");
-      return;
-    }
-    // 미확정 — 여기서도 시도 횟수가 올라가고, 2회째면 안전 중단이다
+    /* 재계산 결과는 **메뉴 확인으로** 돌아간다(QA 5차 후속 2026-08-14). 한때 확정
+       추천이면 장바구니로 직행했는데(2차 QA), 재계산으로 메뉴가 바뀔 수 있는데도
+       바뀐 메뉴를 승인 없이 담게 되는 구멍이었다 — 이제 확정이든 미확정이든 같은
+       길이고, 미확정의 재확인 배너·2회째 안전 중단도 goRecommend 가 그대로 잰다.
+       pinned 는 유지가 실제로 일어났다는 뜻이다 — 직접 선택 표식이 그대로 간다. */
     goRecommend(u, reconfirmCount, pinned);
   };
 

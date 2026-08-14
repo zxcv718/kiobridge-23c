@@ -20,7 +20,7 @@ import {
 export type Step =
   | "connect"                                          // QR 연동 — 흐름의 1걸음 (매장 QR 링크로 열리면 건너뛴다)
   | "start" | "profile" | "saveChoice" | "sessionStart"
-  | "wizard" | "calculating" | "menuConfirm" | "menuSelect"
+  | "wizard" | "calculating" | "menuConfirm"
   | "confirm" | "run" | "savePrompt" | "result" | "staff" | "edit" | "stopped";
 
 /**
