@@ -94,12 +94,12 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await toCartReview(page);
     await page.getByRole("button", { name: "뒤로" }).click();
 
-    // 추천을 받아들이지 않을 길 — «다시 추천받기»가 조건 수정 화면으로 잇는다
-    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    // 추천을 받아들이지 않을 길 — «수정하기»가 조건 수정 화면으로 잇는다
+    await page.getByRole("button", { name: "수정하기" }).click();
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
 
     /* 장바구니의 [수정하기]가 없어진 뒤(QA 1차 TC-CM-08) 메뉴를 다시 고르는 길은 이것
-       하나다: 뒤로 → 메뉴 확인 → 다시 추천받기 → 메뉴 «수정» → 메뉴 선택(점수순 목록).
+       하나다: 뒤로 → 메뉴 확인 → 수정하기 → 메뉴 «수정» → 메뉴 선택(점수순 목록).
        입구가 하나뿐이므로 그 길이 실제로 끝까지 이어지는지를 여기서 못 박는다. */
     await page.getByRole("button", { name: "메뉴 수정" }).click();
     await expect(page.getByRole("heading", { name: /어떤 메뉴를 원하시나요/ })).toBeVisible();
@@ -142,7 +142,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D4b 대체 안내는 장바구니 카드가 아니라 메뉴 확인의 «주의 필요»가 말한다", async ({ page }) => {
     await start(page);
     await toRecommend(page, CASE.normal);
-    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await page.getByRole("button", { name: "수정하기" }).click();
 
     /* 순한맛 + 뼈 로 바꾸면 «간장 순살 닭강정»(6,500원)이 뽑힌다. 예산이 상한이 아니라
        **희망 금액**이라 10,000원에 가장 가까운 생존 후보가 위로 오는데(7,000원 땅콩
@@ -201,7 +201,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
     /* [수정하기] 진입도 없어졌다(QA 1차 TC-CM-08) — 수량·주문 방식이 그 자리에서
        고쳐지는 지금, 조건 수정 화면으로 가는 이 버튼은 인라인 수정과 겹치는 중복
-       입구였다. 조건·메뉴를 고치는 길은 뒤로 → 메뉴 확인의 «다시 추천받기»다(D2). */
+       입구였다. 조건·메뉴를 고치는 길은 뒤로 → 메뉴 확인의 «수정하기»다(D2). */
     await expect(page.getByRole("button", { name: "수정하기", exact: true })).toHaveCount(0);
   });
 
@@ -213,7 +213,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D6 수정 화면은 한 카드다 — 주문 조건 일곱 행이 접힘 없이 다 보인다", async ({ page }) => {
     await start(page);
     await toRecommend(page, CASE.normal);
-    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await page.getByRole("button", { name: "수정하기" }).click();
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
 
     // 2차 QA — «다른 항목 수정» 접힘도, 화면 보기 방식도 없다. 전부 한 카드 안이다.
@@ -228,8 +228,8 @@ test.describe("D계열 — 확인·수정·결과", () => {
   test("D7 수정 화면에는 조건을 고쳐 다시 추천받는 길이 남아 있다", async ({ page }) => {
     // 알레르기가 미확인이라 확정되지 않은 추천 — 여기서 빠져나갈 길이 없으면 막다른 길이 된다
     await 미확정추천까지(page);
-    // 조건을 고치러 가는 길은 «다시 추천받기»다 — 합쳐진 메뉴 확인 화면의 라벨(기획 목업)
-    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    // 조건을 고치러 가는 길은 «수정하기»다 — 라벨이 목적지(조건 수정)를 그대로 말한다(QA 5차)
+    await page.getByRole("button", { name: "수정하기" }).click();
 
     /* 미확인을 «없음»으로 바로잡으면 확정된 추천으로 빠져나간다.
        재확인 경로라 알레르기 선택지는 저절로 펴져서 온다. 선택지 이름에는 그림이
@@ -258,10 +258,10 @@ test.describe("D계열 — 확인·수정·결과", () => {
     // 누르면 그 메뉴가 위 카드로 올라온다 — 화면을 떠나지 않는다
     await expect(page.locator(".cart-name")).toHaveText(대안이름);
 
-    // 버튼 순서 — «선택하기»(주황)가 위, «다시 추천받기»가 아래 (2차 QA)
+    // 버튼 순서 — «선택하기»(주황)가 위, «수정하기»가 아래 (2차 QA · 라벨은 5차 QA)
     const 버튼 = page.locator(".kb-actions button");
     await expect(버튼.first()).toHaveText("선택하기");
-    await expect(버튼.nth(1)).toHaveText("다시 추천받기");
+    await expect(버튼.nth(1)).toHaveText("수정하기");
   });
 
   test("D15 메뉴가 지원하지 않는 주문 방식은 누를 수 없고, 이유를 말한다 (3차 QA)", async ({ page }) => {
@@ -302,8 +302,8 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await expect(page.getByRole("heading", { level: 2, name: /오늘 입력한 내용을 저장할까요/ }))
       .toBeVisible({ timeout: 20_000 });
 
-    // 시안의 여섯 행 — 오늘 «입력한» 내용이 그대로 보인다
-    for (const 라벨 of ["알레르기", "맵기 선호", "뼈/순살 선택", "수량", "먹고가기/포장 선택", "예산"]) {
+    // 시안의 여섯 행 + «메뉴명»(QA 5차 2026-08-14) — 주문한 메뉴와 오늘 «입력한» 내용이 함께 보인다
+    for (const 라벨 of ["메뉴명", "알레르기", "맵기 선호", "뼈/순살 선택", "수량", "먹고가기/포장 선택", "예산"]) {
       await expect(page.locator(".kb-row .kb-rowlabel", { hasText: 라벨 }).first(),
         `S15 카드에 «${라벨}» 이 없습니다`).toBeVisible();
     }
@@ -370,22 +370,24 @@ test.describe("D계열 — 확인·수정·결과", () => {
 
   /* ───────── S12 안전 중단 (Figma 99:1337) ───────── */
 
-  test("D13 «다시 추천받기» 두 번째 클릭이면 안전 중단으로 간다 (TC-CM-01)", async ({ page }) => {
-    /* QA 기대문 그대로 — 확정 추천이어도 다시 추천을 **두 번** 요청하면 S12 다.
-       미확인 알레르기만 세던 판정으로는 이 화면에 닿는 일반 경로가 없었다(1차 QA 실측). */
+  test("D13 «수정하기» 두 번째 클릭이면 안전 중단으로 간다 (TC-CM-01)", async ({ page }) => {
+    /* QA 1차 기대문 «다시 추천받기 2회 클릭 시 안전 중단» 그대로다 — 버튼 이름만
+       «수정하기»가 됐다(QA 5차 2026-08-14). 확정 추천이어도 조건 수정을 **두 번**
+       요청하면 S12 다. 미확인 알레르기만 세던 판정으로는 이 화면에 닿는 일반 경로가
+       없었다(1차 QA 실측). */
     await start(page);
     await toRecommend(page, CASE.normal);
     await expect(page.getByRole("button", { name: "선택하기", exact: true })).toBeVisible();
 
     // 1회째 — 조건을 고칠 기회를 준다. 수정 완료는 장바구니로 직행한다(2차 QA).
-    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await page.getByRole("button", { name: "수정하기" }).click();
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
     await page.getByRole("button", { name: "수정 완료", exact: true }).click();
     await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
 
     // 2회째 — 뒤로 물러나 다시 요청하면, 임의로 더 밀지 않고 직원에게 넘긴다
     await page.getByRole("button", { name: "뒤로" }).click();
-    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await page.getByRole("button", { name: "수정하기" }).click();
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();
 
     // «조건 다시 보기»로 나가면 기회가 다시 생긴다 — 이 화면이 덫이 되면 안 된다
@@ -393,7 +395,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     await page.getByRole("button", { name: "수정 완료", exact: true }).click();
     await expect(page.getByRole("button", { name: "주문하기", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "뒤로" }).click();
-    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await page.getByRole("button", { name: "수정하기" }).click();
     await expect(page.getByRole("heading", { name: /어떤 항목을 수정하고 싶으신가요/ })).toBeVisible();
   });
 
@@ -401,7 +403,7 @@ test.describe("D계열 — 확인·수정·결과", () => {
     /* 첫 미확정에서는 멈추지 않는다 — 조건을 고칠 기회를 한 번 준다. 그대로 다시 받으면
        두 번째이고, 그때 멈춘다(core/ask.ts MAX_RECONFIRM_ATTEMPTS). */
     await 미확정추천까지(page);
-    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await page.getByRole("button", { name: "수정하기" }).click();
     await page.getByRole("button", { name: "수정 완료" }).click();
 
     /* 시안 99:1337 의 네 조각이 그 순서로 다 있다 — 에러 라벨 · 일러스트 · 타이틀 · 서브텍스트. */

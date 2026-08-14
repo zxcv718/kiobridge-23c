@@ -56,7 +56,7 @@ export function CartEdit() {
     ? candidateMaxQty(fixture, uiRec?.rec.recommendedCandidateId ?? null) ?? fixtureMaxQty(fixture)
     : undefined) ?? QUANTITY_MAX;
 
-  /* 이 화면에는 두 갈래로 들어온다 — 추천을 받은 뒤 «다시 추천받기», 그리고 홈에서
+  /* 이 화면에는 두 갈래로 들어온다 — 추천을 받은 뒤 «수정하기», 그리고 홈에서
      «저장된 내용 수정». 뒤로가 늘 추천으로 가면 추천을 받은 적 없는 사람이 빈 화면에
      떨어진다. 어디서 왔는지는 «추천이 있는가»가 말해 준다. */
   return (

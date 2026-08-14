@@ -103,12 +103,12 @@ test.describe("B계열 — 신규 동작", () => {
     await page.getByRole("button", { name: /지난번과 똑같이 주문하기/ }).click();
 
     // 1회차 — 사유는 말하지만 중단 화면은 아니다. 조건을 고칠 기회를 먼저 준다.
-    // 그 길은 «다시 추천받기»다 — 합쳐진 메뉴 확인 화면에서 조건 수정으로 가는 라벨
+    // 그 길은 «수정하기»다 — 메뉴 확인 화면에서 조건 수정으로 가는 라벨(QA 5차 2026-08-14)
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "다시 추천받기" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "수정하기" })).toBeVisible();
 
     // 조건 수정 화면으로 가서 그대로 다시 추천 → 2회차
-    await page.getByRole("button", { name: "다시 추천받기" }).click();
+    await page.getByRole("button", { name: "수정하기" }).click();
     await page.getByRole("button", { name: "수정 완료" }).click();
     await expect(page.getByRole("heading", { name: /추천 메뉴를 찾지 못했습니다/ })).toBeVisible();
     /* «왜 멈췄나요?» 접힘은 1차 QA 후 사용자 결정으로 걷어냈다(2026-08-13) —
@@ -283,7 +283,7 @@ test.describe("B계열 — 신규 동작", () => {
   test("B9 메뉴 선택 목록에 제외된 후보가 없다 — 점수순, 상위 3개 추천 표시", async ({ page }) => {
     await start(page);
     await answerAll(page); // 땅콩·콩 알레르기 → 해당 후보 제외됨
-    await page.getByRole("button", { name: "다시 추천받기" }).click();   // 메뉴 확인 → 수정 화면
+    await page.getByRole("button", { name: "수정하기" }).click();   // 메뉴 확인 → 수정 화면
     await page.getByRole("button", { name: "메뉴 수정", exact: true }).click(); // 수정 화면 → 메뉴 선택
     await expect(page.getByRole("heading", { name: /어떤 메뉴를 원하시나요/ })).toBeVisible();
 
